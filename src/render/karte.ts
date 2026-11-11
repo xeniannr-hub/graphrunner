@@ -220,7 +220,7 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
     fy = (p.y + 0.5) * ts;
     laeuft = p.laeuft;
   }
-  const gr = Math.max(ts * 1.05, 12);
+  const gr = Math.max(ts * 1.45, 14);
   const hops = laeuft ? Math.abs(Math.sin(bild.zeit / 70)) * ts * 0.1 : 0;
   ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
   ctx.fillRect(fx - gr * 0.3, fy + gr * 0.36, gr * 0.6, gr * 0.1);

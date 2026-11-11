@@ -1,10 +1,10 @@
-# Kieselmark
+# Graphrunner
 
-Eine Pixel-Spielwelt im Browser, die zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
+Ein Pixel-Spiel im Klötzchenstil im Browser, die zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
 
 **Live:** https://xeniannr-hub.github.io/kieselmark/
 
-![Kieselmark: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
+![Graphrunner: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
 
 Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg. Thema: „Visualisierung grundlegender Graphensuchalgorithmen mit GUI oder Web-App“.
 
@@ -22,11 +22,11 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 
 ## Bedienung
 
-- **Alle vergleichen:** vier Karten nebeneinander. Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Am Ende zeigt „Loslaufen“, wer den günstigsten Weg gefunden hat.
+- **Alle vergleichen:** vier Karten nebeneinander. Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Darunter stehen die beste Wahl der Welt mit Begründung, ein Fazit und eine Tabelle mit besuchten Feldern, Rechenschritten, Weglänge und Ausdauer. Einen ★ für wenig Suchaufwand bekommt nur, wer den optimalen Weg gefunden hat. Am Ende zeigt „Loslaufen“, wer den günstigsten Weg gefunden hat.
 - **Einzelansicht:** ein Verfahren Zeile für Zeile, mit Pseudocode, Erklärsatz und Besuchsreihenfolge.
 - **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten.
-- **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu.
-- **Tooltip:** Über jedem Feld stehen Koordinate, Gelände, Ausdauer und Besuchsnummer.
+- **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu. „Karte leeren“ macht alles wieder zu Wiese.
+- **Tooltip:** Über jedem Feld stehen Koordinate, Gelände, Ausdauer, die ausgehenden Kanten mit Gewicht (z. B. `Kanten: ↑ 2 · → 4 · ↓ – · ← 2`) und die Besuchsnummer. So sieht man die Karte als Graph.
 
 ## Modell
 
@@ -102,4 +102,5 @@ Jeder Push auf `main` startet `.github/workflows/deploy.yml`: `npm ci` → `npm 
 - Dijkstra, E. W. (1959): A note on two problems in connexion with graphs. *Numerische Mathematik* 1, 269–271.
 - Hart, P. E.; Nilsson, N. J.; Raphael, B. (1968): A Formal Basis for the Heuristic Determination of Minimum Cost Paths. *IEEE Transactions on Systems Science and Cybernetics* 4(2), 100–107.
 - Tarjan, R. E. (1972): Depth-First Search and Linear Graph Algorithms. *SIAM Journal on Computing* 1(2), 146–160.
+- Alle Grafiken (Gelände, Figur, Truhe, Logo) sind eigene Entwürfe im Klötzchenstil; nichts stammt aus anderen Spielen.
 - Schriften: Pixelify Sans, Rubik, JetBrains Mono (SIL Open Font License), lokal eingebunden über `@fontsource`.
