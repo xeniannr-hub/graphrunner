@@ -1,4 +1,4 @@
-# CLAUDE.md: Kieselmark
+# CLAUDE.md: Graphrunner
 
 Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier Gruppenmitglieder und ist die verbindliche Beschreibung des Projekts. Wer etwas Grundsätzliches ändert (Typen, Regeln, Anforderungen), ändert zuerst diese Datei, und zwar per Pull Request.
 
@@ -9,7 +9,8 @@ Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier G
 - **Was:** Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg, Gruppe aus vier Studierenden. Thema: „Visualisierung grundlegender Graphensuchalgorithmen mit GUI oder Web-App“.
 - **Lernziel:** BFS, DFS, Dijkstra und A* verständlich machen, vor allem die Frage: **Wann ist welcher Algorithmus der beste?**
 - **Zielgruppe:** Studierende, die Graphensuche lernen, und Lehrende, die das Werkzeug in der Vorlesung zeigen. Die App muss **ohne Tutorial** verständlich sein.
-- **Idee:** eine Pixel-Spielwelt „Kieselmark“ (Gamification). Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen.
+- **Idee:** ein Pixel-Spiel „Graphrunner“ (Gamification) in einer Klötzchenwelt: Gelände als Blöcke, eine blockige Spielfigur. Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen (keine Texturen, Figuren, Logos oder Schriften daraus).
+- **Name:** Das Spiel heißt nur „Graphrunner“. Das Repo und die Live-Adresse behalten den Namen `kieselmark`.
 - **Abgabe:** als **GitHub-Repo** mit laufender Live-Version auf GitHub Pages, dazu Projektbericht (PDF) und Präsentation. Die Anforderungs-IDs in Abschnitt 9 sind dieselben wie im Bericht (Anhang C). Code, Tests und Bericht verweisen aufeinander.
 
 ---
@@ -73,7 +74,7 @@ src/
   replay/             Replay: Steps vor- und zurückspielen
   world/              terrain (Gelände), worlds (die Welten als Textkarten)
   render/             textures (Pixelgrafik), karte (Karte zeichnen)
-  ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, einzel,
+  ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, bewertung, einzel,
                       seitenleiste, karten-interaktion (Tooltip, Bauen), erklaerung
 prototype/            erster Prototyp, nur Referenz
 docs/                 screenshot.png
@@ -177,10 +178,14 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
 
 ## 8. Oberfläche (Kurzfassung)
 
-- **Kopf:** Logo, „Kieselmark“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
+- **Kopf:** Logo, „Graphrunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
 - **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
 - **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo · Fortschrittsregler „Schritt k von n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen.
-- **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Zähler „besucht“, Status. Darunter das Ergebnis: Fazit-Absatz in ganzen Sätzen und eine Tabelle (besuchte Felder, Weglänge, Ausdauer des Weges, Platz beim Loslaufen), ★ beim besten Wert.
+- **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Zähler „besucht“, Status. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
+  - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten ohne Schätzung (Dijkstra), der Satz nennt zusätzlich, um wie viel Prozent A* weniger Felder besucht; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). In der Eigenen Welt gibt es keine solche Zeile.
+  - Fazit-Absatz in ganzen Sätzen. „Am wenigsten gesucht hat *X*“ steht nur, wenn *X* einen optimalen Weg gefunden hat; sonst z. B. „DFS hat zwar nur 70 Felder angesehen, zahlt aber 176 statt 64 Ausdauer.“
+  - Tabelle: besuchte Felder, Rechenschritte (ausgeführte Pseudocode-Zeilen, keine Millisekunden), Weglänge, Ausdauer des Weges, Platz beim Loslaufen.
+  - ★ bei Weglänge und Ausdauer: kleinster Wert unter den Verfahren mit Weg. ★ bei besuchten Feldern und Rechenschritten: kleinster Wert nur unter den Verfahren mit optimalem Weg (Ruinenhof: minimale Feldzahl, sonst minimale Ausdauer). Ohne Weg steht kein ★ in der Tabelle.
 - **Einzelansicht:** Tabs für die vier Verfahren, Auswahl „Zahlen auf der Karte“. Ein Schritt bedeutet: eine Codezeile. Links die Karte, rechts daneben:
   - Steckbrief, bei allen vier gleich: Verfahren · Wählt als Nächstes · Findet
   - aktueller Erklärsatz mit „Zeile n“
@@ -188,9 +193,9 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
   - Besuchsreihenfolge
 
   Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
-- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, Besuch-Nr. bzw. Status.
-- **Bauen:** Start, Ziel und die sieben Geländearten; klicken oder ziehen, auf jeder Karte. Start und Ziel nur auf begehbare Felder, nie aufeinander. Nach jeder Änderung rechnen alle Verfahren sofort neu.
-- **Darstellung:** nur dunkles Schema. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
+- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Besuch-Nr. bzw. Status. So wird die Karte als Graph aus Knoten und Kanten sichtbar.
+- **Bauen:** Start, Ziel und die sieben Geländearten; klicken oder ziehen, auf jeder Karte. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
+- **Darstellung:** nur dunkles Schema, Klötzchen-Pixelstil. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
 
 ---
 
@@ -213,11 +218,11 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-09 | Vor- und zurückschalten (Einzelansicht je Codezeile, Vergleich je besuchtem Feld), Abspielen mit Tempo | Should | `replay/`, `ui/wiedergabe.ts` |
 | FA-11 | Pseudocode mit aktueller Zeile und Erklärsatz | Should | `algorithms/pseudocode.ts`, `ui/erklaerung.ts` |
 | FA-13 | Alle vier Verfahren gleichzeitig auf derselben Karte, je Schritt ein besuchtes Feld pro Verfahren | Should | `ui/vergleich.ts` |
-| FA-14 | Statistik je Verfahren gegenüberstellen: besuchte Felder (Suchaufwand), Weglänge, Wegkosten; Fazit in Sätzen | Should | Ergebnis-Tabelle |
+| FA-14 | Statistik je Verfahren gegenüberstellen: besuchte Felder (Suchaufwand), Rechenschritte, Weglänge, Wegkosten; Fazit in Sätzen, beste Wahl je Welt | Should | Ergebnis-Tabelle, `ui/bewertung.ts` |
 | FA-16 | Karte mit Geländekosten als gewichteter Graph; Start, Ziel und Gelände veränderbar | Must | `world/`, `algorithms/raster.ts` |
 | FA-21 | Gefundene Wege ablaufen lassen („Loslaufen“), Platzierung nach Kosten | Could | `ui/vergleich.ts` |
 | FA-22 | Je Algorithmus eine Welt, deren Gelände zeigt, wann er am besten passt, mit kurzer Begründung | Must | `world/worlds.ts`, Seitenleiste |
-| FA-23 | Tooltip über jedem Feld in beiden Ansichten: Koordinate, Kategorie, Gewichtung, Besuch-Nr. | Should | `ui/erklaerung.ts` (`feldInfo`) |
+| FA-23 | Tooltip über jedem Feld in beiden Ansichten: Koordinate, Kategorie, Gewichtung, ausgehende Kanten mit Gewicht, Besuch-Nr. | Should | `ui/erklaerung.ts` (`feldInfo`) |
 | FA-24 | Gamification: Pixel-Spielwelt mit Spielfigur, Schatztruhe als Ziel und Rennen beim Loslaufen | Should | `render/textures.ts`, `render/karte.ts` |
 
 ### Qualitätsanforderungen (ISO/IEC 25010)
@@ -284,6 +289,8 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
   - Aussagen der Welten
   - Erklärsatz nennt dieselben Felder, die `fokus()` markiert
   - Leistung (QA-03)
+  - `besteWahl()` liefert in jeder der vier Welten genau deren Algorithmus; ohne Weg enthält die Tabelle kein „★“
+  - `feldInfo()` nennt die ausgehenden Kanten mit Gewicht (mit Rechenweg)
 
 ### Code
 
