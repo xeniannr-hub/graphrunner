@@ -10,7 +10,7 @@ Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier G
 - **Lernziel:** BFS, DFS, Dijkstra und A* verständlich machen, vor allem die Frage: **Wann ist welcher Algorithmus der beste?**
 - **Zielgruppe:** Studierende, die Graphensuche lernen, und Lehrende, die das Werkzeug in der Vorlesung zeigen. Die App muss **ohne Tutorial** verständlich sein.
 - **Idee:** ein Pixel-Spiel „GraphRunner“ (Gamification) in einer Klötzchenwelt: Gelände als Blöcke, eine blockige Spielfigur. Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen (keine Texturen, Figuren, Logos oder Schriften daraus).
-- **Name:** Das Spiel heißt nur „GraphRunner“ („Graph“ steingrau, „Runner“ orange). Designvorlage: die beiden Entwürfe in `docs/` (Logo und Oberfläche). Das Repo und die Live-Adresse behalten den Namen `kieselmark`.
+- **Name:** Das Spiel heißt nur „GraphRunner“ („Graph“ steingrau, „Runner“ orange). Designvorlage: die beiden Entwürfe in `docs/` (Logo und Oberfläche). Repo, Paket und Live-Adresse heißen ebenfalls `graphrunner` (https://xeniannr-hub.github.io/graphrunner/). Nur `prototype/` trägt noch den alten Arbeitstitel „Kieselmark“ und bleibt als Referenz unverändert.
 - **Abgabe:** als **GitHub-Repo** mit laufender Live-Version auf GitHub Pages, dazu Projektbericht (PDF) und Präsentation. Die Anforderungs-IDs in Abschnitt 9 sind dieselben wie im Bericht (Anhang C). Code, Tests und Bericht verweisen aufeinander.
 
 ---

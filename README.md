@@ -2,7 +2,7 @@
 
 Ein Pixel-Spiel im Klötzchenstil im Browser, die zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
 
-**Live:** https://xeniannr-hub.github.io/kieselmark/
+**Live:** https://xeniannr-hub.github.io/graphrunner/
 
 ![GraphRunner: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
 
