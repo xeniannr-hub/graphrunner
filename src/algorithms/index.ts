@@ -24,5 +24,5 @@ export const SUCHE: Readonly<Record<Algo, (grid: Grid, start: Pos, ziel: Pos) =>
   astar: (g, s, z) => aufzeichnen("astar", astar(g, s, z)),
 };
 
-export { PSEUDOCODE, type PseudoZeile } from "./pseudocode";
-export { RICHTUNGEN, billigstesFeld, manhattan, nachbarn, zuId, zuPos } from "./raster";
+export { PSEUDOCODE } from "./pseudocode";
+export { nachbarn } from "./raster";

@@ -75,7 +75,7 @@ function laeuferPos(bild: KartenBild, t: number): { x: number; y: number; laeuft
   return { x: letzt.x, y: letzt.y, laeuft: false };
 }
 
-export function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBild): void {
+function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBild): void {
   const r = bild.replay;
   const e = r.ergebnis;
   const b = e.breite;
@@ -208,9 +208,19 @@ export function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: Ka
   ctx.drawImage(sp.figur, fx - gr / 2, fy - gr * 0.55 - hops, gr, gr);
 }
 
-/** Kachelgröße in Gerätepixeln, damit die Karte die verfügbare Breite füllt und scharf bleibt. */
-export function kachelGroesse(breiteCss: number, spalten: number): number {
+/**
+ * Passt die Leinwand an ihre angezeigte Breite an und zeichnet die Karte.
+ * Die Kachelgröße ist eine ganze Zahl Gerätepixel, damit die Pixelgrafik scharf bleibt.
+ */
+export function zeichneLeinwand(canvas: HTMLCanvasElement, bild: KartenBild): void {
+  const spalten = bild.karte[0].length;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  return Math.max(6, Math.floor((breiteCss * dpr) / spalten));
+  const breite = canvas.clientWidth || (canvas.parentElement?.clientWidth ?? 320);
+  const ts = Math.max(6, Math.floor((breite * dpr) / spalten));
+  if (canvas.width !== spalten * ts) {
+    canvas.width = spalten * ts;
+    canvas.height = bild.karte.length * ts;
+  }
+  zeichneKarte(canvas.getContext("2d") as CanvasRenderingContext2D, ts, bild);
 }
 

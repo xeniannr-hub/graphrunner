@@ -1,0 +1,145 @@
+// Zustand der Oberfläche: gewählte Welt, bearbeitbare Karte, Aufzeichnungen und Positionen beider Ansichten.
+// Nichts davon wird gespeichert (RB-03).
+import { ALGOS, SUCHE } from "../algorithms";
+import type { Zahlen } from "../render/karte";
+import { Replay } from "../replay/replay";
+import type { Algo, Pos, SearchResult, TerrainKey } from "../types";
+import { begehbar, leseKarte, zuGrid, type Karte } from "../world/terrain";
+import { WELTEN } from "../world/worlds";
+
+export type Ansicht = "vergleich" | "einzel";
+export type Werkzeug = TerrainKey | "start" | "ziel";
+
+export interface Zustand {
+  weltIndex: number;
+  karte: Karte;
+  /** Zählt Änderungen an der Karte (für den Zwischenspeicher der Geländegrafik). */
+  version: number;
+  start: Pos;
+  ziel: Pos;
+  ansicht: Ansicht;
+  einzelAlgo: Algo;
+  zahlen: Zahlen;
+  ergebnisse: Record<Algo, SearchResult>;
+  /** Replays der Vergleichsansicht; Position = k-ter Besuch. */
+  vergleich: Record<Algo, Replay>;
+  /** Replays der Einzelansicht; Position = Codezeile. */
+  einzel: Record<Algo, Replay>;
+  /** Vergleich: Anzahl Schritte, also besuchte Felder je Verfahren. */
+  k: number;
+  spielt: boolean;
+  /** Tempo 1 … 10. */
+  tempo: number;
+  /** Ausdauer seit „Loslaufen“, null = Rennen nicht gestartet. */
+  laufzeit: number | null;
+  werkzeug: Werkzeug;
+}
+
+const beobachter: (() => void)[] = [];
+
+/** Wird nach jeder Änderung aufgerufen, damit Ansichten sich neu zeichnen. */
+export function beiAenderung(f: () => void): void {
+  beobachter.push(f);
+}
+
+function melde(): void {
+  for (const f of beobachter) f();
+}
+
+function rechne(karte: Karte, start: Pos, ziel: Pos): Record<Algo, SearchResult> {
+  const grid = zuGrid(karte);
+  return Object.fromEntries(ALGOS.map((a) => [a, SUCHE[a](grid, start, ziel)])) as Record<Algo, SearchResult>;
+}
+
+function replays(e: Record<Algo, SearchResult>): Record<Algo, Replay> {
+  return Object.fromEntries(ALGOS.map((a) => [a, new Replay(e[a])])) as Record<Algo, Replay>;
+}
+
+const erste = WELTEN[0];
+const ersteKarte = leseKarte(erste.karte);
+const ersteErgebnisse = rechne(ersteKarte, erste.start, erste.ziel);
+
+export const Z: Zustand = {
+  weltIndex: 0,
+  karte: ersteKarte,
+  version: 0,
+  start: erste.start,
+  ziel: erste.ziel,
+  ansicht: "vergleich",
+  einzelAlgo: "bfs",
+  zahlen: "reihenfolge",
+  ergebnisse: ersteErgebnisse,
+  vergleich: replays(ersteErgebnisse),
+  einzel: replays(ersteErgebnisse),
+  k: 0,
+  spielt: false,
+  tempo: 5,
+  laufzeit: null,
+  werkzeug: "wald",
+};
+
+/** Größte Zahl von Besuchen über alle Verfahren: so viele Schritte hat der Vergleich. */
+export function vergleichMax(): number {
+  return Math.max(...ALGOS.map((a) => Z.ergebnisse[a].besucht));
+}
+
+/** Setzt den Vergleich auf k besuchte Felder je Verfahren. */
+export function geheVergleich(k: number): void {
+  Z.k = Math.max(0, Math.min(vergleichMax(), Math.round(k)));
+  for (const a of ALGOS) Z.vergleich[a].gehe(Z.vergleich[a].positionNachBesuch(Z.k));
+  // Wer zurückspult, bricht das Rennen ab.
+  if (Z.k < vergleichMax()) Z.laufzeit = null;
+}
+
+/** Rechnet alle vier Verfahren neu; ansEnde zeigt sofort die Ergebnisse (nach dem Bauen). */
+function neuRechnen(ansEnde: boolean): void {
+  Z.version++;
+  Z.ergebnisse = rechne(Z.karte, Z.start, Z.ziel);
+  Z.vergleich = replays(Z.ergebnisse);
+  Z.einzel = replays(Z.ergebnisse);
+  Z.laufzeit = null;
+  Z.spielt = false;
+  geheVergleich(ansEnde ? vergleichMax() : 0);
+  if (ansEnde) for (const a of ALGOS) Z.einzel[a].gehe(Z.einzel[a].laenge);
+}
+
+export function ladeWelt(i: number): void {
+  const w = WELTEN[i];
+  Z.weltIndex = i;
+  Z.karte = leseKarte(w.karte);
+  Z.start = w.start;
+  Z.ziel = w.ziel;
+  neuRechnen(false);
+  melde();
+}
+
+export const istEigeneWelt = (): boolean => WELTEN[Z.weltIndex].algo === null;
+
+const gleich = (a: Pos, b: Pos) => a.x === b.x && a.y === b.y;
+
+/** Darf das aktuelle Werkzeug auf p angewendet werden? Start und Ziel nur auf begehbare Felder, nie aufeinander. */
+export function darfBauen(p: Pos): boolean {
+  const w = Z.werkzeug;
+  if (w === "start") return begehbar(Z.karte[p.y][p.x]) && !gleich(p, Z.ziel);
+  if (w === "ziel") return begehbar(Z.karte[p.y][p.x]) && !gleich(p, Z.start);
+  if (!begehbar(w)) return !gleich(p, Z.start) && !gleich(p, Z.ziel);
+  return true;
+}
+
+/** Wendet das Werkzeug an; alle Verfahren rechnen sofort neu. */
+export function baue(p: Pos): void {
+  if (!istEigeneWelt() || !darfBauen(p)) return;
+  const w = Z.werkzeug;
+  if (w === "start") {
+    if (gleich(p, Z.start)) return;
+    Z.start = p;
+  } else if (w === "ziel") {
+    if (gleich(p, Z.ziel)) return;
+    Z.ziel = p;
+  } else {
+    if (Z.karte[p.y][p.x] === w) return;
+    Z.karte[p.y][p.x] = w;
+  }
+  neuRechnen(true);
+  melde();
+}

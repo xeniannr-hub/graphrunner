@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ALGOS, SUCHE } from "./index";
-import { nachbarn, schaetzung } from "./raster";
+import { RICHTUNGEN, nachbarn, schaetzung } from "./raster";
 
 const I = Infinity;
 
 describe("Raster", () => {
+  it("Nachbarreihenfolge ist fest: oben, rechts, unten, links", () => {
+    expect(RICHTUNGEN.map((r) => r.name)).toEqual(["oben", "rechts", "unten", "links"]);
+  });
+
   it("liefert Nachbarn in der Reihenfolge oben, rechts, unten, links", () => {
     const grid = [
       [1, 1, 1],
