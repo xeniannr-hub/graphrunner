@@ -6,7 +6,7 @@ import "@fontsource/rubik/latin-700.css";
 import "@fontsource/jetbrains-mono/latin-400.css";
 import "@fontsource/jetbrains-mono/latin-600.css";
 import "./styles.css";
-import { sprites } from "./render/textures";
+import { zeichneBanner, zeichneLogo } from "./render/kopf";
 import { Einzel } from "./ui/einzel";
 import { Seitenleiste } from "./ui/seitenleiste";
 import { Vergleich } from "./ui/vergleich";
@@ -19,18 +19,21 @@ const geaendert = () => {
 };
 beiAenderung(geaendert);
 
-// Kopf: Logo, Titel, Untertitel, Umschalter der Ansicht.
+// Kopf: Banner, Logo, Titel, Untertitel, Umschalter der Ansicht.
 const kopf = document.createElement("header");
 kopf.className = "kopf";
-const logo = document.createElement("canvas");
-logo.width = 16;
-logo.height = 16;
+const banner = document.createElement("canvas");
+banner.className = "banner";
+banner.setAttribute("aria-hidden", "true");
+const logo = zeichneLogo();
 logo.className = "logo";
 logo.setAttribute("aria-hidden", "true");
-(logo.getContext("2d") as CanvasRenderingContext2D).drawImage(sprites().logo, 0, 0);
+const trenner = document.createElement("span");
+trenner.className = "trenner";
+trenner.setAttribute("aria-hidden", "true");
 const titel = document.createElement("div");
 titel.className = "titel";
-titel.innerHTML = `<h1>Graphrunner</h1><p>Wann ist welcher Suchalgorithmus der beste?</p>`;
+titel.innerHTML = `<h1><span class="graph">Graph</span><span class="runner">Runner</span></h1><p>Wann ist welcher Suchalgorithmus der beste?</p>`;
 const umschalter = document.createElement("div");
 umschalter.className = "umschalter";
 umschalter.setAttribute("role", "group");
@@ -51,7 +54,7 @@ for (const [a, text] of [
   ansichtKnoepfe.set(a, b);
   umschalter.append(b);
 }
-kopf.append(logo, titel, umschalter);
+kopf.append(banner, logo, trenner, titel, umschalter);
 
 const seitenleiste = new Seitenleiste(geaendert);
 const vergleich = new Vergleich(geaendert);
@@ -92,6 +95,7 @@ function bild(jetzt: number): void {
   if (g !== groesse) {
     groesse = g;
     schmutzig = true;
+    zeichneBanner(banner);
   }
   if (schmutzig || laeuft) {
     schmutzig = false;

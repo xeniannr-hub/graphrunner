@@ -1,15 +1,15 @@
-/* Graphrunner: nur dunkles Schema (QA-09 ist Won't), Klötzchenstil. Pixelschrift nur in Überschriften. */
+/* GraphRunner: nur dunkles Schema in Nachtblau (QA-09 ist Won't), Pixelwelt im Klötzchenstil. Pixelschrift nur in Überschriften. */
 :root {
   color-scheme: dark;
-  --grund: #15120f;
-  /* Blockkante: hell oben links, dunkel unten rechts. */
-  --block: inset 2px 2px 0 rgba(255, 255, 255, 0.09), inset -3px -3px 0 rgba(0, 0, 0, 0.38);
-  --block-gedrueckt: inset 3px 3px 0 rgba(0, 0, 0, 0.42), inset -2px -2px 0 rgba(255, 255, 255, 0.07);
-  --flaeche: #211c17;
-  --flaeche-2: #2b251e;
-  --linie: #433a2f;
-  --text: #f1e9da;
-  --gedaempft: #b9ad99;
+  --grund: #0b111d;
+  --flaeche: #131b2a;
+  --flaeche-2: #1a2436;
+  --linie: #26344b;
+  --text: #e9eef6;
+  --gedaempft: #a3b1c6;
+  --orange: #f5a623;
+  --rund: 8px;
+  --schatten: 0 3px 10px rgba(0, 0, 0, 0.35);
   --akzent: #ffd400;
   --bfs: #ff4d73;
   --dfs: #a56bff;
@@ -37,11 +37,6 @@ body {
 body {
   min-width: 0;
   overflow-x: hidden;
-  /* Feines Blockraster im Hintergrund. */
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.025) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 2px, transparent 2px);
-  background-size: 32px 32px;
 }
 
 h1,
@@ -82,24 +77,50 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* ---------- Kopf ---------- */
+/* ---------- Kopf: Banner mit Pixel-Landschaft, Logo-Insel, zweifarbiger Titel ---------- */
 .kopf {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1rem;
   flex-wrap: wrap;
-  padding: 0.75rem 1rem;
-  /* Grasnarbe über Erde als Kante des Kopfes. */
-  border-bottom: 4px solid #4f8a32;
-  box-shadow: 0 6px 0 #3b2a1a;
-  margin-bottom: 6px;
-  background: var(--flaeche);
+  padding: 0.6rem 1.2rem;
+  min-height: 116px;
+  border-bottom: 3px solid var(--orange);
+  background: #0f2242;
+  overflow: hidden;
+}
+
+.banner {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+}
+
+/* Links dunkler, damit der Titel gut lesbar bleibt. */
+.kopf::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(8, 14, 26, 0.92) 0%, rgba(8, 14, 26, 0.75) 35%, rgba(8, 14, 26, 0.1) 70%);
 }
 
 .logo {
-  width: 44px;
-  height: 44px;
-  filter: drop-shadow(3px 3px 0 #000);
+  width: 96px;
+  height: 96px;
+  flex: none;
+  filter: drop-shadow(0 0 10px rgba(255, 196, 40, 0.25));
+}
+
+.trenner {
+  align-self: stretch;
+  width: 3px;
+  margin: 0.6rem 0.2rem;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .titel {
@@ -108,34 +129,69 @@ canvas {
 }
 
 .titel h1 {
-  font-size: 1.9rem;
-  line-height: 1.1;
-  text-shadow: 3px 3px 0 #000;
+  font-size: 2.9rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.titel h1 .graph {
+  color: #dfe3e8;
+  text-shadow: 0 3px 0 #7d8590, 0 5px 0 #262b33, 3px 6px 0 rgba(0, 0, 0, 0.6);
+}
+
+.titel h1 .runner {
+  color: #ffa51f;
+  text-shadow: 0 3px 0 #b75a08, 0 5px 0 #4a2304, 3px 6px 0 rgba(0, 0, 0, 0.6);
 }
 
 .titel p {
-  margin: 0.1rem 0 0;
-  color: var(--gedaempft);
+  margin: 0.55rem 0 0;
+  color: #d6deea;
+  font-weight: 500;
 }
 
 .umschalter {
   display: flex;
-  border: 2px solid var(--linie);
-  border-radius: 0;
-  overflow: hidden;
+  gap: 0.25rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: rgba(8, 14, 26, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .umschalter button {
   border: 0;
+  border-radius: 999px;
   background: transparent;
-  padding: 0.45rem 0.8rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
+  font-weight: 500;
 }
 
 .umschalter button[aria-pressed="true"] {
   background: var(--akzent);
   color: #1a1408;
   font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .kopf {
+    min-height: 0;
+    gap: 0.6rem;
+  }
+  .logo {
+    width: 64px;
+    height: 64px;
+  }
+  .trenner {
+    display: none;
+  }
+  .kopf::before {
+    background: rgba(8, 14, 26, 0.72);
+  }
+  .titel h1 {
+    font-size: 2rem;
+  }
 }
 
 /* ---------- Grundlayout ---------- */
@@ -195,7 +251,7 @@ canvas {
   padding: 0.5rem 0.65rem;
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   cursor: pointer;
   text-align: left;
 }
@@ -218,7 +274,7 @@ canvas {
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.05rem 0.4rem;
-  border-radius: 0;
+  border-radius: var(--rund);
   background: var(--farbe);
   color: #1a1408;
 }
@@ -232,7 +288,7 @@ canvas {
   background: var(--flaeche);
   border-left: 4px solid var(--akzent);
   padding: 0.6rem 0.75rem;
-  border-radius: 0;
+  border-radius: var(--rund);
 }
 
 .begruendung p {
@@ -247,7 +303,7 @@ canvas {
 .panel {
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.65rem 0.75rem;
 }
 
@@ -304,7 +360,7 @@ canvas {
   padding: 0.35rem 0.45rem;
   background: var(--flaeche-2);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   cursor: pointer;
 }
 
@@ -320,7 +376,7 @@ canvas {
   gap: 0.5rem 1rem;
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.55rem 0.7rem;
   margin-bottom: 0.8rem;
 }
@@ -335,7 +391,7 @@ canvas {
   padding: 0.35rem 0.55rem;
   background: var(--flaeche-2);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   cursor: pointer;
   font-family: var(--mono);
 }
@@ -436,16 +492,14 @@ input[type="range"] {
   width: 14px;
 }
 
-/* Wie auf der Karte: Rahmen in der Farbe des Verfahrens, darunter bleibt das Gelände sichtbar. */
+/* Wie auf der Karte: durchscheinende Farbe über Wiese. */
 .legende .farben b,
 .legende .besucht {
-  background: color-mix(in srgb, currentColor 22%, #5c9a3c);
-  box-shadow: inset 0 0 0 2px currentColor;
+  background: color-mix(in srgb, currentColor 50%, #3f9e2f);
 }
 
 .legende .wartet {
-  background: radial-gradient(#fff 0 2px, #000 2.5px 3.5px, #5c9a3c 4px);
-  box-shadow: inset 0 0 0 2px #fff;
+  background: radial-gradient(#fff 0 2px, #000 2.5px 3.5px, #8cc581 4px);
 }
 
 .legende .kante {
@@ -493,7 +547,7 @@ input[type="range"] {
   background: var(--flaeche);
   border: 2px solid var(--linie);
   border-top: 4px solid var(--farbe);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.5rem;
   min-width: 0;
 }
@@ -523,7 +577,7 @@ input[type="range"] {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: 0;
+  border-radius: var(--rund);
   background: var(--farbe);
   margin-right: 0.35rem;
 }
@@ -553,7 +607,7 @@ input[type="range"] {
   width: 100%;
   height: auto;
   aspect-ratio: 32 / 20;
-  border-radius: 0;
+  border-radius: var(--rund);
   cursor: crosshair;
   touch-action: none;
 }
@@ -563,7 +617,7 @@ input[type="range"] {
   margin-top: 1rem;
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.75rem;
 }
 
@@ -647,7 +701,7 @@ tbody th {
   padding: 0.4rem 0.8rem;
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   cursor: pointer;
   font-weight: 500;
 }
@@ -668,7 +722,7 @@ tbody th {
 .auswahl select {
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.25rem 0.4rem;
 }
 
@@ -688,7 +742,7 @@ tbody th {
 .karte-einzel {
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.5rem;
   min-width: 0;
 }
@@ -702,7 +756,7 @@ tbody th {
 .einzel-seite > * {
   background: var(--flaeche);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.6rem 0.7rem;
   margin: 0;
 }
@@ -740,7 +794,7 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   padding: 0.05rem 0.4rem;
-  border-radius: 0;
+  border-radius: var(--rund);
 }
 
 .satz {
@@ -759,7 +813,7 @@ tbody th {
 
 .code li {
   padding: 0.05rem 0.3rem;
-  border-radius: 0;
+  border-radius: var(--rund);
 }
 
 .code li::marker {
@@ -789,7 +843,7 @@ tbody th {
 .besuchsliste li {
   counter-increment: besuch;
   background: var(--flaeche-2);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.05rem 0.3rem;
 }
 
@@ -810,7 +864,7 @@ tbody th {
   pointer-events: none;
   background: rgba(14, 11, 8, 0.95);
   border: 2px solid var(--linie);
-  border-radius: 0;
+  border-radius: var(--rund);
   padding: 0.35rem 0.55rem;
   font-size: 0.85rem;
   max-width: 16rem;
@@ -821,30 +875,19 @@ tbody th {
   font-weight: 600;
 }
 
-/* ---------- Klötzchenstil: kantige Flächen und Knöpfe mit Blockkante ---------- */
-.welt,
-.knopf,
-.werkzeug,
-.umschalter button,
+/* ---------- Karten und Knöpfe: dunkle Flächen mit weichem Schatten ---------- */
 .panel,
 .wiedergabe,
 .karte-box,
 .ergebnis,
 .begruendung {
-  box-shadow: var(--block);
-}
-
-.knopf:active:not(:disabled),
-.welt[aria-pressed="true"],
-.werkzeug[aria-pressed="true"],
-.umschalter button[aria-pressed="true"] {
-  box-shadow: var(--block-gedrueckt);
+  box-shadow: var(--schatten);
 }
 
 .knopf.haupt {
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.5), inset -3px -3px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 0 #b98f00;
 }
 
-.kuerzel {
-  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+.begruendung {
+  border: 2px solid var(--akzent);
 }

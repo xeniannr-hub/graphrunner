@@ -1,5 +1,5 @@
 // Pixelgrafik im Klötzchenstil (eigene Entwürfe, nichts aus anderen Spielen): 16 × 16-Texturen je Gelände
-// mit eigener Farbe und eigenem Muster, grobe 2 × 2-Pixel und Blockkanten; dazu Spielfigur, Truhe, Fahne und Logo.
+// mit eigener Farbe und eigenem Muster; dazu Spielfigur, Schatztruhe und Startfahne.
 import type { TerrainKey } from "../types";
 
 const KACHEL = 16;
@@ -26,18 +26,7 @@ const px = (g: CanvasRenderingContext2D, x: number, y: number, farbe: string, b 
   g.fillRect(x, y, b, h);
 };
 
-/** Rauschen aus groben 2 × 2-Pixeln: Das gibt den kantigen Blocklook. */
-function rauschen(g: CanvasRenderingContext2D, r: () => number, farben: readonly string[]): void {
-  for (let y = 0; y < KACHEL; y += 2) for (let x = 0; x < KACHEL; x += 2) px(g, x, y, farben[Math.floor(r() * farben.length)], 2, 2);
-}
-
-/** Blockkante: heller Rand oben und links, dunkler Rand unten und rechts. */
-function kante(g: CanvasRenderingContext2D, hell: number, dunkel: number): void {
-  px(g, 0, 0, `rgba(255, 255, 255, ${hell})`, KACHEL, 1);
-  px(g, 0, 1, `rgba(255, 255, 255, ${hell})`, 1, KACHEL - 1);
-  px(g, 0, KACHEL - 1, `rgba(0, 0, 0, ${dunkel})`, KACHEL, 1);
-  px(g, KACHEL - 1, 0, `rgba(0, 0, 0, ${dunkel})`, 1, KACHEL - 1);
-}
+const wahl = <T>(r: () => number, liste: readonly T[]): T => liste[Math.floor(r() * liste.length)];
 
 const MALER: Readonly<Record<TerrainKey, Maler>> = {
   // Weg: graubeige Pflastersteine in versetzten Reihen.
@@ -67,60 +56,75 @@ const MALER: Readonly<Record<TerrainKey, Maler>> = {
   },
   // Wiese: hellgrünes Rauschen mit einzelnen Halmen, selten eine Blume.
   gras: (g, r, v) => {
-    rauschen(g, r, ["#5c9a3c", "#66a644", "#559137", "#6fae4a", "#5c9a3c"]);
-    for (let k = 0; k < 4; k++) px(g, 2 * Math.floor(r() * 8), 2 * Math.floor(r() * 8), "#86c35a", 2, 2);
-    if (v === 3) {
-      const x = 4 + 2 * Math.floor(r() * 4);
-      const y = 4 + 2 * Math.floor(r() * 4);
-      px(g, x, y, "#f2e46b", 2, 2);
+    px(g, 0, 0, "#3f9e2f", KACHEL, KACHEL);
+    for (let k = 0; k < 18; k++) px(g, Math.floor(r() * 16), Math.floor(r() * 16), wahl(r, ["#48ab36", "#379127", "#4fb33c"]));
+    for (let k = 0; k < 3; k++) {
+      const x = 1 + Math.floor(r() * 14);
+      const y = 2 + Math.floor(r() * 13);
+      px(g, x, y, "#62c64c");
+      px(g, x, y - 1, "#62c64c");
     }
-    kante(g, 0.12, 0.22);
+    if (v === 3) px(g, 5 + Math.floor(r() * 6), 5 + Math.floor(r() * 6), "#f2e46b", 2, 2);
   },
-  // Wald: Laubblock von oben, dunkelgrün mit Lücken und hellen Blättern, in der Mitte ein Stück Stamm.
+  // Wald: dichte Baumkronen von oben, dunkelgrün mit runden, hellen Kuppen.
   wald: (g, r) => {
-    rauschen(g, r, ["#1f6b2a", "#257a31", "#1b5f25", "#2c8236"]);
-    for (let k = 0; k < 6; k++) px(g, 2 * Math.floor(r() * 8), 2 * Math.floor(r() * 8), "#123d17", 2, 2);
-    for (let k = 0; k < 5; k++) px(g, 2 * Math.floor(r() * 8), 2 * Math.floor(r() * 8), "#4f9c45", 2, 2);
-    px(g, 6, 6, "#5b3a1f", 4, 4);
-    px(g, 7, 7, "#7a5130", 2, 2);
-    kante(g, 0.14, 0.4);
+    px(g, 0, 0, "#14501f", KACHEL, KACHEL);
+    for (const [mx, my] of [
+      [4, 4],
+      [12, 5],
+      [7, 11],
+      [14, 13],
+      [0, 12],
+    ]) {
+      for (let y = -4; y <= 4; y++) {
+        for (let x = -4; x <= 4; x++) {
+          if (x * x + y * y > 17) continue;
+          const f = y < -1 && x < 1 ? "#3a9a3c" : y > 1 || x > 2 ? "#1d6a28" : "#2a8232";
+          const qx = mx + x;
+          const qy = my + y;
+          if (qx >= 0 && qx < KACHEL && qy >= 0 && qy < KACHEL) px(g, qx, qy, r() < 0.12 ? "#4fb04a" : f);
+        }
+      }
+    }
   },
-  // Sumpf: olivbraun mit dunklen Wasserlachen und Schilf.
+  // Sumpf:  // Sumpf: olivbraun mit dunklen Wasserlachen und Schilf.
   sumpf: (g, r) => {
-    rauschen(g, r, ["#5a5a34", "#62623a", "#53532f", "#6a6840"]);
+    px(g, 0, 0, "#4a4a2a", KACHEL, KACHEL);
+    for (let k = 0; k < 30; k++) px(g, Math.floor(r() * 16), Math.floor(r() * 16), wahl(r, ["#56562f", "#3f4024", "#5e5d35"]));
     for (let k = 0; k < 3; k++) {
-      const x = 2 * Math.floor(r() * 5);
-      const y = 2 * Math.floor(r() * 6);
-      px(g, x, y, "#2c3f3a", 6, 4);
-      px(g, x + 2, y + 2, "#3b5650", 2, 2);
+      const x = Math.floor(r() * 11);
+      const y = Math.floor(r() * 12);
+      px(g, x, y, "#22302e", 5, 3);
+      px(g, x + 1, y + 1, "#34504a", 2, 1);
     }
-    for (let k = 0; k < 3; k++) {
-      const x = 2 + 2 * Math.floor(r() * 6);
-      const y = 6 + 2 * Math.floor(r() * 4);
-      px(g, x, y - 4, "#9aa04a", 1, 4);
-      px(g, x, y - 5, "#6b4a25", 1, 1);
+    for (let k = 0; k < 4; k++) {
+      const x = 1 + Math.floor(r() * 14);
+      const y = 4 + Math.floor(r() * 10);
+      px(g, x, y - 3, "#9aa04a", 1, 3);
+      px(g, x, y - 4, "#6b4a25");
     }
-    kante(g, 0.08, 0.22);
   },
-  // Wasser: Blau mit hellen Wellenlinien.
+  // Wasser:  // Wasser: Blau mit hellen Wellenlinien.
   wasser: (g, r, v) => {
-    rauschen(g, r, ["#2d64c4", "#3170d2", "#2a5cb6"]);
-    for (let y = 2; y < KACHEL; y += 6) {
-      for (let x = 0; x < KACHEL; x += 2) if ((x + v * 4 + y) % 8 < 4) px(g, x, y, "#6aa2ee", 2, 1);
+    px(g, 0, 0, "#1f6fe0", KACHEL, KACHEL);
+    for (let k = 0; k < 14; k++) px(g, Math.floor(r() * 16), Math.floor(r() * 16), wahl(r, ["#2a7cec", "#1a63cf"]));
+    for (let y = 3; y < KACHEL; y += 6) {
+      for (let x = 0; x < KACHEL; x++) if ((x + v * 3 + y) % 9 < 3) px(g, x, y, "#5da0f5");
     }
   },
   // Fels: grauer Stein mit heller Oberkante und Schatten an der Unterkante.
   fels: (g, r) => {
-    rauschen(g, r, ["#7f7d79", "#8a8884", "#75736f", "#918f8a"]);
-    for (let k = 0; k < 4; k++) {
-      const x = 2 * Math.floor(r() * 6);
-      const y = 2 + 2 * Math.floor(r() * 5);
-      px(g, x, y, "#5e5c58", 4, 1);
+    // Graue Steinquader in versetzten Reihen.
+    px(g, 0, 0, "#555b63", KACHEL, KACHEL);
+    for (let reihe = 0; reihe < 3; reihe++) {
+      const y = reihe * 5;
+      for (let x = reihe % 2 === 0 ? 0 : -4; x < KACHEL; x += 8) {
+        px(g, x, y, wahl(r, ["#8d939b", "#848a92", "#979ca3"]), 7, 4);
+        px(g, x, y, "#b2b7bd", 7, 1);
+      }
     }
-    px(g, 0, 0, "#b4b2ad", KACHEL, 1);
-    px(g, 0, 0, "#a5a39e", 1, 13);
-    px(g, 0, 13, "#4a4845", KACHEL, 1);
-    px(g, 0, 14, "#36342f", KACHEL, 2);
+    // Schatten an der Unterkante.
+    px(g, 0, 14, "#33373d", KACHEL, 2);
   },
 };
 
@@ -151,40 +155,9 @@ function sprite(zeilen: readonly string[], farben: Readonly<Record<string, strin
   return c;
 }
 
-let spriteCache: { figur: HTMLCanvasElement; truhe: HTMLCanvasElement; fahne: HTMLCanvasElement; logo: HTMLCanvasElement } | null = null;
+let spriteCache: { figur: HTMLCanvasElement; truhe: HTMLCanvasElement; fahne: HTMLCanvasElement } | null = null;
 
-/** Logo: vier Geländeblöcke, darüber ein Weg durch drei Knoten, also eine Karte als Graph. */
-function logo(): HTMLCanvasElement {
-  const [c, g] = leinwand(16, 16);
-  const block = (x: number, y: number, hell: string, mitte: string, dunkel: string) => {
-    px(g, x, y, mitte, 8, 8);
-    px(g, x, y, hell, 8, 1);
-    px(g, x, y, hell, 1, 8);
-    px(g, x, y + 7, dunkel, 8, 1);
-    px(g, x + 7, y, dunkel, 1, 8);
-  };
-  block(0, 0, "#8fd16a", "#5c9a3c", "#2f5a1f");
-  block(8, 0, "#c9c6c0", "#8a8884", "#4a4845");
-  block(0, 8, "#7fb4ff", "#3170d2", "#1d3f80");
-  block(8, 8, "#e0d4bb", "#b3a690", "#6e665a");
-  // Kanten erst schwarz umrandet, dann weiß; Knoten als Quadrate darüber.
-  px(g, 3, 2, "#000", 10, 4);
-  px(g, 10, 2, "#000", 4, 12);
-  px(g, 4, 3, "#fff", 8, 2);
-  px(g, 11, 3, "#fff", 2, 10);
-  for (const [x, y, f] of [
-    [2, 2, "#ff4d73"],
-    [10, 2, "#ffd400"],
-    [10, 10, "#ff8a2b"],
-  ] as const) {
-    px(g, x - 1, y - 1, "#000", 6, 6);
-    px(g, x, y, f, 4, 4);
-    px(g, x, y, "#fff", 2, 1);
-  }
-  return c;
-}
-
-/** Blockige Spielfigur (eigener Entwurf), Schatztruhe, Startfahne und Logo. */
+/** Blockige Spielfigur (eigener Entwurf), Schatztruhe und Startfahne. */
 export function sprites() {
   if (spriteCache) return spriteCache;
   spriteCache = {
@@ -230,7 +203,6 @@ export function sprites() {
       [".prrrrrr", ".prrrrrr", ".prrrr..", ".prr....", ".p......", ".p......", ".p......", "ppp....."],
       { p: "#4a2f17", r: "#ff5c5c" },
     ),
-    logo: logo(),
   };
   return spriteCache;
 }

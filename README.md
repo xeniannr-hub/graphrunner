@@ -1,10 +1,10 @@
-# Graphrunner
+# GraphRunner
 
 Ein Pixel-Spiel im Klötzchenstil im Browser, die zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
 
 **Live:** https://xeniannr-hub.github.io/kieselmark/
 
-![Graphrunner: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
+![GraphRunner: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
 
 Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg. Thema: „Visualisierung grundlegender Graphensuchalgorithmen mit GUI oder Web-App“.
 

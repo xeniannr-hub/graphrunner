@@ -85,31 +85,18 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(gelaende(bild, ts), 0, 0);
 
-  // Besucht: leichter Schleier und Rahmen in der Farbe des Verfahrens, damit Muster und Farbe des Geländes
-  // sichtbar bleiben. Entdeckt und wartend: weißer Rahmen mit Punkt (FA-04).
-  const rand = Math.max(1, Math.round(ts * 0.1));
-  const rahmenInnen = (v: FeldId, stil: string) => {
-    const x = (v % b) * ts;
-    const y = Math.floor(v / b) * ts;
-    ctx.fillStyle = stil;
-    ctx.fillRect(x, y, ts, rand);
-    ctx.fillRect(x, y + ts - rand, ts, rand);
-    ctx.fillRect(x, y + rand, rand, ts - 2 * rand);
-    ctx.fillRect(x + ts - rand, y + rand, rand, ts - 2 * rand);
-  };
-  for (let v = 0; v < n; v++) {
-    if (r.besuchNr[v] === 0) continue;
-    ctx.fillStyle = rgba(farbe, 0.2);
-    ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
-    rahmenInnen(v, rgba(farbe, 0.9));
-  }
+  // Besucht: durchscheinende Farbe des Verfahrens, Muster und Farbe des Geländes bleiben sichtbar.
+  // Entdeckt und wartend: heller Schleier mit weißem Punkt (FA-04).
+  ctx.fillStyle = rgba(farbe, 0.5);
+  for (let v = 0; v < n; v++) if (r.besuchNr[v] > 0) ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
+  const p = Math.max(2, Math.round(ts / 5));
   for (let v = 0; v < n; v++) {
     if (!r.wartet(v)) continue;
-    rahmenInnen(v, "rgba(255, 255, 255, 0.9)");
     const x = (v % b) * ts;
     const y = Math.floor(v / b) * ts;
-    const p = Math.max(2, Math.round(ts / 5));
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
+    ctx.fillRect(x, y, ts, ts);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
     ctx.fillStyle = "#fff";
     ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);

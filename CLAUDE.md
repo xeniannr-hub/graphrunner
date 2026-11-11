@@ -1,4 +1,4 @@
-# CLAUDE.md: Graphrunner
+# CLAUDE.md: GraphRunner
 
 Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier Gruppenmitglieder und ist die verbindliche Beschreibung des Projekts. Wer etwas Grundsätzliches ändert (Typen, Regeln, Anforderungen), ändert zuerst diese Datei, und zwar per Pull Request.
 
@@ -9,8 +9,8 @@ Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier G
 - **Was:** Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg, Gruppe aus vier Studierenden. Thema: „Visualisierung grundlegender Graphensuchalgorithmen mit GUI oder Web-App“.
 - **Lernziel:** BFS, DFS, Dijkstra und A* verständlich machen, vor allem die Frage: **Wann ist welcher Algorithmus der beste?**
 - **Zielgruppe:** Studierende, die Graphensuche lernen, und Lehrende, die das Werkzeug in der Vorlesung zeigen. Die App muss **ohne Tutorial** verständlich sein.
-- **Idee:** ein Pixel-Spiel „Graphrunner“ (Gamification) in einer Klötzchenwelt: Gelände als Blöcke, eine blockige Spielfigur. Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen (keine Texturen, Figuren, Logos oder Schriften daraus).
-- **Name:** Das Spiel heißt nur „Graphrunner“. Das Repo und die Live-Adresse behalten den Namen `kieselmark`.
+- **Idee:** ein Pixel-Spiel „GraphRunner“ (Gamification) in einer Klötzchenwelt: Gelände als Blöcke, eine blockige Spielfigur. Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen (keine Texturen, Figuren, Logos oder Schriften daraus).
+- **Name:** Das Spiel heißt nur „GraphRunner“ („Graph“ steingrau, „Runner“ orange). Designvorlage: die beiden Entwürfe in `docs/` (Logo und Oberfläche). Das Repo und die Live-Adresse behalten den Namen `kieselmark`.
 - **Abgabe:** als **GitHub-Repo** mit laufender Live-Version auf GitHub Pages, dazu Projektbericht (PDF) und Präsentation. Die Anforderungs-IDs in Abschnitt 9 sind dieselben wie im Bericht (Anhang C). Code, Tests und Bericht verweisen aufeinander.
 
 ---
@@ -178,7 +178,7 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
 
 ## 8. Oberfläche (Kurzfassung)
 
-- **Kopf:** Logo, „Graphrunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
+- **Kopf:** Banner mit Pixel-Landschaft, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
 - **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
 - **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo · Fortschrittsregler „Schritt k von n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen.
 - **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Zähler „besucht“, Status. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
@@ -195,7 +195,7 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
   Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
 - **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Besuch-Nr. bzw. Status. So wird die Karte als Graph aus Knoten und Kanten sichtbar.
 - **Bauen:** Start, Ziel und die sieben Geländearten; klicken oder ziehen, auf jeder Karte. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
-- **Darstellung:** nur dunkles Schema, Klötzchen-Pixelstil. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
+- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
 
 ---
 
