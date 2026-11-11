@@ -68,11 +68,14 @@ export class Replay {
     while (this.k > ziel) this.zurueck();
   }
 
-  /** Position direkt nach dem n-ten Besuch (n ab 1); 0 für n = 0; Ende, wenn es so viele Besuche nicht gibt. */
+  /**
+   * Position direkt nach dem n-ten Besuch (n ab 1); 0 für n = 0.
+   * Ab dem letzten Besuch das Ende, damit Zielprüfung und gefundener Weg sichtbar sind.
+   */
   positionNachBesuch(n: number): number {
     if (n <= 0) return 0;
     const idx = this.ergebnis.besuchsIndizes;
-    return n > idx.length ? this.laenge : idx[n - 1] + 1;
+    return n >= idx.length ? this.laenge : idx[n - 1] + 1;
   }
 
   /** Wartet das Feld in der Datenstruktur, ohne schon besucht zu sein? */

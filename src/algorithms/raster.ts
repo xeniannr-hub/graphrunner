@@ -67,13 +67,13 @@ export function pruefeEingabe(grid: Grid, start: Pos, ziel: Pos): void {
 }
 
 /** Kosten des billigsten begehbaren Feldes der Karte. */
-export function billigstesFeld(grid: Grid): number {
+function billigstesFeld(grid: Grid): number {
   let min = Infinity;
   for (const zeile of grid) for (const k of zeile) if (k < min) min = k;
   return min;
 }
 
-export function manhattan(a: Pos, b: Pos): number {
+function manhattan(a: Pos, b: Pos): number {
   return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
 }
 

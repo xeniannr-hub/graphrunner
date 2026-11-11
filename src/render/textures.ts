@@ -2,7 +2,7 @@
 // dazu Spielfigur, Schatztruhe, Startfahne und Logo.
 import type { TerrainKey } from "../types";
 
-export const KACHEL = 16;
+const KACHEL = 16;
 
 /** Reproduzierbarer Zufall, damit jede Textur bei jedem Laden gleich aussieht. */
 function zufall(seed: number): () => number {
