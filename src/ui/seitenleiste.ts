@@ -4,7 +4,7 @@ import { sprites, textur } from "../render/textures";
 import { TERRAIN } from "../world/terrain";
 import { WELTEN } from "../world/worlds";
 import { ALGO_INFO } from "./erklaerung";
-import { Z, istEigeneWelt, ladeWelt, type Werkzeug } from "./zustand";
+import { Z, istEigeneWelt, ladeWelt, leereKarte, type Werkzeug } from "./zustand";
 
 function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
   const c = document.createElement("canvas");
@@ -95,7 +95,16 @@ export class Seitenleiste {
       this.werkzeuge.set(w, b);
       werkzeugListe.append(b);
     }
-    this.bauen.append(werkzeugListe);
+    const leeren = document.createElement("button");
+    leeren.type = "button";
+    leeren.className = "knopf leeren";
+    leeren.textContent = "Karte leeren";
+    leeren.title = "Alle Felder werden Wiese; Start und Ziel bleiben";
+    leeren.onclick = () => {
+      leereKarte();
+      geaendert();
+    };
+    this.bauen.append(werkzeugListe, leeren);
 
     // Ausdauer pro Feld.
     this.ausdauer = document.createElement("section");
