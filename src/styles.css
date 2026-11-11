@@ -542,6 +542,14 @@ input[type="range"] {
   padding: 0.75rem;
 }
 
+.beste-wahl {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.6rem;
+  max-width: 75ch;
+  border-left: 4px solid var(--akzent);
+  background: rgba(255, 212, 0, 0.08);
+}
+
 .fazit {
   margin: 0.4rem 0 0.7rem;
   max-width: 75ch;
