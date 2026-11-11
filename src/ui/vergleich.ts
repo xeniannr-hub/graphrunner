@@ -1,31 +1,25 @@
 // Ansicht „Alle vergleichen“ (FA-13, FA-14, FA-21): vier Karten im 2 × 2-Raster, ein Schritt = jedes
-// Verfahren besucht ein weiteres Feld. Darunter Fazit in Sätzen und Ergebnistabelle mit ★ beim besten Wert.
+// Verfahren besucht ein weiteres Feld. Darunter beste Wahl, Fazit und Ergebnistabelle (Regeln in bewertung.ts).
 import { ALGOS } from "../algorithms";
 import { zeichneLeinwand } from "../render/karte";
 import type { Algo } from "../types";
+import { WELTEN } from "../world/worlds";
+import { angekommen, besteWahl, fazitText, platz, tabellenZeilen } from "./bewertung";
 import { ALGO_INFO } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { Wiedergabe } from "./wiedergabe";
 import { Z, geheVergleich, vergleichMax } from "./zustand";
 
-const STERN = '<span class="stern" aria-label="bester Wert" title="bester Wert">★</span>';
-
 const fertig = (a: Algo): boolean => Z.k >= Z.ergebnisse[a].besucht;
 const alleFertig = (): boolean => ALGOS.every(fertig);
 const zahl = (x: number): string => x.toLocaleString("de-DE");
 
-/** Platz beim Loslaufen: 1 + Zahl der Verfahren mit strikt günstigerem Weg. */
-function platz(a: Algo): number {
-  const k = Z.ergebnisse[a].kosten;
-  return 1 + ALGOS.filter((b) => Z.ergebnisse[b].gefunden && Z.ergebnisse[b].kosten < k).length;
-}
-
-const angekommen = (a: Algo): boolean => Z.laufzeit !== null && Z.ergebnisse[a].gefunden && Z.laufzeit >= Z.ergebnisse[a].kosten;
 
 export class Vergleich {
   readonly element: HTMLElement;
   readonly wiedergabe: Wiedergabe;
   private readonly karten = new Map<Algo, { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement }>();
+  private readonly wahl: HTMLParagraphElement;
   private readonly fazit: HTMLParagraphElement;
   private readonly tabelle: HTMLTableSectionElement;
 
@@ -86,13 +80,15 @@ export class Vergleich {
     ergebnis.className = "ergebnis";
     ergebnis.innerHTML = `
       <h2>Ergebnis</h2>
+      <p class="beste-wahl" aria-live="polite"></p>
       <p class="fazit" aria-live="polite"></p>
       <div class="tabelle-rahmen">
         <table>
-          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col">Weglänge (Felder)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
+          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes">Rechenschritte</th><th scope="col">Weglänge (Felder)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>`;
+    this.wahl = ergebnis.querySelector(".beste-wahl") as HTMLParagraphElement;
     this.fazit = ergebnis.querySelector(".fazit") as HTMLParagraphElement;
     this.tabelle = ergebnis.querySelector("tbody") as HTMLTableSectionElement;
 
@@ -144,7 +140,7 @@ export class Vergleich {
       else if (!fertig(a)) status = "sucht …";
       else if (!e.gefunden) status = "kein Weg gefunden";
       else if (Z.laufzeit === null) status = `Ziel gefunden: ${zahl(e.felder)} Felder, ${zahl(e.kosten)} Ausdauer`;
-      else if (angekommen(a)) status = `angekommen: <b>Platz ${platz(a)}</b>, ${zahl(e.kosten)} Ausdauer`;
+      else if (angekommen(Z.ergebnisse, a, Z.laufzeit)) status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
       else status = `läuft … ${zahl(Math.floor(Z.laufzeit))} von ${zahl(e.kosten)} Ausdauer`;
       k.status.innerHTML = status;
     }
@@ -152,51 +148,15 @@ export class Vergleich {
   }
 
   private aktualisiereErgebnis(): void {
-    const E = Z.ergebnisse;
+    const welt = WELTEN[Z.weltIndex];
     const alle = alleFertig();
-    const gefunden = ALGOS.filter((a) => E[a].gefunden);
-    const best = (f: (a: Algo) => number, menge: readonly Algo[]) => (alle && menge.length > 0 ? Math.min(...menge.map(f)) : null);
-    const bBesucht = best((a) => E[a].besucht, ALGOS);
-    const bFelder = best((a) => E[a].felder, gefunden);
-    const bKosten = best((a) => E[a].kosten, gefunden);
-    const stern = (wert: number, bester: number | null) => (bester !== null && wert === bester ? STERN : "");
-    this.tabelle.innerHTML = ALGOS.map((a) => {
-      const e = E[a];
-      const fa = fertig(a);
-      const besucht = Math.min(Z.k, e.besucht);
-      const zelle = (wert: number, bester: number | null) => (fa && e.gefunden ? `${zahl(wert)}${stern(wert, bester)}` : fa ? "kein Weg" : "–");
-      const p = angekommen(a) ? `Platz ${platz(a)}${platz(a) === 1 ? STERN : ""}` : "–";
-      return `<tr>
-        <th scope="row"><span class="punkt" style="background:${ALGO_INFO[a].farbe}" aria-hidden="true"></span>${ALGO_INFO[a].name}</th>
-        <td>${zahl(besucht)}${fa ? stern(e.besucht, bBesucht) : ""}</td>
-        <td>${zelle(e.felder, bFelder)}</td>
-        <td>${zelle(e.kosten, bKosten)}</td>
-        <td>${p}</td></tr>`;
-    }).join("");
-    this.fazit.textContent = alle ? fazitText() : "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld.";
+    const position = Object.fromEntries(ALGOS.map((a) => [a, Z.vergleich[a].position])) as Record<Algo, number>;
+    this.tabelle.innerHTML = tabellenZeilen(welt, Z.ergebnisse, { k: Z.k, position, laufzeit: Z.laufzeit });
+    const wahl = alle ? besteWahl(welt, Z.ergebnisse) : null;
+    this.wahl.hidden = wahl === null;
+    this.wahl.innerHTML = wahl ? `<b>Beste Wahl in dieser Welt:</b> ${wahl.satz}` : "";
+    this.fazit.textContent = alle
+      ? fazitText(welt, Z.ergebnisse)
+      : "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld.";
   }
-}
-
-/** Fazit in ganzen Sätzen, aus den Messwerten gebildet (FA-14). */
-function fazitText(): string {
-  const { bfs, dfs, dijkstra: dij, astar } = Z.ergebnisse;
-  if (!bfs.gefunden) return `Zwischen Start und Ziel gibt es keinen Weg. Jedes Verfahren hat alle erreichbaren Felder abgesucht, bevor es aufgegeben hat.`;
-  const s: string[] = [];
-  s.push(`BFS findet den Weg mit den wenigsten Feldern (${zahl(bfs.felder)}).`);
-  s.push(
-    bfs.kosten === dij.kosten
-      ? `Er ist hier zugleich der günstigste Weg mit ${zahl(dij.kosten)} Ausdauer.`
-      : `Der günstigste Weg ist aber ein anderer: Dijkstra und A* zahlen ${zahl(dij.kosten)} statt ${zahl(bfs.kosten)} Ausdauer.`,
-  );
-  // Ab 85 % gilt die Ersparnis als gering, wie in der Bedingung des Ruinenhofs (CLAUDE.md, Abschnitt 7).
-  if (astar.besucht === dij.besucht) s.push(`A* besucht genauso viele Felder wie Dijkstra (${zahl(astar.besucht)}); die Schätzung hilft hier nicht.`);
-  else if (astar.besucht < dij.besucht && astar.besucht > 0.85 * dij.besucht)
-    s.push(`A* besucht mit ${zahl(astar.besucht)} fast so viele Felder wie Dijkstra (${zahl(dij.besucht)}); die Schätzung hilft hier kaum.`);
-  else if (astar.besucht < dij.besucht) s.push(`A* besucht dafür nur ${zahl(astar.besucht)} statt ${zahl(dij.besucht)} Felder, weil die Schätzung zum Ziel lenkt.`);
-  else s.push(`A* besucht ${zahl(astar.besucht)} Felder, Dijkstra ${zahl(dij.besucht)}.`);
-  s.push(`DFS findet irgendeinen Weg: ${zahl(dfs.felder)} Felder und ${zahl(dfs.kosten)} Ausdauer, nach ${zahl(dfs.besucht)} besuchten Feldern.`);
-  const wenigste = Math.min(...ALGOS.map((a) => Z.ergebnisse[a].besucht));
-  const namen = ALGOS.filter((a) => Z.ergebnisse[a].besucht === wenigste).map((a) => ALGO_INFO[a].name);
-  s.push(`Am wenigsten gesucht ${namen.length > 1 ? "haben" : "hat"} ${namen.join(" und ")}.`);
-  return s.join(" ");
 }
