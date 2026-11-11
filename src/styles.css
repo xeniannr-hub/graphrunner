@@ -1,16 +1,19 @@
-/* GraphRunner: nur dunkles Schema in Nachtblau (QA-09 ist Won't), Pixelwelt im Klötzchenstil. Pixelschrift nur in Überschriften. */
+/* GraphRunner: nur dunkles Schema in Nachtblau (QA-09 ist Won't), Oberfläche im Klötzchenstil (eigene Entwürfe).
+   Jedes Bedienelement ist ein Block: eckig, schwarze Außenkante, oben/links Lichtkante, unten/rechts Schattenkante.
+   Gedrückt kehrt sich das Relief um. Pixelschrift nur in Überschriften. */
 :root {
   color-scheme: dark;
   --grund: #0b111d;
-  --flaeche: #131b2a;
-  --flaeche-2: #1a2436;
-  --linie: #26344b;
+  --flaeche: #151e2f;
+  --flaeche-2: #1d2940;
+  --linie: #2b3b57;
+  --kante: #04070d;
   --text: #e9eef6;
   --gedaempft: #a3b1c6;
   --orange: #f5a623;
-  --rund: 8px;
-  --schatten: 0 3px 10px rgba(0, 0, 0, 0.35);
+  --rund: 0;
   --akzent: #ffd400;
+  --gruen: #4caf3a;
   --bfs: #ff4d73;
   --dfs: #a56bff;
   --dijkstra: #ff8a2b;
@@ -18,6 +21,11 @@
   --pixel: "Pixelify Sans", system-ui, sans-serif;
   --ui: "Rubik", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Relief eines Blocks: Lichtkante oben/links, Schattenkante unten/rechts. */
+  --relief: inset 3px 3px 0 rgba(255, 255, 255, 0.16), inset -3px -3px 0 rgba(0, 0, 0, 0.42);
+  --relief-gedrueckt: inset 3px 3px 0 rgba(0, 0, 0, 0.42), inset -3px -3px 0 rgba(255, 255, 255, 0.08);
+  /* Harter Pixelschatten statt weichem Schatten. */
+  --wurf: 4px 4px 0 rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -34,9 +42,14 @@ body {
   line-height: 1.45;
 }
 
+/* Feines Blockraster im Hintergrund, kaum sichtbar. */
 body {
   min-width: 0;
   overflow-x: hidden;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.018) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 2px, transparent 2px);
+  background-size: 32px 32px;
 }
 
 h1,
@@ -50,6 +63,7 @@ h3 {
 
 h2 {
   font-size: 1.15rem;
+  text-shadow: 2px 2px 0 var(--kante);
 }
 
 h3 {
@@ -77,7 +91,53 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* ---------- Kopf: Banner mit Pixel-Landschaft, Logo-Insel, zweifarbiger Titel ---------- */
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+  margin-right: 0.15em;
+  font-family: var(--mono);
+  font-size: 0.8em;
+  text-align: center;
+  background: var(--flaeche-2);
+  border: 2px solid var(--kante);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.45), inset 2px 2px 0 rgba(255, 255, 255, 0.14);
+  color: var(--text);
+}
+
+/* ---------- Blöcke: gemeinsame Gestalt aller Knöpfe ---------- */
+.knopf,
+.welt,
+.werkzeug,
+.tab,
+.umschalter button,
+.auswahl select {
+  border: 2px solid var(--kante);
+  border-radius: 0;
+  background: var(--flaeche-2);
+  box-shadow: var(--relief);
+  cursor: pointer;
+  transition: filter 0.08s;
+}
+
+.knopf:hover:not(:disabled),
+.welt:hover,
+.werkzeug:hover,
+.tab:hover,
+.umschalter button:hover {
+  filter: brightness(1.18);
+}
+
+.knopf:active:not(:disabled),
+.welt:active,
+.werkzeug:active,
+.tab:active,
+.umschalter button:active {
+  box-shadow: var(--relief-gedrueckt);
+  transform: translateY(1px);
+}
+
+/* ---------- Kopf: Banner mit Pixel-Landschaft und Bodenleiste, Logo-Insel, zweifarbiger Titel ---------- */
 .kopf {
   position: relative;
   isolation: isolate;
@@ -85,9 +145,11 @@ canvas {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 0.6rem 1.2rem;
-  min-height: 116px;
-  border-bottom: 3px solid var(--orange);
+  /* Unten Platz für die Bodenleiste aus Gras- und Erdblöcken (6 grobe Pixel × 3 px). */
+  padding: 0.6rem 1.2rem calc(18px + 0.6rem);
+  min-height: 134px;
+  border-bottom: 4px solid var(--orange);
+  box-shadow: 0 4px 0 var(--kante);
   background: #0f2242;
   overflow: hidden;
 }
@@ -100,13 +162,13 @@ canvas {
   z-index: -2;
 }
 
-/* Links dunkler, damit der Titel gut lesbar bleibt. */
+/* Links dunkler, damit der Titel gut lesbar bleibt; die Bodenleiste bleibt frei. */
 .kopf::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 18px;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(8, 14, 26, 0.92) 0%, rgba(8, 14, 26, 0.75) 35%, rgba(8, 14, 26, 0.1) 70%);
+  background: linear-gradient(90deg, rgba(8, 14, 26, 0.9) 0%, rgba(8, 14, 26, 0.7) 35%, rgba(8, 14, 26, 0.05) 70%);
 }
 
 .logo {
@@ -114,13 +176,27 @@ canvas {
   height: 96px;
   flex: none;
   filter: drop-shadow(0 0 10px rgba(255, 196, 40, 0.25));
+  animation: schweben 4s steps(4) infinite;
+}
+
+@keyframes schweben {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo {
+    animation: none;
+  }
 }
 
 .trenner {
   align-self: stretch;
-  width: 3px;
+  width: 4px;
   margin: 0.6rem 0.2rem;
-  background: rgba(255, 255, 255, 0.35);
+  background: #9aa3ad;
+  box-shadow: 2px 0 0 #4b525c;
 }
 
 .titel {
@@ -148,30 +224,40 @@ canvas {
   margin: 0.55rem 0 0;
   color: #d6deea;
   font-weight: 500;
+  text-shadow: 2px 2px 0 var(--kante);
 }
 
+/* Umschalter: zwei Blöcke nebeneinander auf einer Steinplatte. */
 .umschalter {
   display: flex;
-  gap: 0.25rem;
-  padding: 0.3rem;
-  border-radius: 999px;
-  background: rgba(8, 14, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 4px;
+  padding: 4px;
+  background: #2a2f38;
+  border: 2px solid var(--kante);
+  box-shadow: var(--relief), var(--wurf);
 }
 
 .umschalter button {
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  background: #4a515c;
+  font-weight: 600;
+}
+
+.umschalter svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  shape-rendering: crispEdges;
 }
 
 .umschalter button[aria-pressed="true"] {
   background: var(--akzent);
   color: #1a1408;
   font-weight: 700;
+  box-shadow: inset 3px 3px 0 #fff3a0, inset -3px -3px 0 #b98f00;
 }
 
 @media (max-width: 720px) {
@@ -192,6 +278,14 @@ canvas {
   .titel h1 {
     font-size: 2rem;
   }
+  .umschalter {
+    width: 100%;
+  }
+  .umschalter button {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.5rem;
+  }
 }
 
 /* ---------- Grundlayout ---------- */
@@ -199,7 +293,7 @@ canvas {
   display: grid;
   grid-template-columns: 17rem minmax(0, 1fr);
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.1rem 1rem 1rem;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -212,11 +306,11 @@ canvas {
 
 @media (max-width: 520px) {
   .rumpf {
-    padding: 0.6rem;
+    padding: 0.8rem 0.6rem 0.6rem;
     gap: 0.6rem;
   }
   .kopf {
-    padding: 0.6rem;
+    padding: 0.6rem 0.6rem calc(18px + 0.6rem);
   }
 }
 
@@ -224,71 +318,90 @@ canvas {
   min-width: 0;
 }
 
+/* ---------- Platten: Panels, Leisten und Kartenrahmen ---------- */
+.panel,
+.wiedergabe,
+.karte-box,
+.karte-einzel,
+.ergebnis,
+.begruendung,
+.einzel-seite > * {
+  background: var(--flaeche);
+  border: 2px solid var(--kante);
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px var(--linie), var(--wurf);
+}
+
 /* ---------- Seitenleiste ---------- */
 .seitenleiste {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.8rem;
   min-width: 0;
 }
 
 .weltliste {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 @media (max-width: 960px) {
   .weltliste {
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
   }
 }
 
 .welt {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.5rem 0.65rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem;
   text-align: left;
 }
 
-.welt:hover {
-  border-color: var(--gedaempft);
+.welt .symbol {
+  width: 22px;
+  height: 22px;
 }
 
 .welt[aria-pressed="true"] {
+  background: #2c3a56;
   border-color: var(--akzent);
-  background: var(--flaeche-2);
+  box-shadow: var(--relief-gedrueckt), 0 0 0 2px var(--kante);
+}
+
+.welt[aria-pressed="true"] .welt-titel::before {
+  content: "▸ ";
+  color: var(--akzent);
 }
 
 .welt-titel {
+  flex: 1;
+  min-width: 0;
   font-weight: 500;
 }
 
 .kuerzel {
+  flex: none;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.05rem 0.4rem;
-  border-radius: var(--rund);
   background: var(--farbe);
   color: #1a1408;
+  border: 2px solid var(--kante);
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .bauen-kuerzel {
-  background: var(--linie);
-  color: var(--text);
+  background: var(--gruen);
+  color: #0d1a08;
 }
 
 .begruendung {
-  background: var(--flaeche);
-  border-left: 4px solid var(--akzent);
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--rund);
+  border-color: var(--kante);
+  box-shadow: inset 0 0 0 2px var(--akzent), var(--wurf);
+  padding: 0.7rem 0.8rem;
 }
 
 .begruendung p {
@@ -297,14 +410,12 @@ canvas {
 
 .begruendung .wann {
   font-weight: 700;
+  color: var(--akzent);
   margin-bottom: 0.35rem;
 }
 
 .panel {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.65rem 0.75rem;
+  padding: 0.7rem 0.8rem;
 }
 
 .panel h2 {
@@ -321,7 +432,7 @@ canvas {
   width: 20px;
   height: 20px;
   flex: none;
-  border: 1px solid #0006;
+  border: 2px solid var(--kante);
 }
 
 .kosten {
@@ -346,26 +457,27 @@ canvas {
 }
 
 .leeren {
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
   width: 100%;
+  font-family: var(--ui);
+  font-weight: 600;
+  background: #7a2b26;
 }
 
 .werkzeuge {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .werkzeug {
   padding: 0.35rem 0.45rem;
-  background: var(--flaeche-2);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
 }
 
+/* Gewähltes Werkzeug wie ein ausgewählter Platz im Inventar: gelber Rahmen, eingedrückt. */
 .werkzeug[aria-pressed="true"] {
-  border-color: var(--akzent);
+  background: #2c3a56;
+  box-shadow: var(--relief-gedrueckt), 0 0 0 3px var(--akzent);
 }
 
 /* ---------- Wiedergabeleiste ---------- */
@@ -373,12 +485,9 @@ canvas {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.55rem 0.7rem;
-  margin-bottom: 0.8rem;
+  gap: 0.6rem 1rem;
+  padding: 0.65rem 0.8rem;
+  margin-bottom: 1rem;
 }
 
 .knoepfe {
@@ -387,35 +496,37 @@ canvas {
 }
 
 .knopf {
-  min-width: 2.4rem;
-  padding: 0.35rem 0.55rem;
-  background: var(--flaeche-2);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
+  min-width: 2.6rem;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.6rem;
   font-family: var(--mono);
 }
 
-.knopf:hover:not(:disabled) {
-  border-color: var(--gedaempft);
-}
-
 .knopf.haupt {
-  min-width: 6.5rem;
+  min-width: 7rem;
   background: var(--akzent);
-  border-color: var(--akzent);
   color: #1a1408;
   font-family: var(--ui);
   font-weight: 700;
+  box-shadow: inset 3px 3px 0 #fff3a0, inset -3px -3px 0 #b98f00;
 }
 
+.knopf.haupt[aria-pressed="true"] {
+  box-shadow: inset 3px 3px 0 #b98f00, inset -3px -3px 0 #fff3a0;
+}
+
+/* Loslaufen: grüner Block, sobald alle fertig sind – die Einladung zum Rennen. */
 .knopf.los {
   font-family: var(--ui);
   font-weight: 700;
+  background: var(--gruen);
+  color: #0d1a08;
+  box-shadow: inset 3px 3px 0 #8fe07a, inset -3px -3px 0 #2a6b20;
 }
 
 .knopf:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
+  filter: grayscale(0.8);
   cursor: not-allowed;
 }
 
@@ -433,7 +544,7 @@ canvas {
 .fortschritt {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex: 1 1 14rem;
   min-width: 0;
 }
@@ -449,8 +560,51 @@ canvas {
   white-space: nowrap;
 }
 
+/* Regler: eingelassene Rinne mit gelbem Block als Griff. */
 input[type="range"] {
-  accent-color: var(--akzent);
+  appearance: none;
+  -webkit-appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 10px;
+  background: #0a0f19;
+  border: 2px solid var(--kante);
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #0a0f19;
+  border: 2px solid var(--kante);
+}
+
+input[type="range"]::-moz-range-progress {
+  height: 6px;
+  background: var(--orange);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 20px;
+  margin-top: -7px;
+  background: var(--akzent);
+  border: 2px solid var(--kante);
+  border-radius: 0;
+  box-shadow: inset 2px 2px 0 #fff3a0, inset -2px -2px 0 #b98f00;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 16px;
+  background: var(--akzent);
+  border: 2px solid var(--kante);
+  border-radius: 0;
+  box-shadow: inset 2px 2px 0 #fff3a0, inset -2px -2px 0 #b98f00;
 }
 
 .legende {
@@ -458,6 +612,8 @@ input[type="range"] {
   flex-wrap: wrap;
   gap: 0.25rem 0.9rem;
   width: 100%;
+  padding-top: 0.5rem;
+  border-top: 2px dashed var(--linie);
   font-size: 0.85rem;
   color: var(--gedaempft);
 }
@@ -530,11 +686,23 @@ input[type="range"] {
   border-color: #ff4b4b;
 }
 
+.tasten {
+  width: 100%;
+  margin: -0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--gedaempft);
+}
+
+.tasten kbd {
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
 /* ---------- Karten ---------- */
 .raster {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 @media (max-width: 720px) {
@@ -544,12 +712,10 @@ input[type="range"] {
 }
 
 .karte-box {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-top: 4px solid var(--farbe);
-  border-radius: var(--rund);
-  padding: 0.5rem;
+  padding: 0.55rem;
   min-width: 0;
+  box-shadow: inset 0 5px 0 var(--farbe), inset 0 0 0 2px var(--linie), var(--wurf);
+  padding-top: calc(0.55rem + 4px);
 }
 
 .karte-box header {
@@ -557,7 +723,7 @@ input[type="range"] {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.2rem 0.8rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.45rem;
 }
 
 .name {
@@ -575,10 +741,10 @@ input[type="range"] {
 
 .punkt {
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: var(--rund);
+  width: 12px;
+  height: 12px;
   background: var(--farbe);
+  border: 2px solid var(--kante);
   margin-right: 0.35rem;
 }
 
@@ -607,7 +773,7 @@ input[type="range"] {
   width: 100%;
   height: auto;
   aspect-ratio: 32 / 20;
-  border-radius: var(--rund);
+  border: 2px solid var(--kante);
   cursor: crosshair;
   touch-action: none;
 }
@@ -615,27 +781,30 @@ input[type="range"] {
 /* ---------- Ergebnis ---------- */
 .ergebnis {
   margin-top: 1rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.75rem;
+  padding: 0.8rem;
 }
 
 .beste-wahl {
-  margin: 0.4rem 0 0;
-  padding: 0.45rem 0.6rem;
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.7rem;
   max-width: 75ch;
-  border-left: 4px solid var(--akzent);
-  background: rgba(255, 212, 0, 0.08);
+  background: rgba(255, 212, 0, 0.1);
+  border: 2px solid var(--kante);
+  box-shadow: inset 4px 0 0 var(--akzent);
+}
+
+.beste-wahl:empty {
+  display: none;
 }
 
 .fazit {
-  margin: 0.4rem 0 0.7rem;
+  margin: 0.5rem 0 0.7rem;
   max-width: 75ch;
 }
 
 .tabelle-rahmen {
   overflow-x: auto;
+  border: 2px solid var(--kante);
 }
 
 table {
@@ -647,14 +816,19 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--linie);
+  padding: 0.4rem 0.55rem;
+  border-bottom: 2px solid var(--linie);
 }
 
 thead th {
   color: var(--gedaempft);
   font-weight: 500;
   font-family: var(--ui);
+  background: var(--flaeche-2);
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.025);
 }
 
 td {
@@ -688,28 +862,31 @@ tbody th {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.7rem;
 }
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .tab {
-  padding: 0.4rem 0.8rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
   font-weight: 500;
 }
 
 .tab[aria-selected="true"] {
-  border-color: var(--farbe);
-  background: var(--flaeche-2);
-  box-shadow: inset 0 -3px 0 var(--farbe);
+  background: #2c3a56;
+  font-weight: 700;
+  box-shadow: var(--relief-gedrueckt), inset 0 -5px 0 var(--farbe);
+}
+
+.tab .punkt {
+  margin-right: 0;
 }
 
 .auswahl {
@@ -720,16 +897,14 @@ tbody th {
 }
 
 .auswahl select {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.25rem 0.4rem;
+  padding: 0.35rem 0.5rem;
+  color: var(--text);
 }
 
 .einzel-inhalt {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr);
-  gap: 0.8rem;
+  gap: 1rem;
   align-items: start;
 }
 
@@ -740,24 +915,18 @@ tbody th {
 }
 
 .karte-einzel {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.5rem;
+  padding: 0.55rem;
   min-width: 0;
 }
 
 .einzel-seite {
   display: grid;
-  gap: 0.6rem;
+  gap: 0.7rem;
   min-width: 0;
 }
 
 .einzel-seite > * {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.6rem 0.7rem;
+  padding: 0.65rem 0.75rem;
   margin: 0;
 }
 
@@ -784,8 +953,8 @@ tbody th {
   }
 }
 
-.erklaerung {
-  border-left: 4px solid var(--akzent) !important;
+.einzel-seite > .erklaerung {
+  box-shadow: inset 0 0 0 2px var(--akzent), var(--wurf);
 }
 
 .zeile-nr {
@@ -794,7 +963,7 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   padding: 0.05rem 0.4rem;
-  border-radius: var(--rund);
+  border: 2px solid var(--kante);
 }
 
 .satz {
@@ -813,7 +982,6 @@ tbody th {
 
 .code li {
   padding: 0.05rem 0.3rem;
-  border-radius: var(--rund);
 }
 
 .code li::marker {
@@ -824,6 +992,7 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   font-weight: 600;
+  box-shadow: 0 0 0 2px var(--kante);
 }
 
 .besuchsliste {
@@ -843,7 +1012,7 @@ tbody th {
 .besuchsliste li {
   counter-increment: besuch;
   background: var(--flaeche-2);
-  border-radius: var(--rund);
+  border: 1px solid var(--kante);
   padding: 0.05rem 0.3rem;
 }
 
@@ -857,15 +1026,15 @@ tbody th {
   color: var(--gedaempft);
 }
 
-/* ---------- Tooltip ---------- */
+/* ---------- Tooltip: dunkle Tafel mit Pixelrahmen ---------- */
 .tooltip {
   position: fixed;
   z-index: 10;
   pointer-events: none;
-  background: rgba(14, 11, 8, 0.95);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.35rem 0.55rem;
+  background: rgba(16, 8, 28, 0.96);
+  border: 2px solid var(--kante);
+  box-shadow: inset 0 0 0 2px #3b2a6b, var(--wurf);
+  padding: 0.4rem 0.6rem;
   font-size: 0.85rem;
   max-width: 16rem;
 }
@@ -873,21 +1042,10 @@ tbody th {
 .tt-kopf {
   font-family: var(--mono);
   font-weight: 600;
+  color: var(--akzent);
 }
 
-/* ---------- Karten und Knöpfe: dunkle Flächen mit weichem Schatten ---------- */
-.panel,
-.wiedergabe,
-.karte-box,
-.ergebnis,
-.begruendung {
-  box-shadow: var(--schatten);
-}
-
-.knopf.haupt {
-  box-shadow: 0 2px 0 #b98f00;
-}
-
-.begruendung {
-  border: 2px solid var(--akzent);
+/* ---------- Bildlaufleisten im Klötzchenstil ---------- */
+* {
+  scrollbar-color: #4a515c var(--grund);
 }
