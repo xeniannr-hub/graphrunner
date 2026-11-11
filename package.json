@@ -1,0 +1,26 @@
+{
+  "name": "kieselmark",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Pixel-Spielwelt, die BFS, DFS, Dijkstra und A* vergleicht und erklärt.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/pixelify-sans": "^5.3.0",
+    "@fontsource/rubik": "^5.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

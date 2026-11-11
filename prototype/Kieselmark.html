@@ -1,0 +1,1707 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Kieselmark</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;600;700&family=Rubik:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Aufbau: links eine feste Seitenleiste (Welt, Aufgabe, Bauen, Legende), rechts die Karten.
+   Ruhige, flache Flächen; der Spielwelt-Charakter steckt in der Karte und in den Überschriften. */
+:root {
+  --bg: #15130f; --panel: #1f1c17; --field: #29251e; --line: #3a342a; --ink: #f1eadb; --muted: #a89f8c;
+  --accent: #f2c94c; --accent-ink: #f2c94c; --sel: #332c1d; --code-on: #3a3120; --code-on-ink: #ffe7a3;
+  --map-bg: #100e0b; --tip-bg: rgba(18,16,12,.94); --go: #4c8f3f; --go-hi: #5aa24b; --btn: #322d25; --btn-hi: #3c362c;
+  --board: #2b2721; --board-2: #27231d; --board-line: #353027; --node: #6b6458; --edge-c: #8f8676;
+  --c-bfs: #ff5c7a; --c-dfs: #b98bff; --c-dijkstra: #ff9440; --c-astar: #ffe14d;
+  --font-pixel: "Pixelify Sans", "Courier New", monospace;
+  --font-ui: "Rubik", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3efe6; --panel: #fffdf8; --field: #f4efe4; --line: #e2dacb; --ink: #2a2419; --muted: #6e6553;
+    --accent: #c99a12; --accent-ink: #7a5a00; --sel: #fff3cf; --code-on: #fff0bf; --code-on-ink: #4a3600;
+    --map-bg: #e6dfd1; --tip-bg: rgba(255,253,248,.97); --btn: #ece5d7; --btn-hi: #e3dac8;
+    --board: #f1ebdf; --board-2: #ebe4d6; --board-line: #ddd4c3; --node: #8c8475; --edge-c: #9b917f;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3efe6; --panel: #fffdf8; --field: #f4efe4; --line: #e2dacb; --ink: #2a2419; --muted: #6e6553;
+  --accent: #c99a12; --accent-ink: #7a5a00; --sel: #fff3cf; --code-on: #fff0bf; --code-on-ink: #4a3600;
+  --map-bg: #e6dfd1; --tip-bg: rgba(255,253,248,.97); --btn: #ece5d7; --btn-hi: #e3dac8;
+  --board: #f1ebdf; --board-2: #ebe4d6; --board-line: #ddd4c3; --node: #8c8475; --edge-c: #9b917f;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font-family: var(--font-ui); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 32px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button, select, input, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+.small { font-size: 13px; color: var(--muted); margin: 0; }
+h2, h3 { font-family: var(--font-pixel); font-weight: 600; margin: 0; line-height: 1.15; }
+
+/* Kopf */
+.top { max-width: 1520px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand canvas { width: 40px; height: 40px; image-rendering: pixelated; flex: none; border-radius: 4px; }
+.brand h1 { margin: 0; font-family: var(--font-pixel); font-weight: 700; font-size: 32px; line-height: 1; }
+.brand p { margin: 2px 0 0; font-size: 13.5px; color: var(--muted); }
+.right { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; padding: 3px; gap: 3px; background: var(--field); border: 1px solid var(--line); border-radius: 6px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; padding: 6px 14px; border-radius: 4px; cursor: pointer; color: var(--muted); font-weight: 500; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.seg.full { display: flex; }
+.seg.full button { flex: 1; }
+.ghost { border: 1px solid var(--line); background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--muted); font-size: 13.5px; }
+.ghost:hover { color: var(--ink); }
+
+/* Seitenleiste und Hauptbereich */
+.layout { max-width: 1520px; margin: 0 auto; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.layout > *, .main > *, .col > * { min-width: 0; }
+.side { position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); max-height: calc(100vh - 24px); overflow-y: auto; display: grid; gap: 12px; padding-bottom: 2px; scrollbar-width: thin; }
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .side { display: contents; }
+  .side > * { order: 3; } .side > .s-world { order: 1; } .side > .s-task { order: 2; } .layout > .main { order: 2; }
+}
+.box { padding: 14px; display: grid; gap: 10px; }
+.box h2 { font-size: 17px; }
+.box h2 small { font-family: var(--font-ui); font-weight: 400; font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+details.box > summary { cursor: pointer; font-family: var(--font-pixel); font-weight: 600; font-size: 16px; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+details.box > summary::-webkit-details-marker { display: none; }
+details.box > summary::after { content: "+"; color: var(--muted); font-family: var(--font-mono); }
+details.box[open] > summary::after { content: "–"; }
+.main { display: grid; gap: 14px; }
+
+/* Aufgaben */
+.scenlist { display: grid; gap: 6px; }
+.chip { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; align-items: center; padding: 8px 10px; background: transparent; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; text-align: left; }
+.chip:hover { background: var(--field); }
+.chip canvas { width: 26px; height: 26px; image-rendering: pixelated; border-radius: 3px; }
+.chip b { display: block; font-weight: 500; font-size: 14.5px; line-height: 1.25; }
+.chip small { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.chip[aria-pressed="true"] { background: var(--sel); border-color: var(--accent); }
+.hint { margin: 0; font-size: 14px; padding: 10px 12px; background: var(--field); border-radius: 6px; border-left: 3px solid var(--accent); }
+
+/* Werkzeuge */
+.tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.slot { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 8px; background: transparent; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; text-align: left; font-size: 13.5px; }
+.slot:hover { background: var(--field); }
+.slot canvas { width: 22px; height: 22px; image-rendering: pixelated; display: block; border-radius: 2px; }
+.slot .tc { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+.slot[aria-pressed="true"] { background: var(--sel); border-color: var(--accent); }
+.toolextra { display: grid; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.ctrl { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.ctrl select, .ctrl input[type=number], .sel { background: var(--field); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px; color: var(--ink); }
+.ctrl input[type=number] { width: 76px; }
+.ctrl input[type=range] { width: 110px; accent-color: var(--accent); }
+.ctrl input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+.sel { width: 100%; }
+textarea { width: 100%; min-height: 110px; background: var(--field); border: 1px solid var(--line); border-radius: 5px; padding: 8px; font-family: var(--font-mono); font-size: 12px; }
+.msg { font-size: 13px; color: var(--muted); }
+.msg.err { color: #e5484d; }
+
+/* Legende */
+.leg { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--muted); padding-top: 6px; border-top: 1px solid var(--line); }
+.leg div { display: flex; align-items: center; gap: 7px; }
+.leg .badge { font-size: 11px; font-weight: 600; background: #1a1510; color: #fff; border-radius: 3px; padding: 0 5px; line-height: 16px; }
+.leg i { flex: none; width: 14px; height: 14px; border-radius: 2px; border: 1px solid rgba(0,0,0,.35); display: inline-block; }
+.leg i.ln { height: 0; width: 18px; border: 0; border-top: 3px solid; border-radius: 0; }
+.costs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.costs div { display: flex; align-items: center; gap: 7px; }
+.costs canvas { width: 14px; height: 14px; image-rendering: pixelated; border-radius: 2px; flex: none; }
+.costs b { color: var(--ink); font-weight: 500; font-family: var(--font-mono); margin-left: auto; }
+.swatches { display: inline-flex; gap: 2px; }
+
+/* Steuerleiste */
+.ctrlbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; padding: 10px 12px; display: grid; gap: 8px; }
+@media (max-width: 960px) { .ctrlbar { position: static; } }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.btn { font-size: 14.5px; font-weight: 500; min-width: 40px; height: 38px; padding: 0 14px; background: var(--btn); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--btn-hi); }
+.btn.go { background: var(--go); border-color: transparent; color: #fff; min-width: 140px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); }
+.btn.go:hover { background: var(--go-hi); }
+.btn.gold { background: #a77a1c; border-color: transparent; color: #fff; box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); }
+.btn.gold:hover { background: #b88723; }
+.btn.sm { height: 32px; font-size: 13.5px; padding: 0 10px; min-width: 0; }
+.btn:disabled { opacity: .4; cursor: default; }
+.prog { flex: 1 1 200px; display: grid; gap: 2px; min-width: 0; }
+.prog input { width: 100%; accent-color: var(--accent); margin: 0; }
+.prog span { font-size: 12.5px; color: var(--muted); }
+.lead { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+/* Rennen */
+.race { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1180px) { .race { grid-template-columns: minmax(0, 1fr); } }
+.card { overflow: hidden; }
+.cardhead { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 12px; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.cardhead .name { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.cardhead .sw { width: 11px; height: 11px; border-radius: 2px; flex: none; align-self: center; }
+.cardhead h2 { font-size: 19px; }
+.cardhead .kind { font-size: 12.5px; color: var(--muted); }
+.cardhead .count { text-align: right; font-family: var(--font-mono); font-size: 20px; line-height: 1.1; }
+.cardhead .count small { display: block; font-family: var(--font-ui); font-size: 11px; color: var(--muted); }
+.cardhead .status { grid-column: 1 / -1; font-size: 13px; color: var(--muted); min-height: 1.5em; overflow-wrap: anywhere; }
+.cardhead .status b { color: var(--ink); font-weight: 500; }
+.cardhead .status .ord { font-family: var(--font-mono); color: var(--ink); letter-spacing: .05em; }
+.rank { display: inline-block; font-size: 12px; font-weight: 600; padding: 0 7px; margin-right: 6px; background: var(--accent); color: #2a1d00; border-radius: 3px; }
+.scroller { overflow-x: auto; overflow-y: hidden; background: var(--map-bg); line-height: 0; }
+.scroller canvas { image-rendering: pixelated; display: block; touch-action: pan-y; margin: 0 auto; }
+.scroller canvas.edit { touch-action: none; cursor: crosshair; }
+
+/* Ergebnis */
+.results { padding: 14px 16px; display: grid; gap: 10px; }
+.results h3 { font-size: 18px; }
+.summary { margin: 0; font-size: 14.5px; max-width: 95ch; }
+.tblwrap { overflow-x: auto; }
+table.res { width: 100%; border-collapse: collapse; min-width: 520px; }
+table.res th { text-align: left; font-weight: 500; font-size: 12.5px; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--line); }
+table.res td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 14px; }
+table.res tr:last-child td { border-bottom: 0; }
+table.res td.alg { font-weight: 500; white-space: nowrap; }
+table.res td.alg i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; }
+table.res td.ord { font-family: var(--font-mono); letter-spacing: .05em; overflow-wrap: anywhere; }
+.barcell { display: grid; grid-template-columns: minmax(60px, 1fr) 58px; gap: 8px; align-items: center; }
+.bar { height: 8px; background: var(--field); border-radius: 4px; position: relative; overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; transition: width .2s; }
+.barcell span, td.v { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.best { color: var(--accent-ink); margin-left: 3px; }
+
+/* Einzelansicht */
+.algtabs { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; }
+.seg .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 7px; vertical-align: 0; }
+.mapcard { overflow: hidden; }
+.mapopts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.mapbox { position: relative; }
+.tip { position: absolute; left: 10px; top: 10px; padding: 7px 10px; font-size: 12.5px; background: var(--tip-bg); border: 1px solid var(--line); border-radius: 5px; pointer-events: none; max-width: min(300px, calc(100% - 20px)); z-index: 2; line-height: 1.45; }
+.tip b { font-weight: 600; }
+.banner { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); width: min(560px, calc(100% - 20px)); display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--panel); border: 2px solid var(--accent); border-radius: 6px; z-index: 3; font-size: 14px; }
+.banner b { color: var(--accent-ink); }
+.now { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: 12px 14px; border-bottom: 1px solid var(--line); min-height: 6.4em; background: var(--field); }
+.now .tag { font-family: var(--font-mono); font-size: 12px; color: var(--muted); background: var(--field); border-radius: 4px; padding: 2px 7px; margin-top: 2px; white-space: nowrap; }
+.now p { margin: 0; font-size: 15px; }
+.now .fb { display: block; margin-top: 4px; font-weight: 500; }
+.main { container-type: inline-size; }
+.dlayout { display: grid; grid-template-columns: minmax(0, 1fr) 480px; gap: 12px; align-items: start; }
+.dside { position: sticky; top: calc(var(--ctrlh, 0px) + 12px); max-height: calc(100vh - var(--ctrlh, 0px) - 24px); overflow-y: auto; display: grid; gap: 12px; scrollbar-width: thin; }
+@container (max-width: 940px) { .dlayout { grid-template-columns: minmax(0, 1fr); } .dside { position: static; max-height: none; overflow: visible; } }
+.layout.collapsed { grid-template-columns: minmax(0, 1fr); }
+.layout.collapsed > .side { display: none; }
+@media (max-width: 960px) { #sideBtn { display: none; } .layout.collapsed > .side { display: contents; } }
+.ctx { font-size: 13px; color: var(--muted); margin-right: auto; }
+.ctx b { color: var(--ink); font-weight: 500; }
+.ctx button { border: 0; background: none; color: var(--accent-ink); cursor: pointer; padding: 0 0 0 6px; font-size: 13px; text-decoration: underline; }
+.code { overflow: hidden; }
+.codehead { display: flex; justify-content: space-between; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.codehead b { font-family: var(--font-pixel); font-weight: 600; font-size: 16px; color: var(--ink); }
+pre.lines { margin: 0; padding: 6px 0; font-family: var(--font-mono); font-size: 11.4px; line-height: 1.75; overflow-x: auto; }
+pre.lines div { display: grid; grid-template-columns: 28px 1fr; white-space: pre; padding-right: 8px; border-left: 3px solid transparent; }
+pre.lines .ln { color: var(--muted); opacity: .7; text-align: right; padding-right: 10px; user-select: none; }
+pre.lines .on { background: var(--code-on); color: var(--code-on-ink); border-left-color: var(--accent); }
+pre.lines .on .ln { color: var(--code-on-ink); opacity: 1; }
+.col { display: grid; gap: 12px; }
+.pbox { padding: 12px 14px; display: grid; gap: 8px; }
+.pbox h3 { font-size: 16px; }
+.pbox h3 span { color: var(--muted); font-family: var(--font-ui); font-size: 12.5px; font-weight: 400; margin-left: 6px; }
+.listrow { display: flex; flex-wrap: wrap; gap: 5px; }
+.item { display: inline-flex; gap: 6px; align-items: center; padding: 3px 8px 3px 4px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; font-size: 12.5px; }
+.item img { width: 16px; height: 16px; image-rendering: pixelated; border-radius: 2px; }
+.item .lbl { font-weight: 600; padding: 0 3px; }
+.item.head { border-color: var(--accent); background: var(--sel); }
+.item.stale { opacity: .45; text-decoration: line-through; }
+.item .v { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; }
+.order { margin: 0; font-family: var(--font-mono); font-size: 13px; line-height: 1.75; overflow-wrap: anywhere; }
+.order b { color: var(--accent-ink); font-weight: 500; }
+.ecls { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.ecls i { display: inline-block; width: 20px; border-top: 3px solid; vertical-align: 3px; margin-right: 6px; }
+
+/* Hintergrund */
+.guide { padding: 14px 16px; }
+.guide > summary { cursor: pointer; font-family: var(--font-pixel); font-weight: 600; font-size: 17px; }
+.guide .gbody { display: grid; gap: 14px; margin-top: 12px; }
+.gcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 24px; }
+.gcols h4 { margin: 0 0 3px; font-size: 14.5px; font-weight: 600; }
+.gcols p { margin: 0; font-size: 14px; color: var(--muted); }
+.refs { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 12.5px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="brand">
+    <canvas id="logo" width="16" height="16" aria-hidden="true"></canvas>
+    <div>
+      <h1>Kieselmark</h1>
+      <p>Wie BFS, DFS, Dijkstra und A* ihren Weg finden</p>
+    </div>
+  </div>
+  <div class="right">
+    <div class="seg" role="group" aria-label="Ansicht">
+      <button id="tabRace" type="button" aria-pressed="true">Alle vergleichen</button>
+      <button id="tabDetail" type="button" aria-pressed="false">Schritt für Schritt</button>
+    </div>
+    <button class="ghost" id="sideBtn" type="button" aria-controls="side" aria-expanded="true">Einstellungen ausblenden</button>
+    <button class="ghost" id="themeBtn" type="button" aria-label="Farbschema wechseln">Hell</button>
+  </div>
+</header>
+
+<div class="layout" id="layout">
+  <aside class="side" id="side" aria-label="Einstellungen">
+    <section class="panel box s-world">
+      <h2>Welt</h2>
+      <div class="seg full" role="group" aria-label="Welt">
+        <button id="worldKm" type="button" aria-pressed="true">Karte</button>
+        <button id="worldGraph" type="button" aria-pressed="false">Graph</button>
+      </div>
+    </section>
+
+    <section class="panel box s-task">
+      <h2>Aufgabe</h2>
+      <div class="scenlist" id="chips" role="group" aria-label="Aufgabe wählen"></div>
+      <p class="hint" id="hint"></p>
+    </section>
+
+    <section class="panel box" id="toolbox" hidden>
+      <h2 id="toolTitle">Bauen</h2>
+      <div class="tools" id="hotbar"></div>
+      <p class="small" id="toolInfo"></p>
+      <div class="toolextra" id="toolExtra"></div>
+    </section>
+
+    <section class="panel box" id="costBox">
+      <h2>Ausdauer pro Feld</h2>
+      <div class="costs" id="costs"></div>
+    </section>
+
+    <details class="panel box" id="moreBox">
+      <summary>Nachbarreihenfolge</summary>
+      <p class="small">In welcher Reihenfolge ein Knoten seine Nachbarn prüft. Das verändert vor allem DFS; die Länge des BFS-Weges und die günstigsten Kosten bleiben gleich.</p>
+      <select class="sel" id="orderSel" aria-label="Nachbarreihenfolge"></select>
+    </details>
+
+    <details class="panel box" id="dataBox">
+      <summary>Speichern und laden</summary>
+      <p class="small">Die aktuelle Welt als JSON-Text. Zum Speichern kopieren, zum Laden einfügen.</p>
+      <div class="row">
+        <button class="btn sm" id="expBtn" type="button">Als JSON zeigen</button>
+        <button class="btn sm" id="copyBtn" type="button">Kopieren</button>
+        <button class="btn sm" id="impBtn" type="button">Laden</button>
+      </div>
+      <textarea id="dataTxt" spellcheck="false" aria-label="JSON-Text der Welt"></textarea>
+      <span class="msg" id="dataMsg" aria-live="polite"></span>
+    </details>
+  </aside>
+
+  <main class="main">
+    <!-- Alle vergleichen -->
+    <section id="raceView" class="main" aria-label="Alle vergleichen">
+      <div class="panel ctrlbar">
+        <div class="controls">
+          <button class="btn go" id="rPlay" type="button">Suche starten</button>
+          <button class="btn" id="rStep" type="button" title="Jedes Verfahren besucht einen weiteren Knoten">+1 Schritt</button>
+          <button class="btn" id="rEnd" type="button">Zum Ende</button>
+          <button class="btn" id="rReset" type="button" aria-label="Zurück auf Anfang" title="Zurück auf Anfang">↺</button>
+          <label class="ctrl" for="rSpeed">Tempo <input type="range" id="rSpeed" min="0" max="100" value="45"></label>
+          <button class="btn gold" id="rWalk" type="button" disabled>Loslaufen</button>
+          <div class="prog"><input type="range" id="rScrub" min="0" max="0" value="0" aria-label="Fortschritt"><span class="num" id="rInfo"></span></div>
+        </div>
+        <p class="lead" id="raceLead"></p>
+        <div class="leg" id="legend"></div>
+      </div>
+      <div class="race" id="race"></div>
+      <section class="panel results" aria-label="Ergebnis">
+        <h3>Ergebnis</h3>
+        <p class="summary" id="summary"></p>
+        <div class="tblwrap"><table class="res"><thead id="resHead"></thead><tbody id="resBody"></tbody></table></div>
+      </section>
+    </section>
+
+    <!-- Schritt für Schritt -->
+    <section id="detailView" class="main" aria-label="Schritt für Schritt" hidden>
+      <div class="panel ctrlbar">
+        <div class="algtabs">
+          <div class="seg" id="algtabs" role="group" aria-label="Verfahren"></div>
+          <span class="ctx" id="ctxLabel"></span>
+          <label class="ctrl" for="dGran">Ein Schritt ist <select id="dGran"><option value="line">eine Codezeile</option><option value="node">ein besuchter Knoten</option></select></label>
+        </div>
+        <div class="controls">
+          <button class="btn" id="dStart" type="button" aria-label="Zum Anfang">|◀</button>
+          <button class="btn" id="dBack" type="button" aria-label="Schritt zurück">◀</button>
+          <button class="btn go" id="dPlay" type="button" style="min-width:110px">Abspielen</button>
+          <button class="btn" id="dFwd" type="button" aria-label="Schritt vor">▶</button>
+          <button class="btn" id="dEnd" type="button" aria-label="Zum Ende">▶|</button>
+          <label class="ctrl" for="dSpeed">Tempo <input type="range" id="dSpeed" min="0" max="100" value="35"></label>
+          <div class="prog"><input type="range" id="dScrub" min="0" max="0" value="0" aria-label="Fortschritt"><span class="num" id="dInfo"></span></div>
+        </div>
+        <div class="leg" id="legendD"></div>
+      </div>
+      <div class="dlayout">
+      <div class="panel mapcard">
+        <div class="mapopts">
+          <label class="ctrl" for="numSel">Zahlen auf der Karte <select id="numSel"><option value="order">Besuchsnummer</option><option value="dist">Kosten bzw. Abstand</option><option value="none">keine</option></select></label>
+          <label class="ctrl" for="guessChk"><input type="checkbox" id="guessChk"> Mitraten: nächsten Knoten vorhersagen</label>
+        </div>
+        <div class="mapbox">
+          <div class="scroller" id="dScroller"><canvas id="dMap" tabindex="0" aria-label="Karte mit Suchfortschritt"></canvas></div>
+          <div class="tip" id="tip" hidden></div>
+          <div class="banner" id="banner" hidden><span><b>Mitraten:</b> <span id="bannerTxt"></span></span><button class="btn sm" id="bSkip" type="button">Auflösen</button></div>
+        </div>
+      </div>
+      <div class="dside">
+        <section class="panel code" aria-label="Pseudocode">
+          <div class="now"><span class="tag" id="nowTag">Start</span><p id="explain" aria-live="polite"></p></div>
+          <div class="codehead"><b id="codeName">Breitensuche</b><span id="codeTag">Pseudocode</span></div>
+          <pre class="lines" id="lines"></pre>
+        </section>
+          <section class="panel pbox" aria-label="Liste der Suche">
+            <h3 id="listTitle">Warteschlange</h3>
+            <div class="listrow" id="listRow"></div>
+            <p class="small" id="listFoot"></p>
+          </section>
+          <section class="panel pbox" aria-label="Besuchsreihenfolge">
+            <h3>Besuchsreihenfolge <span id="orderHint"></span></h3>
+            <p class="order" id="orderTxt"></p>
+            <div class="ecls" id="eclsLegend" hidden>
+              <span><i style="border-color:var(--c-dfs)"></i>Baumkante</span>
+              <span><i style="border-color:#e5484d;border-top-style:dashed"></i>Rückwärtskante</span>
+              <span><i style="border-color:#3e9bff;border-top-style:dashed"></i>Vorwärtskante</span>
+              <span><i style="border-color:#8f8f8f;border-top-style:dotted"></i>Querkante</span>
+            </div>
+          </section>
+      </div>
+      </div>
+    </section>
+
+    <details class="panel guide">
+      <summary>Wie funktioniert das?</summary>
+      <div class="gbody">
+        <div class="gcols">
+          <div><h4>Die Karte ist ein Graph</h4><p>Jedes begehbare Feld ist ein Knoten. Von jedem Feld geht es zu den vier Nachbarfeldern. Ein Schritt kostet so viel Ausdauer, wie das Feld kostet, das man betritt. Im Graph-Modus zeichnest du Knoten und Kanten selbst.</p></div>
+          <div><h4>Faire Schritte</h4><p>Im Vergleich besucht jedes Verfahren pro Schritt genau einen weiteren Knoten. Gezählt wird also, wie viele Knoten ein Verfahren anschauen muss, nicht wie schnell der Computer ist.</p></div>
+          <div><h4>Zwei Fragen</h4><p>Wie viel musste gesucht werden? Das zeigen die besuchten Knoten. Wie gut ist der gefundene Weg? Das zeigt die Laufphase: Wer den günstigsten Weg gefunden hat, kommt zuerst an.</p></div>
+          <div><h4>Der Kompass von A*</h4><p>A* schätzt, wie weit es noch bis zum Ziel ist, und schätzt dabei nie zu viel. Deshalb findet A* denselben günstigsten Weg wie Dijkstra, schaut sich aber meist weniger Knoten an.</p></div>
+        </div>
+        <div>
+          <h4 style="margin:0 0 4px;font-size:14.5px">Quellen</h4>
+          <ul class="refs">
+            <li>Brown, M. H.; Sedgewick, R. (1984): A System for Algorithm Animation. Computer Graphics 18(3), 177–186.</li>
+            <li>Dijkstra, E. W. (1959): A note on two problems in connexion with graphs. Numerische Mathematik 1, 269–271.</li>
+            <li>Hart, P. E.; Nilsson, N. J.; Raphael, B. (1968): A Formal Basis for the Heuristic Determination of Minimum Cost Paths. IEEE Trans. SSC 4(2), 100–107.</li>
+            <li>Tarjan, R. E. (1972): Depth-First Search and Linear Graph Algorithms. SIAM J. Computing 1(2), 146–160.</li>
+          </ul>
+        </div>
+      </div>
+    </details>
+  </main>
+</div>
+
+<script>
+/*
+ * Kieselmark-Engine
+ * ------------------
+ * Welten (Rasterwelt "Kieselmark" und frei gezeichnete Graphen), Graphaufbau,
+ * vier Suchverfahren als Schritt-Rekorder und eine Wiedergabe mit Vor/Zurück.
+ *
+ * Browser: globales Objekt KM. Node: module.exports (für Tests und Experiment).
+ *
+ * Grundidee (vgl. Brown & Sedgewick 1984, "interesting events"): Die Verfahren
+ * zeichnen nicht selbst. Sie laufen einmal vollständig durch und schreiben jede
+ * ausgeführte Pseudocode-Zeile als Ereignis in eine Liste. Die Wiedergabe wendet
+ * Ereignisse an (vor) oder nimmt sie zurück (zurück).
+ *
+ * Graphmodell der Rasterwelt: Jedes begehbare Feld ist ein Knoten. Von jedem Feld
+ * führt eine gerichtete Kante zu jedem begehbaren Nachbarfeld (oben, rechts, unten,
+ * links). Ihr Gewicht ist die Ausdauer, die das Betreten des ZIELfeldes kostet.
+ * Die Struktur ist symmetrisch (zu jeder Kante gibt es die Gegenkante), die Gewichte
+ * im Allgemeinen nicht: Der Graph ist gerichtet und gewichtet.
+ */
+(function (root) {
+  "use strict";
+
+  /* ======================= Gelände ======================= */
+  // cost = Ausdauer beim Betreten; Infinity = nicht begehbar
+  const TERRAIN = [
+    { key: "gras",    name: "Gras",         cost: 2 },
+    { key: "weg",     name: "Pflasterweg",  cost: 1 },
+    { key: "sand",    name: "Sand",         cost: 2 },
+    { key: "wald",    name: "Wald",         cost: 4 },
+    { key: "sumpf",   name: "Sumpf",        cost: 7 },
+    { key: "acker",   name: "Acker",        cost: 3 },
+    { key: "kies",    name: "Geröll",       cost: 3 },
+    { key: "bruecke", name: "Brücke",       cost: 1 },
+    { key: "wasser",  name: "Wasser",       cost: Infinity },
+    { key: "fels",    name: "Fels",         cost: Infinity },
+    { key: "lava",    name: "Lava",         cost: Infinity },
+    { key: "haus",    name: "Haus",         cost: Infinity },
+    { key: "muehle",  name: "Mühle",        cost: Infinity },
+    { key: "mine",    name: "Mineneingang", cost: 1 },
+    { key: "schnee",  name: "Schnee",       cost: 3 },
+  ];
+  const T = Object.fromEntries(TERRAIN.map((t, i) => [t.key, i]));
+  const MIN_COST = Math.min(...TERRAIN.map(t => t.cost)); // = 1, Grundlage der Heuristik
+
+  /* ======================= Welt "Kieselmark" (erfunden, deterministisch) ======================= */
+  function rng(seed) { let s = seed >>> 0; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
+  function valueNoise(seed, W, H, cell) {
+    const r = rng(seed), gw = Math.ceil(W / cell) + 2, gh = Math.ceil(H / cell) + 2;
+    const g = Array.from({ length: gw * gh }, r);
+    const sm = t => t * t * (3 - 2 * t);
+    return (x, y) => {
+      const fx = x / cell, fy = y / cell, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = sm(fx - x0), ty = sm(fy - y0);
+      const v = (i, j) => g[j * gw + i];
+      const a = v(x0, y0) * (1 - tx) + v(x0 + 1, y0) * tx, b = v(x0, y0 + 1) * (1 - tx) + v(x0 + 1, y0 + 1) * tx;
+      return a * (1 - ty) + b * ty;
+    };
+  }
+
+  function makeWorld() {
+    const W = 48, H = 30;
+    const tiles = new Uint8Array(W * H).fill(T.gras);
+    const at = (x, y) => tiles[y * W + x];
+    const set = (x, y, t) => { if (x >= 0 && y >= 0 && x < W && y < H) tiles[y * W + x] = t; };
+    const nA = valueNoise(11, W, H, 5), nB = valueNoise(23, W, H, 3), nC = valueNoise(37, W, H, 4);
+    const dist = (x, y, cx, cy, sx = 1, sy = 1) => Math.hypot((x - cx) / sx, (y - cy) / sy);
+
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const m = dist(x, y, 4, 2, 11, 8) - nA(x, y) * 0.45;            // Gebirge im Nordwesten
+      if (m < 0.55) set(x, y, T.fels);
+      else if (m < 0.72) set(x, y, T.kies);
+      if (dist(x, y, 2, 1, 4, 3) - nB(x, y) * 0.4 < 0.5) set(x, y, T.schnee);
+      if (dist(x, y, 9, 3, 2.2, 1.4) < 1) set(x, y, T.lava);
+      if (dist(x, y, 21, 5, 8, 5) - nB(x, y) * 0.5 < 0.62 && at(x, y) === T.gras) set(x, y, T.wald); // Dunkelwald
+      if (dist(x, y, 9, 24, 7, 4) - nC(x, y) * 0.5 < 0.55) set(x, y, T.sumpf);                       // Moor
+      if (dist(x, y, 41, 5, 5, 4) - nA(x, y) * 0.5 < 0.5) set(x, y, T.wald);
+      if (dist(x, y, 40, 25, 4, 3) - nC(x, y) * 0.5 < 0.45) set(x, y, T.wald);
+    }
+    for (const [x, y] of [[7, 23], [8, 23], [11, 25], [6, 25], [12, 23]]) set(x, y, T.wasser);   // Moortümpel
+    for (let y = 0; y < H; y++) {                                                                // Fluss
+      const c = Math.round(31 + 2.2 * Math.sin(y / 4.2) + (y > 18 ? -1 : 0));
+      for (let dx = -1; dx <= 1; dx++) set(c + dx, y, T.wasser);
+      if (y % 7 === 3) set(c + 2, y, T.wasser);
+    }
+    for (let y = 0; y < H; y++) {                                                                // Meer und Strand
+      const coast = 45 + Math.round(nB(y, 1) * 2 - 1);
+      for (let x = coast; x < W; x++) set(x, y, T.wasser);
+      set(coast - 1, y, T.sand); if (nA(y, 3) > 0.45) set(coast - 2, y, T.sand);
+    }
+    for (let y = 4; y <= 7; y++) for (let x = 20; x <= 24; x++) set(x, y, T.gras);              // Lichtung
+    set(21, 4, T.haus); set(22, 4, T.haus);
+    const houses = [[10, 13, 2, 2], [14, 12, 3, 2], [19, 13, 2, 2], [9, 18, 2, 2], [13, 19, 3, 2], [19, 18, 2, 2], [6, 15, 2, 2]];
+    for (const [hx, hy, w, h] of houses) for (let y = hy; y < hy + h; y++) for (let x = hx; x < hx + w; x++) set(x, y, T.haus);
+    for (let y = 15; y <= 17; y++) for (let x = 12; x <= 18; x++) set(x, y, T.weg);             // Dorfplatz
+    const road = pts => {
+      for (let i = 0; i + 1 < pts.length; i++) {
+        let [x, y] = pts[i]; const [x2, y2] = pts[i + 1];
+        while (x !== x2 || y !== y2) {
+          if (at(x, y) !== T.haus && at(x, y) !== T.wasser) set(x, y, T.weg);
+          if (x !== x2) x += Math.sign(x2 - x); else y += Math.sign(y2 - y);
+        }
+        if (at(x, y) !== T.haus && at(x, y) !== T.wasser) set(x, y, T.weg);
+      }
+    };
+    road([[12, 16], [8, 16], [8, 11], [12, 11], [12, 9]]);
+    road([[15, 15], [15, 10], [18, 10], [18, 8], [20, 8]]);
+    road([[18, 17], [24, 17], [24, 21], [27, 21]]);
+    road([[18, 16], [25, 16], [25, 13]]);
+    set(12, 8, T.mine); set(11, 8, T.kies); set(13, 8, T.kies);
+    for (let x = 10; x <= 14; x++) if (at(x, 7) !== T.lava) set(x, 7, T.fels);
+    set(26, 22, T.muehle); set(27, 22, T.muehle); set(26, 23, T.muehle); set(27, 23, T.muehle);
+    for (let y = 24; y <= 28; y++) for (let x = 20; x <= 27; x++) if (at(x, y) === T.gras) set(x, y, T.acker);
+    const bridgeRow = y => { for (let x = 0; x < W; x++) if (at(x, y) === T.wasser && x > 25 && x < 38) set(x, y, T.bruecke); };
+    bridgeRow(4); bridgeRow(27);
+    road([[25, 13], [25, 4], [27, 4]]);
+    road([[38, 4], [40, 4], [40, 12], [42, 12]]);
+    road([[24, 27], [27, 27]]);
+    road([[36, 27], [39, 27], [39, 21], [43, 21]]);
+    for (let x = 42; x <= 46; x++) set(x, 12, x >= 45 ? T.bruecke : T.weg);
+    const landmarks = {
+      "Dorfplatz": [15, 16], "Mineneingang": [12, 8], "Holzfällerhütte": [22, 5], "Mühle": [25, 22],
+      "Hafen": [46, 12], "Schatztruhe": [43, 21], "Leuchtfeuer": [43, 27], "Moorhütte": [4, 22],
+    };
+    for (const [, [x, y]] of Object.entries(landmarks)) if (!isFinite(TERRAIN[at(x, y)].cost)) set(x, y, T.gras);
+    return { W, H, tiles, landmarks, name: "Kieselmark" };
+  }
+
+  /* ======================= Nachbarreihenfolgen ======================= */
+  // Richtungen der Rasterwelt; eine Reihenfolge ist eine Permutation der Indizes 0..3.
+  const DIRS = [[0, -1, "oben"], [1, 0, "rechts"], [0, 1, "unten"], [-1, 0, "links"]];
+  const GRID_ORDERS = [
+    { id: "orul", name: "oben, rechts, unten, links", perm: [0, 1, 2, 3] },
+    { id: "rulo", name: "rechts, unten, links, oben", perm: [1, 2, 3, 0] },
+    { id: "ulor", name: "unten, links, oben, rechts", perm: [2, 3, 0, 1] },
+    { id: "loru", name: "links, oben, rechts, unten", perm: [3, 0, 1, 2] },
+  ];
+  const GRAPH_ORDERS = [
+    { id: "az", name: "alphabetisch (A → Z)", dir: 1 },
+    { id: "za", name: "umgekehrt (Z → A)", dir: -1 },
+  ];
+
+  /* ======================= Graph aus der Rasterwelt ======================= */
+  function buildGraph(world, orderId) {
+    const { W, H, tiles } = world, n = W * H;
+    const perm = (GRID_ORDERS.find(o => o.id === orderId) || GRID_ORDERS[0]).perm;
+    const adj = Array.from({ length: n }, () => []), edges = [];
+    const pass = v => isFinite(TERRAIN[tiles[v]].cost);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const u = y * W + x; if (!pass(u)) continue;
+      for (const di of perm) {
+        const [dx, dy, dir] = DIRS[di];
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const v = ny * W + nx; if (!pass(v)) continue;
+        const w = TERRAIN[tiles[v]].cost, e = edges.length;
+        edges.push({ a: u, b: v, w, dir, key: Math.min(u, v) + ":" + Math.max(u, v) });
+        adj[u].push([v, w, e]);
+      }
+    }
+    const names = {}; for (const [k, [x, y]] of Object.entries(world.landmarks || {})) names[y * W + x] = k;
+    const label = v => names[v] ? names[v] : `(${v % W}|${Math.floor(v / W)}) ${TERRAIN[tiles[v]].name}`;
+    // Manhattan-Abstand mal kleinste Feldkosten: zulässig und konsistent (siehe Bericht)
+    const h = (u, z) => z < 0 ? 0 : (Math.abs(u % W - z % W) + Math.abs(Math.floor(u / W) - Math.floor(z / W))) * MIN_COST;
+    const pos = v => [v % W + 0.5, Math.floor(v / W) + 0.5];
+    return { kind: "grid", n, W, H, adj, edges, pass, label, h, pos, tiles, symmetric: true, weighted: true };
+  }
+
+  /* ======================= Graph aus einer freien Zeichnung ======================= */
+  // def = { nodes: [{x, y, label}], edges: [{a, b, w}], directed: bool, weighted: bool }
+  function buildAbstract(def, orderId) {
+    const n = def.nodes.length, dirSign = (GRAPH_ORDERS.find(o => o.id === orderId) || GRAPH_ORDERS[0]).dir;
+    const adj = Array.from({ length: n }, () => []), edges = [];
+    const len = (a, b) => Math.hypot(def.nodes[a].x - def.nodes[b].x, def.nodes[a].y - def.nodes[b].y);
+    const weightOf = e => def.weighted ? Math.max(0, +e.w || 0) : 1;
+    def.edges.forEach((e, eid) => {
+      if (e.a === e.b || e.a < 0 || e.b < 0 || e.a >= n || e.b >= n) return;
+      const w = weightOf(e);
+      const add = (a, b) => { const id = edges.length; edges.push({ a, b, w, eid, key: String(eid) }); adj[a].push([b, w, id]); };
+      add(e.a, e.b); if (!def.directed) add(e.b, e.a);
+    });
+    const cmp = (x, y) => dirSign * def.nodes[x[0]].label.localeCompare(def.nodes[y[0]].label, "de", { numeric: true }) || x[2] - y[2];
+    adj.forEach(list => list.sort(cmp));
+    // Heuristik: c mal Luftlinie, c = kleinstes Verhältnis Gewicht/Länge über alle Kanten.
+    // Für jede Kante gilt dann c·len(u,v) <= w(u,v); mit der Dreiecksungleichung folgt
+    // h(u) <= w(u,v) + h(v), also Konsistenz und damit Zulässigkeit.
+    let c = Infinity;
+    for (const e of edges) { const l = len(e.a, e.b); if (l > 0) c = Math.min(c, e.w / l); }
+    if (!isFinite(c)) c = 0;
+    const h = (u, z) => z < 0 ? 0 : c * len(u, z);
+    const label = v => def.nodes[v].label;
+    const pos = v => [def.nodes[v].x, def.nodes[v].y];
+    return { kind: "graph", n, adj, edges, pass: () => true, label, h, hFactor: c, pos, def, symmetric: !def.directed, weighted: !!def.weighted };
+  }
+
+  /* ======================= Pseudocode ======================= */
+  const PSEUDO = {
+    bfs: [
+      "BFS(G, s, z)",
+      "  für alle v ∈ V: markiert[v] ← falsch; vorg[v] ← NIL",
+      "  markiert[s] ← wahr; dist[s] ← 0",
+      "  Q ← Warteschlange mit s",
+      "  solange Q nicht leer",
+      "    u ← ENTNEHMEN(Q)            // vorne",
+      "    falls u = z: gib WEG(vorg, z) zurück",
+      "    für alle v ∈ Adj[u]",
+      "      falls markiert[v] = falsch",
+      "        markiert[v] ← wahr; dist[v] ← dist[u] + 1; vorg[v] ← u",
+      "        EINFÜGEN(Q, v)           // hinten",
+      "  gib „kein Weg“ zurück",
+    ],
+    dfs: [
+      "DFS(G, s, z)",
+      "  für alle v ∈ V: markiert[v] ← falsch; vorg[v] ← NIL",
+      "  markiert[s] ← wahr; tiefe[s] ← 0",
+      "  S ← Stapel mit s",
+      "  solange S nicht leer",
+      "    u ← OBEN(S)                  // nur ansehen",
+      "    falls u = z: gib WEG(vorg, z) zurück",
+      "    falls u hat ungeprüften Nachbarn v",
+      "      falls markiert[v] = falsch",
+      "        markiert[v] ← wahr; tiefe[v] ← tiefe[u] + 1; vorg[v] ← u",
+      "        LEGE v AUF S             // Vorstoß",
+      "    sonst: NIMM u VON S          // Rücksprung",
+      "  gib „kein Weg“ zurück",
+    ],
+    dijkstra: [
+      "DIJKSTRA(G, s, z)",
+      "  für alle v ∈ V: dist[v] ← ∞; vorg[v] ← NIL",
+      "  dist[s] ← 0",
+      "  PQ ← {(0, s)}",
+      "  solange PQ nicht leer",
+      "    (d, u) ← ENTNIMM-MIN(PQ)",
+      "    falls u abgeschlossen: weiter",
+      "    markiere u als abgeschlossen",
+      "    falls u = z: gib WEG(vorg, z) zurück",
+      "    für alle (v, w) ∈ Adj[u]",
+      "      neu ← dist[u] + w",
+      "      falls neu < dist[v]",
+      "        dist[v] ← neu; vorg[v] ← u",
+      "        EINFÜGEN(PQ, (neu, v))",
+      "  gib „kein Weg“ zurück",
+    ],
+    astar: [
+      "A*(G, s, z, h)",
+      "  für alle v ∈ V: g[v] ← ∞; vorg[v] ← NIL",
+      "  g[s] ← 0",
+      "  PQ ← {(h(s, z), s)}",
+      "  solange PQ nicht leer",
+      "    (f, u) ← ENTNIMM-MIN(PQ)",
+      "    falls u abgeschlossen: weiter",
+      "    markiere u als abgeschlossen",
+      "    falls u = z: gib WEG(vorg, z) zurück",
+      "    für alle (v, w) ∈ Adj[u]",
+      "      neu ← g[u] + w",
+      "      falls neu < g[v]",
+      "        g[v] ← neu; vorg[v] ← u",
+      "        EINFÜGEN(PQ, (neu + h(v, z), v))",
+      "  gib „kein Weg“ zurück",
+    ],
+  };
+  // "Besuch" eines Knotens = das Ereignis, das der Takt des Wettrennens zählt:
+  // BFS entnimmt, DFS stößt vor (legt auf den Stapel), Dijkstra/A* schließen ab.
+  const VISIT = { bfs: "pop", dfs: "push", dijkstra: "close", astar: "close" };
+  const VISIT_LINE = { bfs: 5, dfs: 10, dijkstra: 7, astar: 7 };
+
+  /* ======================= Binärer Heap ======================= */
+  const less = (x, y) => x.key < y.key || (x.key === y.key && x.seq < y.seq);
+  class Heap {
+    constructor() { this.a = []; }
+    get size() { return this.a.length; }
+    push(x) { const a = this.a; a.push(x); let i = a.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (!less(a[i], a[p])) break; [a[i], a[p]] = [a[p], a[i]]; i = p; } }
+    pop() {
+      const a = this.a, top = a[0], last = a.pop();
+      if (a.length) { a[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && less(a[l], a[m])) m = l; if (r < a.length && less(a[r], a[m])) m = r; if (m === i) break; [a[i], a[m]] = [a[m], a[i]]; i = m; } }
+      return top;
+    }
+  }
+
+  /* ======================= Rekorder ======================= */
+  // z = -1: kein Ziel, das Verfahren durchsucht alles von s aus Erreichbare.
+  function record(G, s, z, mode) {
+    const n = G.n, ev = [];
+    const dist = new Float64Array(n).fill(Infinity), vorg = new Int32Array(n).fill(-1), vorgE = new Int32Array(n).fill(-1);
+    const closed = new Uint8Array(n), disc = new Int32Array(n).fill(-1);
+    let seq = 0, maxList = 0, found = false, closedCount = 0, edgeChecks = 0, discT = 0;
+    const setEv = (l, v, d, p, e) => { ev.push({ l, t: "set", v, u: p, d, oldD: dist[v], p, oldP: vorg[v], e, oldE: vorgE[v] }); dist[v] = d; vorg[v] = p; vorgE[v] = e; disc[v] = discT++; };
+
+    if (mode === "bfs" || mode === "dfs") {
+      ev.push({ l: 1, t: "init" });
+      setEv(2, s, 0, -1, -1);
+      const isQ = mode === "bfs";
+      const list = [{ v: s, seq, key: isQ ? seq : -seq, i: 0 }];
+      ev.push({ l: 3, t: "push", v: s, key: list[0].key, seq: seq++ });
+      while (true) {
+        ev.push({ l: 4, t: "loop", size: list.length });
+        if (!list.length) break;
+        maxList = Math.max(maxList, list.length);
+        if (isQ) {
+          const top = list.shift(), u = top.v;
+          closed[u] = 1; closedCount++;
+          ev.push({ l: 5, t: "pop", u, key: top.key, seq: top.seq, close: true });
+          const hit = u === z; ev.push({ l: 6, t: "goal", u, hit });
+          if (hit) { found = true; break; }
+          for (const [v, w, e] of G.adj[u]) {
+            edgeChecks++;
+            ev.push({ l: 7, t: "nb", u, v, w, e, has: true });
+            const marked = dist[v] < Infinity;
+            ev.push({ l: 8, t: "chk", u, v, e, marked });
+            if (marked) continue;
+            setEv(9, v, dist[u] + 1, u, e);
+            const it = { v, seq, key: seq }; list.push(it);
+            ev.push({ l: 10, t: "push", u, v, e, key: it.key, seq: seq++ });
+          }
+        } else {
+          const top = list[list.length - 1], u = top.v;
+          ev.push({ l: 5, t: "top", u });
+          const hit = u === z; ev.push({ l: 6, t: "goal", u, hit });
+          if (hit) { found = true; break; }
+          if (top.i < G.adj[u].length) {
+            const [v, w, e] = G.adj[u][top.i++];
+            edgeChecks++;
+            ev.push({ l: 7, t: "nb", u, v, w, e, has: true });
+            const marked = dist[v] < Infinity;
+            // Kantenklassifikation (Tarjan 1972; Demaine et al. 2008):
+            // Ziel auf dem Stapel = Rückwärtskante; im gerichteten Fall sonst Vorwärts- oder Querkante.
+            let cls = "baum";
+            if (marked) {
+              const onStack = !closed[v];
+              if (G.symmetric && v === vorg[u] && G.edges[e].key === G.edges[vorgE[u]].key) cls = "vorgaenger";
+              else if (onStack) cls = "rueck";
+              else if (G.symmetric) cls = "erfasst";
+              else cls = disc[v] > disc[u] ? "vor" : "quer";
+            }
+            ev.push({ l: 8, t: "chk", u, v, e, marked, cls });
+            if (marked) continue;
+            setEv(9, v, dist[u] + 1, u, e);
+            const it = { v, seq, key: -seq, i: 0 }; list.push(it);
+            ev.push({ l: 10, t: "push", u, v, e, key: it.key, seq: seq++ });
+          } else {
+            ev.push({ l: 7, t: "nb", u, has: false });
+            list.pop(); closed[u] = 1; closedCount++;
+            ev.push({ l: 11, t: "pop", u, key: top.key, seq: top.seq, close: true });
+          }
+        }
+      }
+      if (!found) ev.push({ l: isQ ? 11 : 12, t: "none" });
+    } else {
+      const astar = mode === "astar";
+      const h = astar ? v => G.h(v, z) : () => 0;
+      const pq = new Heap();
+      ev.push({ l: 1, t: "init" });
+      setEv(2, s, 0, -1, -1);
+      pq.push({ key: h(s), v: s, seq, g: 0 });
+      ev.push({ l: 3, t: "push", v: s, key: h(s), g: 0, h: h(s), seq: seq++ });
+      while (true) {
+        ev.push({ l: 4, t: "loop", size: pq.size });
+        if (!pq.size) break;
+        maxList = Math.max(maxList, pq.size);
+        const top = pq.pop(), u = top.v;
+        ev.push({ l: 5, t: "pop", u, key: top.key, seq: top.seq, g: top.g, close: false });
+        const stale = closed[u] === 1;
+        ev.push({ l: 6, t: "stale", u, stale });
+        if (stale) continue;
+        closed[u] = 1; closedCount++;
+        ev.push({ l: 7, t: "close", u });
+        const hit = u === z; ev.push({ l: 8, t: "goal", u, hit });
+        if (hit) { found = true; break; }
+        for (const [v, w, e] of G.adj[u]) {
+          edgeChecks++;
+          ev.push({ l: 9, t: "nb", u, v, w, e, has: true });
+          const neu = dist[u] + w;
+          ev.push({ l: 10, t: "calc", u, v, w, e, neu });
+          const old = dist[v], better = neu < old;
+          ev.push({ l: 11, t: "cmp", u, v, e, neu, old, better });
+          if (!better) continue;
+          setEv(12, v, neu, u, e);
+          const hv = h(v);
+          pq.push({ key: neu + hv, v, seq, g: neu });
+          ev.push({ l: 13, t: "push", u, v, e, key: neu + hv, g: neu, h: hv, seq: seq++ });
+        }
+      }
+      if (!found) ev.push({ l: 14, t: "none" });
+    }
+
+    const path = [];
+    if (found) for (let v = z; v !== -1; v = vorg[v]) path.push(v);
+    path.reverse();
+    let cost = 0; for (let i = 1; i < path.length; i++) cost += G.edges[vorgE[path[i]]].w;
+    // Besuchsreihenfolge: Ereignisindex und Knoten jedes Besuchs
+    const visits = []; ev.forEach((e, i) => { if (e.t === VISIT[mode]) visits.push(i); });
+    const order = visits.map(i => ev[i].t === "push" ? ev[i].v : ev[i].u);
+    return {
+      mode, s, z, events: ev, found, path, cost: found ? cost : Infinity, fields: found ? path.length - 1 : Infinity,
+      closedCount, maxList, pushes: seq, edgeChecks, visits, order, reached: order.length,
+    };
+  }
+
+  /* ======================= Wiedergabe ======================= */
+  const cmpE = (x, y) => x.key - y.key || x.seq - y.seq;
+  function ins(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (cmpE(a[m], x) < 0) lo = m + 1; else hi = m; } a.splice(lo, 0, x); }
+  function rem(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (cmpE(a[m], x) < 0) lo = m + 1; else hi = m; } if (a[lo] && a[lo].seq === x.seq) a.splice(lo, 1); else { const i = a.findIndex(y => y.seq === x.seq); if (i >= 0) a.splice(i, 1); } }
+
+  class Replay {
+    constructor(G, rec) {
+      this.G = G; this.rec = rec; this.ev = rec.events; this.i = 0;
+      this.dist = new Float64Array(G.n).fill(Infinity); this.vorg = new Int32Array(G.n).fill(-1); this.vorgE = new Int32Array(G.n).fill(-1);
+      this.closed = new Uint8Array(G.n); this.closedCount = 0; this.list = []; this.found = false;
+      this.visitNo = new Int32Array(G.n).fill(0);   // 1, 2, 3 ... in Besuchsreihenfolge; 0 = noch nicht besucht
+      this.visitCount = 0;
+      this.visitType = VISIT[rec.mode];
+    }
+    get length() { return this.ev.length; }
+    get current() { return this.i > 0 ? this.ev[this.i - 1] : null; }
+    get next() { return this.i < this.ev.length ? this.ev[this.i] : null; }
+    forward() {
+      if (this.i >= this.ev.length) return false;
+      const e = this.ev[this.i++];
+      switch (e.t) {
+        case "set": this.dist[e.v] = e.d; this.vorg[e.v] = e.p; this.vorgE[e.v] = e.e; break;
+        case "push": ins(this.list, e); break;
+        case "pop": rem(this.list, e); if (e.close) { this.closed[e.u] = 1; this.closedCount++; } break;
+        case "close": this.closed[e.u] = 1; this.closedCount++; break;
+        case "goal": if (e.hit) this.found = true; break;
+      }
+      if (e.t === this.visitType) { const v = e.t === "push" ? e.v : e.u; this.visitNo[v] = ++this.visitCount; }
+      return true;
+    }
+    back() {
+      if (this.i <= 0) return false;
+      const e = this.ev[--this.i];
+      if (e.t === this.visitType) { const v = e.t === "push" ? e.v : e.u; this.visitNo[v] = 0; this.visitCount--; }
+      switch (e.t) {
+        case "set": this.dist[e.v] = e.oldD; this.vorg[e.v] = e.oldP; this.vorgE[e.v] = e.oldE; break;
+        case "push": rem(this.list, e); break;
+        case "pop": ins(this.list, e); if (e.close) { this.closed[e.u] = 0; this.closedCount--; } break;
+        case "close": this.closed[e.u] = 0; this.closedCount--; break;
+        case "goal": if (e.hit) this.found = false; break;
+      }
+      return true;
+    }
+    seek(t) { t = Math.max(0, Math.min(this.ev.length, t)); while (this.i < t) this.forward(); while (this.i > t) this.back(); }
+    nextLine(l) { do { if (!this.forward()) return false; } while (this.current.l !== l); return true; }
+    prevLine(l) { if (!this.i) return false; this.back(); while (this.i > 0 && this.current.l !== l) this.back(); return true; }
+    /** Kanten, die bis zum aktuellen Schritt geprüft wurden, mit Klassifikation (nur DFS). */
+    checkedEdges() {
+      const out = new Map();
+      for (let k = 0; k < this.i; k++) { const e = this.ev[k]; if (e.t === "chk") out.set(this.G.edges[e.e].key, e.cls || (e.marked ? "gesehen" : "baum")); }
+      return out;
+    }
+  }
+
+  /* ======================= Beispielgraphen für das Graph-Labor ======================= */
+  const P = (label, x, y) => ({ label, x, y });
+  const GRAPH_PRESETS = [
+    {
+      id: "lehr", title: "Lehrgraph", sub: "ungerichtet, ungewichtet",
+      hint: "Ein kleiner Graph zum Nachrechnen von Hand. Ohne Ziel durchsuchen alle Verfahren den ganzen Graphen. Vergleiche die Besuchsreihenfolge von BFS und DFS.",
+      def: {
+        directed: false, weighted: false,
+        nodes: [P("A", 120, 300), P("B", 300, 140), P("C", 300, 460), P("D", 480, 90), P("E", 500, 300), P("F", 480, 500), P("G", 680, 200), P("H", 700, 420), P("I", 860, 300)],
+        edges: [[0, 1], [0, 2], [1, 3], [1, 4], [2, 4], [2, 5], [3, 6], [4, 6], [4, 7], [5, 7], [6, 8], [7, 8]].map(([a, b]) => ({ a, b, w: 1 })),
+      }, s: 0, z: -1,
+    },
+    {
+      id: "gewicht", title: "Gewichteter Graph", sub: "wenige Kanten oder günstig?",
+      hint: "Der Weg mit den wenigsten Kanten ist hier nicht der günstigste. BFS zählt Kanten, Dijkstra und A* summieren Gewichte.",
+      def: {
+        directed: false, weighted: true,
+        nodes: [P("S", 90, 300), P("A", 270, 120), P("B", 270, 300), P("C", 270, 480), P("D", 480, 120), P("E", 480, 300), P("F", 480, 480), P("G", 690, 200), P("H", 690, 420), P("Z", 880, 300)],
+        edges: [[0, 1, 2], [0, 2, 9], [0, 3, 3], [1, 4, 2], [2, 5, 9], [3, 6, 2], [4, 7, 2], [5, 9, 9], [6, 8, 2], [7, 9, 3], [8, 9, 4], [1, 2, 5], [2, 3, 5], [4, 5, 4], [5, 6, 4]].map(([a, b, w]) => ({ a, b, w })),
+      }, s: 0, z: 9,
+    },
+    {
+      id: "gerichtet", title: "Gerichteter Graph", sub: "Kantentypen der DFS",
+      hint: "Öffne „Einzeln ansehen“ und wähle DFS. Jede geprüfte Kante, die nicht zum Baum gehört, wird als Rückwärts-, Vorwärts- oder Querkante eingefärbt.",
+      def: {
+        directed: true, weighted: false,
+        nodes: [P("A", 120, 300), P("B", 320, 140), P("C", 320, 460), P("D", 540, 300), P("E", 540, 520), P("F", 760, 460), P("G", 760, 140)],
+        edges: [[0, 1], [0, 2], [0, 3], [1, 3], [3, 0], [2, 3], [2, 4], [4, 5], [5, 2], [3, 6], [6, 1]].map(([a, b]) => ({ a, b, w: 1 })),
+      }, s: 0, z: -1,
+    },
+  ];
+
+  const KM = { TERRAIN, T, MIN_COST, DIRS, GRID_ORDERS, GRAPH_ORDERS, makeWorld, buildGraph, buildAbstract, record, Replay, Heap, PSEUDO, VISIT, VISIT_LINE, GRAPH_PRESETS, rng };
+  if (typeof module !== "undefined" && module.exports) module.exports = KM; else root.KM = KM;
+})(typeof window !== "undefined" ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const TER = KM.TERRAIN, TK = KM.T, ORDER = ["bfs", "dfs", "dijkstra", "astar"];
+  const MODES = {
+    bfs: { name: "BFS", long: "Breitensuche", kind: "Breitensuche", list: "Warteschlange", listHint: "wer vorne steht, ist als Nächstes dran" },
+    dfs: { name: "DFS", long: "Tiefensuche", kind: "Tiefensuche", list: "Stapel", listHint: "wer oben liegt, ist als Nächstes dran" },
+    dijkstra: { name: "Dijkstra", long: "Dijkstra", kind: "günstigster Weg", list: "Prioritätswarteschlange", listHint: "kleinste Kosten zuerst" },
+    astar: { name: "A*", long: "A*", kind: "günstigster Weg mit Schätzung", list: "Prioritätswarteschlange", listHint: "kleinste Kosten + Schätzung zuerst" },
+  };
+  let CSS = {};
+  function readCss() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["board", "board-2", "board-line", "node", "edge-c", "ink", "muted", "map-bg", "c-bfs", "c-dfs", "c-dijkstra", "c-astar", "font-pixel", "font-ui"]) CSS[k] = cs.getPropertyValue("--" + k).trim();
+    CSS.light = currentTheme() === "light";
+    for (const m of ORDER) MODES[m].color = CSS["c-" + m];
+    gBaseCache.clear(); kmBaseCache.clear(); S.dirty = true;
+  }
+  const f0 = x => x === Infinity ? "∞" : (Math.round(x * 10) / 10).toLocaleString("de-DE");
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+
+  /* ================= Pixel-Texturen (eigene Entwürfe) ================= */
+  const PAL = {
+    gras: ["#5e9e3a", "#6aaa42", "#579436", "#73b44a", "#4f8a31"], weg: ["#9a958c", "#8c877e", "#a6a196", "#7f7a72"],
+    sand: ["#dccb8f", "#e3d39a", "#d4c184", "#e8daa7", "#cbb878"], wald: ["#2f6b2a", "#357a30", "#285e24", "#3f8a37"],
+    sumpf: ["#4d5a2e", "#55623a", "#46522a", "#5c6b3a"], acker: ["#6b4a2b", "#5f4126", "#74512f"],
+    kies: ["#8a8378", "#7b746a", "#968f83", "#6d675e", "#a29a8d"], bruecke: ["#9c7444", "#8e6a3d", "#a67c49"],
+    wasser: ["#2f6fd1", "#3a7be0", "#2b63bd", "#3570d6"], fels: ["#7d7d7d", "#888888", "#737373", "#919191"],
+    lava: ["#d9480f", "#f76707", "#e8590c", "#e03131"], haus: ["#8f3b2c", "#9d4535", "#7e3326", "#a64c3a"],
+    muehle: ["#d8cdb5", "#cfc3a8", "#e0d6c0"], mine: ["#6f6a63", "#7c766e"], schnee: ["#f2f6fa", "#e6edf5", "#ffffff", "#dbe5f0"],
+  };
+  const texCache = new Map();
+  function tex(key, variant, frame) {
+    const id = key + ":" + variant + ":" + (frame || 0);
+    if (texCache.has(id)) return texCache.get(id);
+    const c = document.createElement("canvas"); c.width = c.height = 16;
+    const g = c.getContext("2d");
+    let seed = 0; for (const ch of id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+    const r = KM.rng(seed + 7), pal = PAL[key];
+    const px = (x, y, col) => { g.fillStyle = col; g.fillRect(x, y, 1, 1); };
+    const noise = p => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) px(x, y, p[Math.floor(r() * p.length)]); };
+    switch (key) {
+      case "gras": noise(pal); if (variant === 3) { px(4, 5, "#f7e26b"); px(11, 10, "#f2f2f2"); } break;
+      case "sand": noise(pal); break;
+      case "kies": noise(pal); for (let k = 0; k < 7; k++) { const x = Math.floor(r() * 15), y = Math.floor(r() * 15); px(x, y, "#b5ad9f"); px(x + 1, y + 1, "#57524a"); } break;
+      case "schnee": noise(pal); break;
+      case "weg": g.fillStyle = "#5a5650"; g.fillRect(0, 0, 16, 16);
+        for (let row = 0; row < 4; row++) { let x = -Math.floor(r() * 4); while (x < 16) { const w = 3 + Math.floor(r() * 4); g.fillStyle = pal[Math.floor(r() * pal.length)]; g.fillRect(x, row * 4, w - 1, 3); g.fillStyle = "#b9b4a9"; g.fillRect(x, row * 4, w - 1, 1); x += w; } } break;
+      case "wald": noise(pal); for (let k = 0; k < 14; k++) px(Math.floor(r() * 16), Math.floor(r() * 16), r() < 0.5 ? "#55a04a" : "#1e4a1b");
+        g.fillStyle = "#1c4219"; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); break;
+      case "sumpf": noise(pal); for (let k = 0; k < 3; k++) { const x = Math.floor(r() * 12), y = Math.floor(r() * 12); g.fillStyle = "#2f4a42"; g.fillRect(x, y, 4, 3); }
+        for (let k = 0; k < 3; k++) { const x = Math.floor(r() * 16), y = 2 + Math.floor(r() * 12); px(x, y, "#8a9a46"); px(x, y - 1, "#9cab52"); } break;
+      case "acker": noise(pal); for (let y = 1; y < 16; y += 4) for (let x = 0; x < 16; x++) { px(x, y, "#4d3520"); if ((x + variant) % 3 === 0) px(x, y - 1, "#7fb04a"); } break;
+      case "bruecke": for (let y = 0; y < 16; y += 4) { g.fillStyle = pal[(y / 4 + variant) % 3]; g.fillRect(0, y, 16, 3); g.fillStyle = "#5b3f22"; g.fillRect(0, y + 3, 16, 1); }
+        g.fillStyle = "#6b4a2b"; g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16); break;
+      case "wasser": noise(pal); for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x++) if ((x + y + variant) % 8 < 2) px(x, (y + (x >> 2)) % 16, "#5e9ae8"); break;
+      case "lava": { const p = ["#d9480f", "#f76707", "#ff922b", "#e03131"]; for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const v = Math.sin(x * 0.9 + variant) + Math.cos(y * 0.8); px(x, y, v > 1.2 ? "#ffd43b" : v > 0.4 ? p[2] : p[Math.floor(r() * 4)]); } break; }
+      case "fels": noise(pal); g.fillStyle = "#a3a3a3"; g.fillRect(0, 0, 16, 1); g.fillRect(0, 0, 1, 16); g.fillStyle = "#545454"; g.fillRect(0, 15, 16, 1); g.fillRect(15, 0, 1, 16); break;
+      case "haus": for (let y = 0; y < 16; y += 3) for (let x = -(y % 2) * 2; x < 16; x += 4) { g.fillStyle = pal[Math.floor(r() * 4)]; g.fillRect(x, y, 4, 3); g.fillStyle = "#5c241b"; g.fillRect(x, y + 2, 4, 1); } break;
+      case "muehle": noise(pal); g.fillStyle = "#6b4a2b"; g.fillRect(0, 0, 16, 2); g.fillRect(0, 14, 16, 2); g.fillRect(0, 0, 2, 16); g.fillRect(14, 0, 2, 16); g.fillRect(7, 0, 2, 16); g.fillRect(0, 7, 16, 2); break;
+      case "mine": g.fillStyle = "#7d7d7d"; g.fillRect(0, 0, 16, 16);
+        g.fillStyle = "#120f0c"; g.fillRect(3, 4, 10, 12); g.fillStyle = "#7a5230"; g.fillRect(2, 3, 12, 2); g.fillRect(2, 3, 2, 13); g.fillRect(12, 3, 2, 13); break;
+    }
+    texCache.set(id, c); return c;
+  }
+  function sprite(rows, colors) {
+    const c = document.createElement("canvas"); c.width = rows[0].length; c.height = rows.length; const g = c.getContext("2d");
+    rows.forEach((row, y) => [...row].forEach((ch, x) => { if (colors[ch]) { g.fillStyle = colors[ch]; g.fillRect(x, y, 1, 1); } }));
+    return c;
+  }
+  const SPR = {
+    explorer: sprite(["....bbbbbb....", "...bbbbbbbb...", "..BBBBBBBBBB..", "....ssssss....", "....sEssEs....", "....ssssss....", "...gggggggg...", "..rggggggggr..", "..rgggyygggr..", "..rggggggggr..", "...gggggggg...", "....dd..dd....", "....kk..kk....", "...kkk..kkk..."],
+      { b: "#7a4b23", B: "#5a3418", s: "#f0c49b", E: "#2b1d12", g: "#3f8f4a", r: "#9a5f2a", y: "#ffd23f", d: "#4b3a2a", k: "#2b2018" }),
+    chest: sprite(["..............", ".bbbbbbbbbbbb.", "bwwwwwwwwwwwwb", "bwwwwwwwwwwwwb", "bwwwwwwwwwwwwb", "bbbbbbggbbbbbb", "bwwwwwgGgwwwwb", "bwwwwwwggwwwwb", "bwwwwwwwwwwwwb", "bwwwwwwwwwwwwb", "bbbbbbbbbbbbbb"], { b: "#3d2a16", w: "#a8743c", g: "#e8c34a", G: "#fff3b0" }),
+    flag: sprite([".prrrrrr", ".prrrrrr", ".prrrr..", ".prr....", ".p......", ".p......", ".p......", "ppp....."], { p: "#5a3418", r: "#e04646" }),
+    goalflag: sprite([".pyyyyyy", ".pyyyyyy", ".pyyyy..", ".pyy....", ".p......", ".p......", ".p......", "ppp....."], { p: "#5a3418", y: "#ffd23f" }),
+    pick: sprite(["..gggggggg..", ".g........g.", "g....hh....g", ".....hh.....", ".....hh.....", ".....hh.....", ".....hh.....", ".....hh.....", ".....hh.....", ".....hh.....", "............", "............"], { g: "#9fb7c4", h: "#7a5230" }),
+    node: sprite(["............", ".gggggggggg.", ".gwwwwwwwwg.", ".gw......wg.", ".gw......wg.", ".gw......wg.", ".gw......wg.", ".gw......wg.", ".gw......wg.", ".gwwwwwwwwg.", ".gggggggggg.", "............"], { g: "#2b2620", w: "#b9b0a0" }),
+    edge: sprite(["............", ".bb.........", ".bb.........", "...b........", "....b.......", ".....b......", "......b.....", ".......b....", "........b...", ".........bb.", ".........bb.", "............"], { b: "#a89f8c" }),
+    move: sprite([".....bb.....", "....bbbb....", ".....bb.....", "..b..bb..b..", ".bbbbbbbbbb.", "bbbbbbbbbbbb", ".bbbbbbbbbb.", "..b..bb..b..", ".....bb.....", "....bbbb....", ".....bb.....", "............"], { b: "#a89f8c" }),
+    weight: sprite(["............", "....bbbb....", "....b..b....", "...bbbbbb...", "..bbbbbbbb..", "..bbb99bbb..", "..bb9bb9bb..", "..bbb99bbb..", "..bb9bbbbb..", "..bbb99bbb..", "..bbbbbbbb..", "............"], { b: "#8a8170", 9: "#f3ead6" }),
+    del: sprite(["............", ".r........r.", "..r......r..", "...r....r...", "....r..r....", ".....rr.....", ".....rr.....", "....r..r....", "...r....r...", "..r......r..", ".r........r.", "............"], { r: "#e5484d" }),
+  };
+
+  /* ================= Welten und Aufgaben ================= */
+  const ORIG = KM.makeWorld(), W = ORIG.W, H = ORIG.H;
+  const LM = name => { const [x, y] = ORIG.landmarks[name]; return y * W + x; };
+  const LMNAME = {}; for (const [k, [x, y]] of Object.entries(ORIG.landmarks)) LMNAME[y * W + x] = k;
+  const KM_SCEN = [
+    { title: "Zur Mühle", sub: "vom Dorfplatz zur Mühle", icon: () => tex("muehle", 0, 0), from: "Dorfplatz", to: "Mühle",
+      hint: "BFS breitet sich gleichmäßig in alle Richtungen aus. DFS läuft stur in eine Richtung und macht einen riesigen Umweg. Dijkstra und A* nehmen die billigen Pflasterwege." },
+    { title: "Durchs Moor", sub: "von der Moorhütte zur Mühle", icon: () => tex("sumpf", 1, 0), from: "Moorhütte", to: "Mühle",
+      hint: "Der Weg mit den wenigsten Feldern führt durch den Sumpf, und jedes Sumpffeld kostet 7. Starte die Suche und drücke danach „Loslaufen“: Wer kommt zuerst an?" },
+    { title: "Zur Schatztruhe", sub: "über den Fluss", icon: () => SPR.chest, from: "Dorfplatz", to: "Schatztruhe",
+      hint: "Dijkstra und A* finden denselben günstigsten Weg. A* sucht aber gezielt in Richtung Truhe und schaut sich viel weniger Felder an." },
+    { title: "Eigene Karte", sub: "selbst bauen", icon: () => tex("bruecke", 0, 0), from: "Dorfplatz", to: "Schatztruhe", build: true,
+      hint: "Wähle unten einen Block und male auf eine der Karten. Mit den Fahnen setzt du Start und Ziel. Alle Verfahren rechnen sofort neu." },
+  ];
+  const GR_HINT = {
+    lehr: "Ein kleiner Graph ohne Ziel. Die Zahlen an den Knoten zeigen, in welcher Reihenfolge besucht wird. Vergleiche BFS und DFS.",
+    gewicht: "Der Weg mit den wenigsten Kanten ist hier nicht der günstigste. BFS zählt nur Kanten, Dijkstra und A* rechnen mit den Gewichten.",
+    gerichtet: "Die Kanten haben eine Richtung. Wähle „Schritt für Schritt“ und DFS: Dort siehst du, welche Arten von Kanten es gibt.",
+  };
+  const GR_SCEN = KM.GRAPH_PRESETS.map(p => ({ ...p, hint: GR_HINT[p.id] || p.hint, icon: () => SPR.node }));
+  GR_SCEN.push({ id: "eigen", title: "Eigener Graph", sub: "selbst zeichnen", icon: () => SPR.edge,
+    hint: "Setze mit „Knoten“ neue Knoten und ziehe mit „Kante“ eine Linie von Knoten zu Knoten. Ohne Ziel durchsuchen alle Verfahren den ganzen Graphen.",
+    def: { directed: false, weighted: false, nodes: [{ label: "A", x: 200, y: 300 }, { label: "B", x: 480, y: 180 }, { label: "C", x: 480, y: 420 }], edges: [{ a: 0, b: 1, w: 1 }, { a: 0, b: 2, w: 1 }] }, s: 0, z: -1 });
+
+  const S = {
+    wt: "km", scen: 0, gscen: 0, view: "race", world: null, gdef: null, G: null, s: -1, z: -1,
+    orderKm: "orul", orderGr: "az", rec: {}, rp: {}, k: 0, maxK: 0, playing: false, acc: 0, last: 0,
+    walking: false, walkT: 0, wLast: 0, maxCost: 0,
+    dMode: "bfs", dR: null, dPlaying: false, dAcc: 0, dLast: 0,
+    tool: "weg", gtool: "knoten", painting: false, changed: false, hover: -1, hoverCv: null, dirty: true,
+    drag: null, selEdge: -1, ask: new Set(), asked: new Set(), awaiting: -1, hits: 0, tries: 0, feedback: null,
+  };
+  const isGraph = () => S.wt === "graph";
+  const costTxt = c => isGraph() ? `Kosten ${f0(c)}` : `${f0(c)} Ausdauer`;
+  const TERM = () => isGraph()
+    ? { node: "Knoten", nodes: "Knoten", step: "Kanten", stepDat: "Kanten", cost: "Kosten", which: "Welcher Knoten", whichAcc: "welchen Knoten", none: "kein Knoten", front: "den vordersten Knoten", top: "den obersten Knoten" }
+    : { node: "Feld", nodes: "Felder", step: "Felder", stepDat: "Feldern", cost: "Ausdauer", which: "Welches Feld", whichAcc: "welches Feld", none: "kein Feld", front: "das vorderste Feld", top: "das oberste Feld" };
+
+  /* ================= Graph aufbauen und alle Läufe aufzeichnen ================= */
+  function rebuild(keepView) {
+    S.G = isGraph() ? KM.buildAbstract(S.gdef, S.orderGr) : KM.buildGraph(S.world, S.orderKm);
+    gBaseCache.clear(); kmBaseCache.clear();
+    if (S.s >= S.G.n) S.s = 0;
+    if (S.z >= S.G.n || S.z === S.s) S.z = isGraph() ? -1 : S.z;
+    S.maxK = 0; S.maxCost = 0;
+    for (const m of ORDER) {
+      const rec = KM.record(S.G, S.s, S.z, m); S.rec[m] = rec; S.rp[m] = new KM.Replay(S.G, rec);
+      S.maxK = Math.max(S.maxK, rec.visits.length); if (rec.found) S.maxCost = Math.max(S.maxCost, rec.cost);
+    }
+    S.k = 0; S.playing = false; S.walking = false; S.walkT = 0;
+    $("rScrub").max = S.maxK;
+    renderLegend(); setDetailMode(S.dMode); updateRace();
+    if (!keepView) sizeCanvases();
+  }
+  function cloneDef(d) { return { directed: !!d.directed, weighted: !!d.weighted, nodes: d.nodes.map(n => ({ ...n })), edges: d.edges.map(e => ({ ...e })) }; }
+  function loadScenario(i) {
+    stopAll();
+    if (isGraph()) { S.gscen = i; const sc = GR_SCEN[i]; S.gdef = cloneDef(sc.def); S.s = sc.s; S.z = sc.z; S.selEdge = -1; $("hint").textContent = sc.hint; }
+    else { S.scen = i; const sc = KM_SCEN[i]; S.world = { ...ORIG, tiles: ORIG.tiles.slice() }; S.s = LM(sc.from); S.z = LM(sc.to); $("hint").textContent = sc.hint; }
+    renderChips(); renderToolbox(); rebuild();
+  }
+  function setWorld(wt) {
+    S.wt = wt; $("worldKm").setAttribute("aria-pressed", wt === "km"); $("worldGraph").setAttribute("aria-pressed", wt === "graph");
+    const sel = $("orderSel"); sel.innerHTML = (wt === "km" ? KM.GRID_ORDERS : KM.GRAPH_ORDERS).map(o => `<option value="${o.id}">${o.name}</option>`).join("");
+    sel.value = wt === "km" ? S.orderKm : S.orderGr;
+    buildRaceCards(); renderCosts();
+    loadScenario(wt === "km" ? S.scen : S.gscen);
+  }
+  function renderChips() {
+    const list = isGraph() ? GR_SCEN : KM_SCEN, cur = isGraph() ? S.gscen : S.scen;
+    $("chips").innerHTML = list.map((s, i) => `<button class="chip" type="button" aria-pressed="${i === cur}"><canvas width="16" height="16"></canvas><span><b>${esc(s.title)}</b><small>${esc(s.sub)}</small></span></button>`).join("");
+    document.querySelectorAll(".chip").forEach((b, i) => { paintIcon(b.querySelector("canvas"), list[i].icon()); b.onclick = () => loadScenario(i); });
+  }
+
+  /* ================= Vergleich ================= */
+  function raceSeek(k) {
+    S.k = Math.max(0, Math.min(S.maxK, k));
+    for (const m of ORDER) { const v = S.rec[m].visits, R = S.rp[m]; if (S.k >= v.length) R.seek(R.length); else if (S.k === 0) R.seek(0); else R.seek(v[S.k - 1] + 1); }
+    if (S.k < S.maxK) { S.walking = false; S.walkT = 0; }
+    updateRace();
+  }
+  const done = m => S.k >= S.rec[m].visits.length;
+  const visited = m => Math.min(S.k, S.rec[m].visits.length);
+  const walkStarted = () => S.walking || S.walkT > 0;
+  const rankOf = m => 1 + ORDER.filter(x => S.rec[x].found && S.rec[x].cost < S.rec[m].cost).length;
+  const orderStr = (m, k) => S.rec[m].order.slice(0, k).map(v => S.G.label(v)).join(" ");
+  function updateRace() {
+    const t = TERM(), noGoal = S.z < 0;
+    for (const m of ORDER) {
+      const card = document.querySelector(`.card[data-m="${m}"]`); if (!card) continue;
+      const r = S.rec[m];
+      card.querySelector(".count").innerHTML = `${visited(m)}<small>besucht</small>`;
+      let st;
+      const arrived = done(m) && r.found && walkStarted() && S.walkT >= r.cost;
+      if (isGraph() && S.G.n <= 30) {
+        st = `Reihenfolge: <span class="ord">${esc(orderStr(m, visited(m))) || "–"}</span>`;
+        if (done(m) && !noGoal && r.found) st += ` · Weg: <b>${r.fields} ${t.step}, ${costTxt(r.cost)}</b>`;
+        if (arrived) st = `<span class="rank">Platz ${rankOf(m)}</span>` + st;
+      }
+      else if (!done(m)) st = S.k === 0 ? "bereit" : "sucht …";
+      else if (noGoal) st = `alle erreichbaren ${t.nodes} besucht`;
+      else if (!r.found) st = "kein Weg gefunden";
+      else if (walkStarted()) st = arrived ? `<span class="rank">Platz ${rankOf(m)}</span>angekommen, <b>${costTxt(r.cost)}</b>` : `läuft … <b>${f0(S.walkT)} von ${f0(r.cost)}</b> ${t.cost}`;
+      else st = `Ziel gefunden: <b>${r.fields} ${t.step}, ${costTxt(r.cost)}</b>`;
+      card.querySelector(".status").innerHTML = st;
+    }
+    const all = ORDER.every(done);
+    $("rPlay").textContent = S.playing ? "Pause" : all ? "Nochmal" : S.k ? "Weiter" : "Suche starten";
+    $("rWalk").disabled = !all || noGoal || !ORDER.some(m => S.rec[m].found);
+    $("rWalk").textContent = S.walking ? "Ziel sofort" : "Loslaufen";
+    $("rScrub").value = S.k;
+    $("rInfo").textContent = `Schritt ${S.k} von ${S.maxK}${all ? " · alle fertig" : ""}`;
+    $("raceLead").textContent = all
+      ? (noGoal ? "Fertig. Vergleiche unten die Reihenfolgen." : "Fertig. Drücke „Loslaufen“, um zu sehen, wer den günstigsten Weg gefunden hat.")
+      : "Alle vier Verfahren suchen gleichzeitig. Pro Schritt besucht jedes genau einen weiteren Knoten.";
+    renderResults(); S.dirty = true;
+  }
+  function renderResults() {
+    const all = ORDER.every(done), t = TERM(), noGoal = S.z < 0;
+    const maxV = Math.max(...ORDER.map(m => S.rec[m].visits.length), 1);
+    const star = '<span class="best" title="bester Wert">★</span>';
+    const vBar = (m, best) => { const v = visited(m), c = MODES[m].color; return `<div class="barcell"><div class="bar"><i style="width:${(v / maxV * 100).toFixed(1)}%;background:${c}"></i></div><span>${v}${best && done(m) && v === best ? star : ""}</span></div>`; };
+    const nm = m => `<td class="alg"><i style="background:${MODES[m].color}"></i>${MODES[m].name}</td>`;
+    if (noGoal) {
+      $("resHead").innerHTML = `<tr><th>Verfahren</th><th>Besuchte ${t.nodes}</th><th>Reihenfolge</th></tr>`;
+      $("resBody").innerHTML = ORDER.map(m => `<tr>${nm(m)}<td>${vBar(m)}</td><td class="ord">${esc(orderStr(m, visited(m))) || "–"}</td></tr>`).join("");
+      $("summary").textContent = !all ? "Hier steht gleich, was herausgekommen ist."
+        : `Ohne Ziel besuchen alle Verfahren dieselben ${S.rec.bfs.reached} ${t.nodes}, nur in anderer Reihenfolge. BFS geht Ebene für Ebene vor, DFS folgt einem Pfad so tief wie möglich.`;
+      return;
+    }
+    const found = ORDER.filter(m => S.rec[m].found), maxC = Math.max(...found.map(m => S.rec[m].cost), 1e-9);
+    const best = fn => all && found.length ? Math.min(...found.map(fn)) : null;
+    const bV = all ? Math.min(...ORDER.map(m => S.rec[m].visits.length)) : null, bF = best(m => S.rec[m].fields), bC = best(m => S.rec[m].cost);
+    $("resHead").innerHTML = `<tr><th>Verfahren</th><th>Besuchte ${t.nodes} (Suchaufwand)</th><th>Weglänge (${t.step})</th><th>${t.cost} des Weges</th><th>Laufen</th></tr>`;
+    $("resBody").innerHTML = ORDER.map(m => {
+      const r = S.rec[m], d = done(m), c = MODES[m].color;
+      const cBar = d && r.found ? `<div class="barcell"><div class="bar"><i style="width:${(r.cost / maxC * 100).toFixed(1)}%;background:${c}"></i></div><span>${f0(r.cost)}${Math.abs(r.cost - bC) < 1e-9 ? star : ""}</span></div>` : "–";
+      const walk = d && r.found && walkStarted() && S.walkT >= r.cost ? `Platz ${rankOf(m)}` : "–";
+      return `<tr>${nm(m)}<td>${vBar(m, bV)}</td><td class="v">${d && r.found ? r.fields + (r.fields === bF ? star : "") : "–"}</td><td>${cBar}</td><td class="v">${walk}</td></tr>`;
+    }).join("");
+    const b = S.rec.bfs, j = S.rec.dijkstra, f = S.rec.dfs;
+    let sum;
+    if (!all) sum = "Hier steht gleich, was herausgekommen ist.";
+    else if (!b.found) sum = "Zwischen Start und Ziel gibt es keinen Weg.";
+    else {
+      sum = `BFS findet den Weg mit den wenigsten ${t.stepDat} (${b.fields}). `;
+      sum += Math.abs(b.cost - j.cost) < 1e-9 ? `Hier ist das zugleich der günstigste Weg (${costTxt(j.cost)}). ` : `Der günstigste Weg ist aber ein anderer: ${costTxt(j.cost)} statt ${costTxt(b.cost)}. Den finden Dijkstra und A*. `;
+      const va = S.rec.astar.visits.length, vd = S.rec.dijkstra.visits.length;
+      sum += va < vd ? `A* muss dafür nur ${va} statt ${vd} ${t.nodes} anschauen. ` : va === vd ? `A* schaut hier genauso viele ${t.nodes} an wie Dijkstra (${va}). ` : `A* schaut hier ${va} ${t.nodes} an, Dijkstra ${vd}. `;
+      sum += `DFS findet irgendeinen Weg: ${f.fields} ${t.step}, ${costTxt(f.cost)}.`;
+    }
+    $("summary").textContent = sum;
+  }
+  function renderLegend() {
+    const g = isGraph(), sw = ORDER.map(m => `<i style="background:${MODES[m].color}"></i>`).join("");
+    const base = `<div><span class="swatches">${sw}</span>besucht</div>`
+      + `<div><i style="background:${g ? "#f3ede0" : "rgba(255,255,255,.6)"}"></i>entdeckt, wartet noch</div>`
+      + `<div><i class="ln" style="border-color:#fff;box-shadow:0 0 0 1px #111"></i>gefundener Weg</div>`;
+    $("legend").innerHTML = base + (g ? `<div><i class="ln" style="border-color:${MODES.bfs.color}"></i>Kante, über die entdeckt wurde</div><div><span class="badge">3</span>Besuchsnummer</div>` : "");
+    $("legendD").innerHTML = base + `<div><i class="ln" style="border-color:${MODES.bfs.color}"></i>Kante, über die entdeckt wurde</div><div><i style="background:transparent;border:2px solid #ffe14d"></i>wird gerade geprüft</div>`;
+  }
+  function renderCosts() {
+    const el = $("costs");
+    $("costBox").hidden = isGraph();
+    if (isGraph()) { el.innerHTML = ""; return; }
+    const keys = ["weg", "bruecke", "gras", "sand", "acker", "kies", "schnee", "wald", "sumpf", "wasser", "fels", "haus"];
+    el.innerHTML = keys.map(k => { const t = TER[TK[k]]; return `<div><canvas width="16" height="16" data-k="${k}"></canvas>${esc(t.name)}<b>${isFinite(t.cost) ? t.cost : "–"}</b></div>`; }).join("")
+      + `<div style="grid-column:1/-1">– heißt: nicht begehbar</div>`;
+    el.querySelectorAll("canvas").forEach(c => paintIcon(c, tex(c.dataset.k, 1, 0)));
+  }
+  function buildRaceCards() {
+    $("race").innerHTML = ORDER.map(m => `
+      <article class="panel card" data-m="${m}">
+        <div class="cardhead">
+          <div class="name"><span class="sw" style="background:${MODES[m].color}"></span><h2>${MODES[m].name}</h2><span class="kind">${MODES[m].kind}</span></div>
+          <div class="count">0<small>besucht</small></div>
+          <div class="status"></div>
+        </div>
+        <div class="scroller"><canvas data-m="${m}" aria-label="Karte ${MODES[m].name}"></canvas></div>
+      </article>`).join("");
+    document.querySelectorAll("#race canvas").forEach(attachEditing);
+  }
+
+  /* ================= Zeichnen: Karte ================= */
+  let DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const TALL = new Set([TK.fels, TK.haus, TK.wald, TK.muehle]);
+  const kmBaseCache = new Map(), gBaseCache = new Map();
+  const variantOf = v => ((v * 2654435761) >>> 0) % 4;
+  function kmBase(ts) {
+    const key = ts + ":" + DPR + ":" + (CSS.light ? "l" : "d");
+    if (kmBaseCache.has(key)) return kmBaseCache.get(key);
+    const c = document.createElement("canvas"); c.width = Math.round(W * ts * DPR); c.height = Math.round(H * ts * DPR);
+    const g = c.getContext("2d"); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.imageSmoothingEnabled = false;
+    const tiles = S.world.tiles;
+    for (let v = 0; v < W * H; v++) g.drawImage(tex(TER[tiles[v]].key, variantOf(v), 0), (v % W) * ts, Math.floor(v / W) * ts, ts, ts);
+    for (let v = 0; v < W * H; v++) {
+      const x = (v % W) * ts, y = Math.floor(v / W) * ts, below = v + W < W * H ? tiles[v + W] : -1;
+      if (TALL.has(tiles[v]) && below !== tiles[v]) { g.fillStyle = "rgba(0,0,0,0.28)"; g.fillRect(x, y + ts * 0.8, ts, ts * 0.2); }
+    }
+    // Karte leicht dämpfen, damit die Suche besser hervortritt
+    g.fillStyle = CSS.light ? "rgba(255,252,245,0.2)" : "rgba(16,14,11,0.28)"; g.fillRect(0, 0, W * ts, H * ts);
+    // Mühlenflügel und Leuchtturm sind fester Teil der Karte (keine Animation)
+    const mill = tiles.indexOf(TK.muehle);
+    if (mill >= 0) { const cx = (mill % W + 1) * ts, cy = (Math.floor(mill / W) + 1) * ts; g.save(); g.translate(cx, cy); g.rotate(0.4);
+      for (let k = 0; k < 4; k++) { g.rotate(Math.PI / 2); g.fillStyle = "#5a3418"; g.fillRect(-ts * 0.07, 0, ts * 0.14, ts * 1.5); g.fillStyle = "rgba(240,230,205,0.92)"; g.fillRect(ts * 0.07, ts * 0.45, ts * 0.42, ts * 1.0); }
+      g.restore(); }
+    { const [lx, ly] = ORIG.landmarks.Leuchtfeuer, x = (lx + 0.5) * ts, y = (ly + 0.5) * ts; g.fillStyle = "#f2f2f2"; g.fillRect(x - ts * 0.22, y - ts * 0.9, ts * 0.44, ts * 1.2); g.fillStyle = "#d63b3b"; g.fillRect(x - ts * 0.22, y - ts * 0.55, ts * 0.44, ts * 0.22); g.fillStyle = "#ffd75a"; g.fillRect(x - ts * 0.18, y - ts * 1.22, ts * 0.36, ts * 0.3); }
+    kmBaseCache.set(key, c); return c;
+  }
+  const pixFont = s => `600 ${s}px ${CSS["font-pixel"]}`;
+  const uiFont = s => `600 ${s}px ${CSS["font-ui"]}`;
+  function plate(ctx, x, y, text, col, size) {
+    ctx.font = uiFont(size); const w = ctx.measureText(text).width + 8, h = size + 5;
+    ctx.fillStyle = "rgba(10,8,6,0.78)"; ctx.fillRect(x - w / 2, y - h, w, h);
+    ctx.fillStyle = col || "#f3ead6"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, x, y - h / 2 + 0.5);
+  }
+  const isWaiting = (R, v) => R.visitNo[v] === 0 && R.dist[v] < Infinity && !R.closed[v];
+  function numLabel(o, R, v) { if (o.nums === "order") return R.visitNo[v] ? String(R.visitNo[v]) : ""; if (o.nums === "dist") return R.dist[v] < Infinity ? f0(R.dist[v]) : ""; return ""; }
+  function walkerPos(C, path, wOf) {
+    let T = S.walkT, i = 0;
+    while (i + 1 < path.length) { const c = wOf(i); if (T < c) break; T -= c; i++; }
+    if (i + 1 < path.length) { const c = wOf(i), a = C(path[i]), b = C(path[i + 1]), f = c > 0 ? T / c : 1; return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, true]; }
+    return [...C(path[path.length - 1]), false];
+  }
+  function drawKm(ctx, o) {
+    const { ts, t, R, m, big } = o, col = MODES[m].color;
+    const C = v => [(v % W + 0.5) * ts, (Math.floor(v / W) + 0.5) * ts];
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(kmBase(ts), 0, 0);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = rgba(col, 0.58);
+    for (let v = 0; v < W * H; v++) if (R.visitNo[v] > 0) ctx.fillRect((v % W) * ts, Math.floor(v / W) * ts, ts, ts);
+    ctx.fillStyle = "rgba(255,255,255,0.42)";
+    for (let v = 0; v < W * H; v++) if (isWaiting(R, v)) ctx.fillRect((v % W) * ts, Math.floor(v / W) * ts, ts, ts);
+    if (m === "dfs" && R.list.length > 1 && !R.found) { ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = Math.max(1.5, ts * 0.12); ctx.lineJoin = "round"; ctx.beginPath(); [...R.list].sort((a, b) => a.seq - b.seq).forEach((it, i) => { const [x, y] = C(it.v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); }
+    if (big) { ctx.strokeStyle = rgba(col, 0.85); ctx.lineWidth = Math.max(1.2, ts * 0.08); ctx.beginPath();
+      for (let v = 0; v < W * H; v++) { const p = R.vorg[v]; if (p < 0) continue; const [x1, y1] = C(v), [x2, y2] = C(p); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); } ctx.stroke(); }
+    if (big && o.nums !== "none" && ts >= 17) { ctx.font = uiFont(Math.round(ts * 0.42)); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let v = 0; v < W * H; v++) { const s = numLabel(o, R, v); if (!s) continue; const [x, y] = C(v); ctx.fillStyle = "rgba(0,0,0,.8)"; ctx.fillText(s, x + 1, y + 1); ctx.fillStyle = "#fff"; ctx.fillText(s, x, y); } }
+    const chain = x => { const a = []; for (let k = x; k >= 0; k = R.vorg[k]) a.push(k); return a; };
+    const e = R.current, u = e && e.u !== undefined && e.u >= 0 ? e.u : null;
+    if (R.found) { const p = chain(S.z); ctx.lineJoin = "round"; ctx.lineCap = "round";
+      ctx.strokeStyle = "#111"; ctx.lineWidth = Math.max(4, ts * 0.42); ctx.beginPath(); p.forEach((v, i) => { const [x, y] = C(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+      ctx.strokeStyle = "#ffffff"; ctx.lineWidth = Math.max(2, ts * 0.24); ctx.stroke(); }
+    else if (big && u !== null && R.dist[u] < Infinity) { const p = chain(u); ctx.setLineDash([ts * 0.3, ts * 0.25]); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = ts * 0.14; ctx.beginPath(); p.forEach((v, i) => { const [x, y] = C(v); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); ctx.setLineDash([]); }
+    if (big && m === "astar" && u !== null && !R.found && S.z >= 0) { const [x1, y1] = C(u), [x2, y2] = C(S.z); ctx.setLineDash([4, 6]); ctx.strokeStyle = "rgba(255,225,77,0.95)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); }
+    if (big && e && e.v !== undefined && e.u !== undefined && e.u >= 0 && e.t !== "pop" && e.t !== "top") { const x = (e.v % W) * ts, y = Math.floor(e.v / W) * ts; ctx.strokeStyle = (e.t === "chk" && e.marked) || (e.t === "cmp" && !e.better) ? "#ff7a66" : "#ffe14d"; ctx.lineWidth = 3; ctx.strokeRect(x + 1.5, y + 1.5, ts - 3, ts - 3); }
+    let cur = u; if (!big && e) cur = e.u !== undefined && e.u >= 0 ? e.u : e.v;
+    if (cur !== null && cur !== undefined && cur >= 0 && !R.found) { const x = (cur % W) * ts, y = Math.floor(cur / W) * ts; ctx.strokeStyle = "#fff"; ctx.lineWidth = 2.5; ctx.strokeRect(x - 1, y - 1, ts + 2, ts + 2); }
+    if (o.fb) { const x = (o.fb.v % W) * ts, y = Math.floor(o.fb.v / W) * ts; ctx.strokeStyle = o.fb.ok ? "#46c26a" : "#e5484d"; ctx.lineWidth = 4; ctx.strokeRect(x - 2, y - 2, ts + 4, ts + 4); }
+    if (o.hover >= 0 && KM_SCEN[S.scen].build) { const x = (o.hover % W) * ts, y = Math.floor(o.hover / W) * ts; ctx.strokeStyle = canPlace(o.hover) ? "#fff" : "#ff7a66"; ctx.lineWidth = 2; ctx.strokeRect(x + 1, y + 1, ts - 2, ts - 2); }
+    const fs = Math.max(10, Math.min(13, Math.round(ts * 0.55)));
+    if (big) for (const [name, [lx, ly]] of Object.entries(S.world.landmarks)) { const v = ly * W + lx; if (v === S.s || v === S.z) continue; const [x, y] = C(v); plate(ctx, x, name === "Leuchtfeuer" ? y + ts * 1.3 : y - ts * 0.55, name, null, fs); }
+    if (S.z >= 0) { const [x, y] = C(S.z); const img = S.z === LM("Schatztruhe") ? SPR.chest : SPR.goalflag; const w = ts * 0.9, h = w * img.height / img.width; ctx.drawImage(img, x - w / 2, y - h * 0.6, w, h); plate(ctx, x, y - ts * 0.7, "Ziel", "#ffd23f", fs); }
+    let px = null;
+    if (o.walk && R.found && S.walkT > 0) { const path = S.rec[m].path; px = walkerPos(C, path, i => TER[S.world.tiles[path[i + 1]]].cost); }
+    if (!px) { const [x, y] = C(S.s); ctx.drawImage(SPR.flag, x - ts * 0.05, y - ts * 0.95, ts * 0.7, ts * 0.7); px = [x, y, false]; plate(ctx, x, y - ts * 0.75, "Start", "#ff9a8a", fs); }
+    { const [x, y, moving] = px, bob = moving ? Math.abs(Math.sin(t * 14)) * ts * 0.08 : 0, s = Math.max(ts * 1.1, 15);
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(x - s * 0.35, y + s * 0.32, s * 0.7, s * 0.12);
+      ctx.drawImage(SPR.explorer, x - s / 2, y - s * 0.55 - bob, s, s); }
+  }
+
+  /* ================= Zeichnen: Graph ================= */
+  const BW = 960, BH = 600, NR = 24;
+  function gBase(sc) {
+    const key = sc.toFixed(4) + ":" + DPR + ":" + CSS.board;
+    if (gBaseCache.has(key)) return gBaseCache.get(key);
+    const c = document.createElement("canvas"); c.width = Math.round(BW * sc * DPR); c.height = Math.round(BH * sc * DPR);
+    const g = c.getContext("2d"); g.setTransform(DPR * sc, 0, 0, DPR * sc, 0, 0);
+    g.fillStyle = CSS.board; g.fillRect(0, 0, BW, BH);
+    g.fillStyle = CSS["board-line"];
+    for (let y = 40; y < BH; y += 40) for (let x = 40; x < BW; x += 40) g.fillRect(x - 1.5, y - 1.5, 3, 3);
+    gBaseCache.set(key, c); return c;
+  }
+  const CLS_STYLE = { rueck: ["#e5484d", [10, 7]], vor: ["#3e9bff", [10, 7]], quer: ["#8f8f8f", [3, 6]] };
+  function drawGraph(ctx, o) {
+    const { sc, t, R, m, big } = o, col = MODES[m].color, def = S.gdef, G = S.G;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(gBase(sc), 0, 0);
+    ctx.setTransform(DPR * sc, 0, 0, DPR * sc, 0, 0); ctx.imageSmoothingEnabled = false;
+    const P = v => [def.nodes[v].x, def.nodes[v].y];
+    const lw = 1 / Math.max(sc, 0.45);
+    const tree = new Set(), path = new Set(), cls = big ? R.checkedEdges() : new Map();
+    for (let v = 0; v < G.n; v++) if (R.vorgE[v] >= 0) tree.add(G.edges[R.vorgE[v]].eid);
+    if (R.found) for (let v = S.z; R.vorgE[v] >= 0; v = R.vorg[v]) path.add(G.edges[R.vorgE[v]].eid);
+    const e = R.current, curArc = e && e.e !== undefined && e.e >= 0 && e.t !== "set" ? G.edges[e.e] : null;
+    // Gegenläufige Kanten (u→v und v→u) werden seitlich versetzt, damit beide sichtbar bleiben
+    const pairs = new Set(def.directed ? def.edges.map(ed => ed.a + ":" + ed.b) : []);
+    const off = ed => pairs.has(ed.b + ":" + ed.a) ? 11 : 0;
+    const ends = ed => { const [x1, y1] = P(ed.a), [x2, y2] = P(ed.b), o2 = off(ed); if (!o2) return [x1, y1, x2, y2]; const L = Math.hypot(x2 - x1, y2 - y1) || 1, nx = -(y2 - y1) / L * o2, ny = (x2 - x1) / L * o2; return [x1 + nx, y1 + ny, x2 + nx, y2 + ny]; };
+    const drawArrow = (x1, y1, x2, y2, color, width, dash) => {
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+      const sx = x1 + ux * (NR + 2), sy = y1 + uy * (NR + 2), ex = x2 - ux * (NR + 4), ey = y2 - uy * (NR + 4);
+      ctx.strokeStyle = color; ctx.lineWidth = width; ctx.setLineDash(dash || []); ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      if (def.directed) { const ah = 12 + width; ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(ex + ux * 2, ey + uy * 2); ctx.lineTo(ex - ux * ah - uy * ah * 0.55, ey - uy * ah + ux * ah * 0.55); ctx.lineTo(ex - ux * ah + uy * ah * 0.55, ey - uy * ah - ux * ah * 0.55); ctx.closePath(); ctx.fill(); }
+    };
+    def.edges.forEach((ed, eid) => {
+      const [x1, y1, x2, y2] = ends(ed);
+      if (path.has(eid)) { drawArrow(x1, y1, x2, y2, "#111", 11 * lw + 4); drawArrow(x1, y1, x2, y2, "#ffffff", 5 * lw + 3); }
+      else if (tree.has(eid)) drawArrow(x1, y1, x2, y2, col, 4 * lw + 3);
+      else if (cls.has(String(eid)) && CLS_STYLE[cls.get(String(eid))] && m === "dfs") { const [c2, dash] = CLS_STYLE[cls.get(String(eid))]; drawArrow(x1, y1, x2, y2, c2, 3 * lw + 2, dash); }
+      else drawArrow(x1, y1, x2, y2, CSS["edge-c"], 2 * lw + 1.5);
+      if (S.selEdge === eid && S.gtool === "gewicht") drawArrow(x1, y1, x2, y2, "#ffd23f", 3, [4, 4]);
+    });
+    if (curArc && big) { const [x1, y1, x2, y2] = ends(def.edges[curArc.eid]); drawArrow(x1, y1, x2, y2, "#ffe14d", 5); }
+    if (def.weighted) { ctx.font = uiFont(16); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      def.edges.forEach(ed => { const [x1, y1, x2, y2] = ends(ed), mx = (x1 + x2) / 2, my = (y1 + y2) / 2, s = String(ed.w), w = ctx.measureText(s).width + 10;
+        ctx.fillStyle = "rgba(20,17,13,0.88)"; ctx.fillRect(mx - w / 2, my - 11, w, 22); ctx.fillStyle = "#ffe9a8"; ctx.fillText(s, mx, my + 1); }); }
+    if (S.drag && S.drag.type === "edge" && S.drag.cv === o.cv) { const [x1, y1] = P(S.drag.from); ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(S.drag.x, S.drag.y); ctx.stroke(); ctx.setLineDash([]); }
+    const u = e && e.u !== undefined && e.u >= 0 ? e.u : null;
+    if (big && m === "astar" && u !== null && !R.found && S.z >= 0) { const [x1, y1] = P(u), [x2, y2] = P(S.z); ctx.setLineDash([4, 7]); ctx.strokeStyle = "#e0b400"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); }
+    if (u !== null && !R.found) { const [x, y] = P(u); ctx.strokeStyle = CSS.ink; ctx.lineWidth = 4; ctx.strokeRect(x - NR - 6, y - NR - 6, NR * 2 + 12, NR * 2 + 12); }
+    if (o.fb) { const [x, y] = P(o.fb.v); ctx.strokeStyle = o.fb.ok ? "#46c26a" : "#e5484d"; ctx.lineWidth = 5; ctx.strokeRect(x - NR - 8, y - NR - 8, NR * 2 + 16, NR * 2 + 16); }
+    const showNum = big ? o.nums : "order";
+    for (let v = 0; v < G.n; v++) {
+      const [x, y] = P(v), vis = R.visitNo[v] > 0, wait = isWaiting(R, v);
+      ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.fillRect(x - NR + 3, y - NR + 4, NR * 2, NR * 2);
+      ctx.fillStyle = vis ? col : wait ? "#f3ede0" : CSS.node; ctx.fillRect(x - NR, y - NR, NR * 2, NR * 2);
+      ctx.strokeStyle = "#0a0908"; ctx.lineWidth = 2; ctx.strokeRect(x - NR, y - NR, NR * 2, NR * 2);
+      ctx.font = pixFont(24); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = vis || wait ? "#1a1510" : "#ffffff"; ctx.fillText(def.nodes[v].label, x, y + 1);
+      const s = showNum === "order" ? (R.visitNo[v] ? String(R.visitNo[v]) : "") : showNum === "dist" ? (R.dist[v] < Infinity ? f0(R.dist[v]) : "") : "";
+      if (s) { ctx.font = uiFont(14); const w = Math.max(22, ctx.measureText(s).width + 10); ctx.fillStyle = "#1a1510"; ctx.fillRect(x + NR - 10, y - NR - 12, w, 22); ctx.fillStyle = "#ffffff"; ctx.fillText(s, x + NR - 10 + w / 2, y - NR - 0.5); }
+    }
+    if (o.hover >= 0 && S.drag == null) { const [x, y] = P(o.hover); ctx.strokeStyle = "#ffd23f"; ctx.lineWidth = 2; ctx.setLineDash([4, 4]); ctx.strokeRect(x - NR - 4, y - NR - 4, NR * 2 + 8, NR * 2 + 8); ctx.setLineDash([]); }
+    { const [x, y] = P(S.s); ctx.drawImage(SPR.flag, x - NR - 6, y - NR - 30, 28, 28); }
+    if (S.z >= 0) { const [x, y] = P(S.z); ctx.drawImage(SPR.goalflag, x - NR - 6, y - NR - 30, 28, 28); }
+    if (o.walk && R.found && S.walkT > 0) { const pth = S.rec[m].path; const [x, y, moving] = walkerPos(P, pth, i => G.edges[S.rp[m].vorgE[pth[i + 1]]].w || 0.0001);
+      const bob = moving ? Math.abs(Math.sin(t * 14)) * 4 : 0; ctx.drawImage(SPR.explorer, x - 22, y - 50 - bob, 44, 44); }
+  }
+
+  function sizeCanvases() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const set = (cv, minTs, maxTs, maxH) => {
+      const avail = cv.parentElement.clientWidth; if (!avail) return;
+      let w, h;
+      if (isGraph()) { let sc = avail / BW; if (maxH) sc = Math.min(sc, maxH / BH); sc = Math.max(0.3, sc); cv._sc = sc; w = BW * sc; h = BH * sc; }
+      else { let ts = Math.floor(avail / W); if (maxH) ts = Math.min(ts, Math.floor(maxH / H)); ts = Math.max(minTs, Math.min(maxTs, ts)); cv._ts = ts; w = W * ts; h = H * ts; }
+      const key = `${S.wt}:${w}:${DPR}`;
+      if (cv._key !== key) { cv._key = key; cv.style.width = w + "px"; cv.style.height = h + "px"; cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR); }
+    };
+    document.querySelectorAll("#race canvas").forEach(cv => set(cv, 7, 20));
+    set($("dMap"), 12, 28, Math.max(320, window.innerHeight * 0.68));
+    document.querySelectorAll("canvas[data-m], #dMap").forEach(cv => cv.classList.toggle("edit", editable()));
+    S.dirty = true;
+  }
+
+  /* ================= Schritt für Schritt ================= */
+  const visitTarget = ev => ev.t === "push" ? ev.v : ev.u;
+  function setDetailMode(m) {
+    S.dMode = m; S.dPlaying = false; S.awaiting = -1; $("banner").hidden = true;
+    document.querySelectorAll(".algtab").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === m));
+    S.dR = new KM.Replay(S.G, S.rec[m]);
+    S.ask = new Set(); S.asked = new Set();
+    for (const j of S.rec[m].visits) { const d = m === "bfs" ? j : m === "dfs" ? j - 3 : j - 2; if (d > 0) S.ask.add(d); }
+    $("dScrub").max = S.dR.length;
+    $("codeName").textContent = MODES[m].long; $("codeTag").textContent = "Pseudocode";
+    $("lines").innerHTML = KM.PSEUDO[m].map((tx, i) => `<div data-l="${i}"><span class="ln">${i || ""}</span><span>${esc(tx)}</span></div>`).join("");
+    $("listTitle").innerHTML = `${MODES[m].list} <span>${MODES[m].listHint}</span>`;
+    $("eclsLegend").hidden = !(m === "dfs" && isGraph());
+    updateDetail();
+  }
+  const Lb = v => isGraph() ? S.G.label(v) : (LMNAME[v] || `Feld ${v % W}|${Math.floor(v / W)}`);
+  const Z = v => v === S.z ? `${Lb(v)} (das Ziel)` : v === S.s ? `${Lb(v)} (der Start)` : Lb(v);
+  const CLS_TXT = {
+    vorgaenger: "Das ist nur die Kante zurück zu dem Knoten, von dem DFS gerade kam.",
+    rueck: "Er liegt noch im Stapel, die Kante führt also zurück auf den aktuellen Pfad: eine Rückwärtskante. Der Graph hat hier einen Kreis.",
+    vor: "Er wurde von hier aus schon fertig untersucht: eine Vorwärtskante.",
+    quer: "Er gehört zu einem anderen, schon fertigen Zweig: eine Querkante.",
+    erfasst: "Diese Kante wurde von der anderen Seite schon gezählt.",
+  };
+  function explain(e) {
+    const m = S.dMode, R = S.dR, t = TERM(), nm = MODES[m].name;
+    if (!e) return S.z >= 0 ? `${nm} sucht einen Weg von ${Lb(S.s)} nach ${Lb(S.z)}. Drücke ▶ für den ersten Schritt.` : `${nm} besucht alle ${t.nodes}, die von ${Lb(S.s)} aus erreichbar sind. Es ist kein Ziel gesetzt. Drücke ▶ für den ersten Schritt.`;
+    const vn = v => `Das ist Besuch Nr. ${R.visitNo[v]}.`;
+    switch (e.t) {
+      case "init": return m === "bfs" || m === "dfs" ? `Vorbereitung: Noch ist ${t.none} entdeckt.` : `Vorbereitung: Die Kosten aller ${t.nodes} sind noch unbekannt (∞).`;
+      case "set":
+        if (e.l === 2) return m === "bfs" || m === "dfs" ? `Der Start ${Lb(S.s)} gilt als entdeckt.` : `Der Start ${Lb(S.s)} kostet 0.`;
+        if (m === "bfs") return `${Z(e.v)} ist jetzt entdeckt. Es liegt ${e.d} ${e.d === 1 ? "Schritt" : "Schritte"} vom Start entfernt und wurde über ${Lb(e.u)} erreicht.`;
+        if (m === "dfs") return `${Z(e.v)} ist jetzt entdeckt, erreicht über ${Lb(e.u)}.`;
+        return `Neuer bester Weg: ${Z(e.v)} kostet jetzt ${f0(e.d)}, erreicht über ${Lb(e.u)}.`;
+      case "push":
+        if (e.l === 3) return m === "bfs" ? `${Lb(S.s)} kommt in die Warteschlange. Darin stehen alle ${t.nodes}, die noch untersucht werden müssen.` : m === "dfs" ? `${Lb(S.s)} kommt in den Stapel. Der Stapel ist der Pfad, auf dem DFS gerade unterwegs ist.` : `${Lb(S.s)} kommt in die Prioritätswarteschlange. Dort kommt immer der Eintrag mit dem kleinsten Wert als Nächstes dran.`;
+        if (m === "bfs") return `${Lb(e.v)} stellt sich hinten in der Warteschlange an.`;
+        if (m === "dfs") return `DFS geht tiefer: ${Lb(e.v)} kommt oben auf den Stapel. ${vn(e.v)}`;
+        if (m === "dijkstra") return `${Lb(e.v)} kommt mit Kosten ${f0(e.key)} in die Prioritätswarteschlange.`;
+        return `${Lb(e.v)} kommt in die Prioritätswarteschlange mit Wert ${f0(e.g)} bisher + ${f0(e.h)} geschätzt = ${f0(e.key)}.`;
+      case "loop": { const L = m === "bfs" ? "Die Warteschlange" : m === "dfs" ? "Der Stapel" : "Die Prioritätswarteschlange"; return e.size ? `${L} ist nicht leer (${e.size} ${e.size === 1 ? "Eintrag" : "Einträge"}), also geht es weiter.` : `${L} ist leer.`; }
+      case "pop":
+        if (m === "bfs") return `BFS nimmt ${t.front} aus der Warteschlange: ${Lb(e.u)}. ${vn(e.u)}`;
+        if (m === "dfs") return `Sackgasse: ${Lb(e.u)} hat keine neuen Nachbarn mehr. DFS nimmt ${Lb(e.u)} vom Stapel und geht einen Schritt zurück.`;
+        if (m === "dijkstra") return `Dijkstra nimmt den Eintrag mit den kleinsten Kosten: ${Lb(e.u)} mit ${f0(e.key)}.`;
+        return `A* nimmt den Eintrag mit dem kleinsten Wert: ${Lb(e.u)} mit ${f0(e.g)} bisher + ${f0(e.key - e.g)} geschätzt = ${f0(e.key)}.`;
+      case "top": return `DFS schaut auf ${t.top} im Stapel: ${Lb(e.u)}.`;
+      case "goal": { if (!e.hit) return S.z < 0 ? "Es gibt kein Ziel, die Suche geht weiter." : `${Lb(e.u)} ist nicht das Ziel.`; const r = S.rec[m]; return `${Lb(e.u)} ist das Ziel. Gefunden! Der Weg hat ${r.fields} ${t.step}, ${costTxt(r.cost)}.`; }
+      case "nb": { if (!e.has) return `${Lb(e.u)} hat keinen ungeprüften Nachbarn mehr.`; const dir = S.G.edges[e.e].dir; return m === "dijkstra" || m === "astar" ? `Nachbar ${Lb(e.v)}${dir ? " (" + dir + ")" : ""}: Der Schritt dorthin kostet ${f0(e.w)}.` : `${nm} schaut sich den Nachbarn ${Lb(e.v)}${dir ? " (" + dir + ")" : ""} an.`; }
+      case "chk": return e.marked ? `${Lb(e.v)} ist schon entdeckt, hier ist nichts zu tun.${m === "dfs" && CLS_TXT[e.cls] ? " " + CLS_TXT[e.cls] : ""}` : `${Lb(e.v)} ist neu.`;
+      case "stale": return e.stale ? `${Lb(e.u)} ist schon fertig. Dieser Eintrag ist veraltet und wird übersprungen.` : `${Lb(e.u)} ist noch nicht fertig.`;
+      case "close": return `Die Kosten von ${Z(e.u)} stehen jetzt fest: ${f0(R.dist[e.u])}. Günstiger geht es nicht. ${vn(e.u)}`;
+      case "calc": return `Über ${Lb(e.u)} würde ${Lb(e.v)} ${f0(e.neu - e.w)} + ${f0(e.w)} = ${f0(e.neu)} kosten.`;
+      case "cmp": return e.better ? `${f0(e.neu)} ist günstiger als bisher (${f0(e.old)}).` : `${f0(e.neu)} ist nicht günstiger als bisher (${f0(e.old)}). ${Lb(e.v)} bleibt, wie es ist.`;
+      case "none": { const L = m === "bfs" ? "Die Warteschlange" : m === "dfs" ? "Der Stapel" : "Die Prioritätswarteschlange"; return S.z >= 0 ? `${L} ist leer, das Ziel wurde nicht erreicht. Es gibt keinen Weg.` : `${L} ist leer. Alle ${R.visitCount} erreichbaren ${t.nodes} wurden besucht.`; }
+    }
+    return "";
+  }
+  const iconCache = {};
+  function tileIcon(v) { const k = TER[S.world.tiles[v]].key; if (!iconCache[k]) { const c = document.createElement("canvas"); c.width = c.height = 16; c.getContext("2d").drawImage(tex(k, 0, 0), 0, 0); iconCache[k] = c.toDataURL(); } return iconCache[k]; }
+  const itemLabel = v => isGraph() ? `<span class="lbl">${esc(Lb(v))}</span>` : `<img src="${tileIcon(v)}" alt=""><span>${esc(LMNAME[v] || `${v % W}|${Math.floor(v / W)}`)}</span>`;
+  function updateDetail() {
+    const R = S.dR, e = R.current, m = S.dMode;
+    for (const d of $("lines").children) d.classList.toggle("on", !!e && +d.dataset.l === e.l);
+    let ex = esc(explain(e));
+    if (S.feedback && S.feedback.at === R.i) ex += ` <span class="fb" style="color:${S.feedback.ok ? "#46c26a" : "#e5484d"}">${S.feedback.ok ? "Richtig vorhergesagt." : `Nicht ganz: Als Nächstes kam ${esc(Lb(S.feedback.v))}.`} Treffer: ${S.hits} von ${S.tries}.</span>`;
+    $("explain").innerHTML = ex;
+    $("nowTag").textContent = e ? `Zeile ${e.l}` : "Start";
+    const items = R.list.slice(0, 14);
+    $("listRow").innerHTML = items.length ? items.map((x, i) => {
+      const stale = (m === "dijkstra" || m === "astar") && (R.closed[x.v] === 1 || x.g > R.dist[x.v]);
+      const val = m === "bfs" ? `${f0(R.dist[x.v])} Schr.` : m === "dfs" ? "" : f0(x.key);
+      return `<span class="item ${i === 0 ? "head" : ""} ${stale ? "stale" : ""}" title="${esc(Lb(x.v))}">${itemLabel(x.v)}${val ? ` <span class="v">${val}</span>` : ""}</span>`;
+    }).join("") : `<span class="item">leer</span>`;
+    $("listFoot").textContent = `${R.list.length} ${R.list.length === 1 ? "Eintrag" : "Einträge"}${R.list.length > 14 ? " (die ersten 14 sind gezeigt)" : ""}. Der hervorgehobene ist als Nächstes dran.`;
+    const ord = S.rec[m].order.slice(0, R.visitCount), lim = isGraph() ? 200 : 60;
+    const lbl = v => isGraph() ? Lb(v) : (LMNAME[v] || `${v % W}|${Math.floor(v / W)}`);
+    $("orderTxt").innerHTML = ord.length ? ord.slice(0, lim).map((v, i) => `<b>${i + 1}</b> ${esc(lbl(v))}`).join(" · ") + (ord.length > lim ? ` · … (${ord.length} insgesamt)` : "") : "noch kein Besuch";
+    $("orderHint").textContent = m === "bfs" ? "Reihenfolge, in der BFS die Knoten entnimmt" : m === "dfs" ? "Reihenfolge, in der DFS die Knoten zuerst erreicht" : "Reihenfolge, in der die Kosten feststehen";
+    $("dScrub").value = R.i; $("dInfo").textContent = `Schritt ${R.i} von ${R.length}`;
+    $("dBack").disabled = $("dStart").disabled = R.i === 0; $("dFwd").disabled = $("dEnd").disabled = R.i >= R.length;
+    $("dPlay").textContent = S.dPlaying ? "Pause" : R.i >= R.length ? "Nochmal" : "Abspielen";
+    const sc = isGraph() ? GR_SCEN[S.gscen] : KM_SCEN[S.scen];
+    if ($("ctxLabel").dataset.k !== S.wt + sc.title) { $("ctxLabel").dataset.k = S.wt + sc.title; $("ctxLabel").innerHTML = `${isGraph() ? "Graph" : "Karte"} · <b>${esc(sc.title)}</b><button type="button" id="ctxBtn">ändern</button>`; $("ctxBtn").onclick = () => setSide(true); }
+    S.dirty = true;
+  }
+  function mustAsk() {
+    if (!$("guessChk").checked || !S.ask.has(S.dR.i) || S.asked.has(S.dR.i)) return false;
+    return S.dMode === "dfs" || S.dR.list.length >= 2;
+  }
+  function askNow() {
+    S.awaiting = S.dR.i; S.dPlaying = false;
+    const t = TERM();
+    $("bannerTxt").textContent = S.dMode === "dfs" ? `Auf ${t.whichAcc} geht DFS als Nächstes? Klicke darauf.` : `${t.which} wird als Nächstes besucht? Klicke darauf.`;
+    $("banner").hidden = false; updateDetail();
+  }
+  function answer(v) {
+    const R = S.dR, m = S.dMode, i = S.awaiting;
+    let j = i; while (j < R.length && R.ev[j].t !== KM.VISIT[m]) j++;
+    const target = visitTarget(R.ev[j]);
+    let ok = v === target;
+    if (!ok && (m === "dijkstra" || m === "astar")) { const top = R.ev[i]; ok = R.list.some(x => x.v === v && x.key === top.key && !R.closed[v]); }
+    S.asked.add(i); S.awaiting = -1; $("banner").hidden = true; S.tries++; if (ok) S.hits++;
+    R.seek(j + 1); S.feedback = { v: target, ok, at: R.i, until: performance.now() / 1000 + 1.5 };
+    updateDetail();
+  }
+  function dFwd() {
+    if (S.awaiting >= 0) return false;
+    if (mustAsk()) { askNow(); return false; }
+    if ($("dGran").value === "node") { do { if (!S.dR.forward()) return false; if (mustAsk()) { askNow(); return true; } } while (S.dR.current.t !== KM.VISIT[S.dMode]); return true; }
+    return S.dR.forward();
+  }
+  function dBack() { S.awaiting = -1; $("banner").hidden = true; return $("dGran").value === "node" ? S.dR.prevLine(KM.VISIT_LINE[S.dMode]) : S.dR.back(); }
+
+  /* ================= Bauen ================= */
+  const KM_TOOLS = [
+    { id: "flag", name: "Start", icon: () => SPR.flag }, { id: "goal", name: "Ziel", icon: () => SPR.goalflag },
+    { id: "weg" }, { id: "bruecke" }, { id: "gras" }, { id: "wald" }, { id: "sumpf" }, { id: "wasser" }, { id: "fels" },
+    { id: "pick", name: "Zurücksetzen", icon: () => SPR.pick },
+  ];
+  const GR_TOOLS = [
+    { id: "knoten", name: "Knoten", icon: () => SPR.node, info: "Klicke auf eine freie Stelle, um einen Knoten zu setzen." },
+    { id: "kante", name: "Kante", icon: () => SPR.edge, info: "Ziehe mit gedrückter Maustaste von einem Knoten zu einem anderen." },
+    { id: "verschieben", name: "Verschieben", icon: () => SPR.move, info: "Ziehe einen Knoten an eine neue Stelle." },
+    { id: "gewicht", name: "Gewicht", icon: () => SPR.weight, info: "Klicke eine Kante an und trage unten das Gewicht ein." },
+    { id: "loeschen", name: "Löschen", icon: () => SPR.del, info: "Klicke einen Knoten oder eine Kante an, um sie zu entfernen." },
+    { id: "start", name: "Start", icon: () => SPR.flag, info: "Klicke den Knoten an, bei dem die Suche beginnt." },
+    { id: "ziel", name: "Ziel", icon: () => SPR.goalflag, info: "Klicke den Zielknoten an. Ein zweiter Klick auf das Ziel entfernt es." },
+  ];
+  const editable = () => isGraph() || !!KM_SCEN[S.scen].build;
+  function renderToolbox() {
+    const showKm = !isGraph() && KM_SCEN[S.scen].build;
+    $("toolbox").hidden = !(isGraph() || showKm);
+    const bar = $("hotbar"); bar.innerHTML = "";
+    const tools = isGraph() ? GR_TOOLS : showKm ? KM_TOOLS : [];
+    const cur = isGraph() ? S.gtool : S.tool;
+    $("toolTitle").textContent = isGraph() ? "Graph bearbeiten" : "Karte bauen";
+    for (const tl of tools) {
+      const k = TK[tl.id], name = tl.name || TER[k].name, cost = tl.name ? "" : isFinite(TER[k].cost) ? TER[k].cost : "–";
+      const b = document.createElement("button"); b.className = "slot"; b.type = "button"; b.setAttribute("aria-pressed", cur === tl.id);
+      b.title = cost === "" ? name : `${name}: ${cost === "–" ? "nicht begehbar" : cost + " Ausdauer"}`;
+      const img = tl.icon ? tl.icon() : tex(tl.id, 1, 0); const c = document.createElement("canvas"); c.width = 16; c.height = 16; paintIcon(c, img); b.appendChild(c);
+      b.insertAdjacentHTML("beforeend", `<span class="tn">${esc(name)}</span><span class="tc">${cost}</span>`);
+      b.onclick = () => { if (isGraph()) S.gtool = tl.id; else S.tool = tl.id; renderToolbox(); }; bar.appendChild(b);
+    }
+    if (isGraph()) $("toolInfo").textContent = GR_TOOLS.find(x => x.id === S.gtool).info;
+    else if (showKm) { const k = TK[S.tool];
+      $("toolInfo").textContent = S.tool === "flag" || S.tool === "goal" ? "Klicke auf ein begehbares Feld." : S.tool === "pick" ? "Setzt ein Feld auf den ursprünglichen Block zurück." : isFinite(TER[k].cost) ? `${TER[k].name}: jedes Feld kostet ${TER[k].cost} Ausdauer. Klicke oder ziehe über die Karte.` : `${TER[k].name} ist nicht begehbar. Klicke oder ziehe über die Karte.`; }
+    const ex = $("toolExtra"); ex.innerHTML = "";
+    if (isGraph()) {
+      const d = S.gdef, sel = S.selEdge >= 0 && d.edges[S.selEdge];
+      ex.innerHTML = `<div class="row"><label class="ctrl" for="gDir"><input type="checkbox" id="gDir" ${d.directed ? "checked" : ""}> gerichtet</label>
+        <label class="ctrl" for="gWei"><input type="checkbox" id="gWei" ${d.weighted ? "checked" : ""}> mit Gewichten</label></div>
+        ${S.gtool === "gewicht" ? (sel ? `<label class="ctrl" for="gW">Gewicht der Kante ${esc(d.nodes[sel.a].label)}–${esc(d.nodes[sel.b].label)} <input type="number" id="gW" min="0" max="999" step="1" value="${sel.w}"></label>` : `<span class="small">Noch keine Kante ausgewählt.</span>`) : ""}
+        <div class="row"><button class="btn sm" id="gClear" type="button">Alles löschen</button></div>`;
+      $("gDir").onchange = ev => { S.gdef.directed = ev.target.checked; rebuild(true); };
+      $("gWei").onchange = ev => { S.gdef.weighted = ev.target.checked; rebuild(true); renderToolbox(); };
+      if ($("gW")) $("gW").onchange = ev => { const v = Math.max(0, Math.min(999, Math.round(+ev.target.value || 0))); S.gdef.edges[S.selEdge].w = v; ev.target.value = v; if (!S.gdef.weighted) { S.gdef.weighted = true; renderToolbox(); } rebuild(true); };
+      $("gClear").onclick = () => { S.gdef.nodes = [{ label: "A", x: 200, y: 300 }]; S.gdef.edges = []; S.s = 0; S.z = -1; S.selEdge = -1; rebuild(true); };
+    }
+    sizeCanvases();
+  }
+  function canPlace(v) {
+    const tool = S.tool, cur = S.world.tiles[v];
+    if (tool === "flag") return isFinite(TER[cur].cost) && v !== S.z;
+    if (tool === "goal") return isFinite(TER[cur].cost) && v !== S.s;
+    if (tool === "pick") return cur !== ORIG.tiles[v];
+    const k = TK[tool]; if (cur === k) return false;
+    if ((v === S.s || v === S.z) && !isFinite(TER[k].cost)) return false;
+    return !(cur === TK.haus || cur === TK.muehle || cur === TK.mine);
+  }
+  function place(v) {
+    if (!canPlace(v)) return false;
+    if (S.tool === "flag") S.s = v; else if (S.tool === "goal") S.z = v;
+    else S.world.tiles[v] = S.tool === "pick" ? ORIG.tiles[v] : TK[S.tool];
+    kmBaseCache.clear(); return true;
+  }
+  const boardXY = (cv, ev) => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) / cv._sc, (ev.clientY - r.top) / cv._sc]; };
+  const tileAt = (cv, ev) => { const r = cv.getBoundingClientRect(), ts = cv._ts, x = Math.floor((ev.clientX - r.left) / ts), y = Math.floor((ev.clientY - r.top) / ts); return x < 0 || y < 0 || x >= W || y >= H ? -1 : y * W + x; };
+  function nodeAt(x, y) { const d = S.gdef; for (let i = d.nodes.length - 1; i >= 0; i--) if (Math.abs(d.nodes[i].x - x) <= NR + 4 && Math.abs(d.nodes[i].y - y) <= NR + 4) return i; return -1; }
+  function edgeAt(x, y) { const d = S.gdef; let best = -1, bd = 12;
+    d.edges.forEach((e, i) => { const a = d.nodes[e.a], b = d.nodes[e.b], dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1; let t = ((x - a.x) * dx + (y - a.y) * dy) / L2; t = Math.max(0, Math.min(1, t)); const dd = Math.hypot(a.x + t * dx - x, a.y + t * dy - y); if (dd < bd) { bd = dd; best = i; } }); return best; }
+  function nextLabel() { const used = new Set(S.gdef.nodes.map(n => n.label)); for (let k = 0; ; k++) { const l = k < 26 ? String.fromCharCode(65 + k) : String.fromCharCode(65 + (k % 26)) + Math.floor(k / 26); if (!used.has(l)) return l; } }
+  const defaultWeight = (a, b) => Math.max(1, Math.round(Math.hypot(a.x - b.x, a.y - b.y) / 90));
+  function graphDown(cv, ev) {
+    const [x, y] = boardXY(cv, ev), d = S.gdef, v = nodeAt(x, y), tool = S.gtool;
+    if (S.view === "detail" && S.awaiting >= 0 && cv === $("dMap")) { if (v >= 0) answer(v); return; }
+    if (tool === "knoten" && v < 0) { if (d.nodes.length >= 40) return; d.nodes.push({ label: nextLabel(), x: Math.max(NR, Math.min(BW - NR, x)), y: Math.max(NR + 30, Math.min(BH - NR, y)) }); rebuild(true); return; }
+    if (tool === "kante" && v >= 0) { S.drag = { type: "edge", from: v, x, y, cv }; cv.setPointerCapture(ev.pointerId); return; }
+    if (tool === "verschieben" && v >= 0) { S.drag = { type: "move", node: v, cv }; cv.setPointerCapture(ev.pointerId); return; }
+    if (tool === "gewicht") { S.selEdge = edgeAt(x, y); renderToolbox(); if ($("gW")) $("gW").focus(); S.dirty = true; return; }
+    if (tool === "loeschen") {
+      if (v >= 0) { if (d.nodes.length <= 1) return; d.nodes.splice(v, 1); d.edges = d.edges.filter(e => e.a !== v && e.b !== v).map(e => ({ ...e, a: e.a > v ? e.a - 1 : e.a, b: e.b > v ? e.b - 1 : e.b }));
+        if (S.s === v) S.s = 0; else if (S.s > v) S.s--; if (S.z === v) S.z = -1; else if (S.z > v) S.z--; S.selEdge = -1; rebuild(true); return; }
+      const e = edgeAt(x, y); if (e >= 0) { d.edges.splice(e, 1); S.selEdge = -1; rebuild(true); } return;
+    }
+    if (tool === "start" && v >= 0) { S.s = v; if (S.z === v) S.z = -1; rebuild(true); return; }
+    if (tool === "ziel" && v >= 0) { S.z = S.z === v || v === S.s ? -1 : v; rebuild(true); }
+  }
+  function graphMove(cv, ev) {
+    const [x, y] = boardXY(cv, ev);
+    S.hover = nodeAt(x, y); S.hoverCv = cv;
+    if (S.drag && S.drag.type === "edge") { S.drag.x = x; S.drag.y = y; }
+    if (S.drag && S.drag.type === "move") { const n = S.gdef.nodes[S.drag.node]; n.x = Math.max(NR, Math.min(BW - NR, x)); n.y = Math.max(NR + 30, Math.min(BH - NR, y)); S.drag.moved = true; }
+    S.dirty = true;
+  }
+  function graphUp(cv, ev) {
+    const dr = S.drag; S.drag = null; if (!dr) return;
+    const [x, y] = boardXY(cv, ev), d = S.gdef;
+    if (dr.type === "edge") { const v = nodeAt(x, y); if (v >= 0 && v !== dr.from) {
+      const dup = d.edges.some(e => (e.a === dr.from && e.b === v) || (!d.directed && e.a === v && e.b === dr.from));
+      if (!dup) { d.edges.push({ a: dr.from, b: v, w: d.weighted ? defaultWeight(d.nodes[dr.from], d.nodes[v]) : 1 }); rebuild(true); } } }
+    if (dr.type === "move" && dr.moved) rebuild(true);
+    S.dirty = true;
+  }
+  function attachEditing(cv) {
+    cv.addEventListener("pointerdown", ev => {
+      if (isGraph()) { if (!cv._sc) return; graphDown(cv, ev); if (S.drag) ev.preventDefault(); return; }
+      const v = tileAt(cv, ev); if (v < 0) return;
+      if (S.view === "detail" && S.awaiting >= 0 && cv === $("dMap")) { answer(v); return; }
+      if (!KM_SCEN[S.scen].build) return;
+      ev.preventDefault(); S.painting = true; S.changed = false; cv.setPointerCapture(ev.pointerId);
+      if (place(v)) { S.changed = true; if (S.tool === "flag" || S.tool === "goal") { S.painting = false; rebuild(true); } }
+    });
+    cv.addEventListener("pointermove", ev => {
+      if (isGraph()) { if (cv._sc) graphMove(cv, ev); return; }
+      S.hover = KM_SCEN[S.scen].build ? tileAt(cv, ev) : -1; S.hoverCv = cv;
+      if (S.painting && S.hover >= 0 && S.tool !== "flag" && S.tool !== "goal" && place(S.hover)) S.changed = true; S.dirty = true;
+    });
+    const end = ev => { if (isGraph()) { graphUp(cv, ev); return; } if (S.painting) { S.painting = false; if (S.changed) rebuild(true); } };
+    cv.addEventListener("pointerup", end); cv.addEventListener("pointercancel", end);
+    cv.addEventListener("pointerleave", () => { S.hover = -1; S.dirty = true; });
+  }
+
+  /* ================= Speichern und laden ================= */
+  function exportJson() {
+    const out = isGraph()
+      ? { format: "kieselmark-graph", version: 1, gerichtet: S.gdef.directed, gewichtet: S.gdef.weighted, knoten: S.gdef.nodes.map(n => ({ name: n.label, x: Math.round(n.x), y: Math.round(n.y) })), kanten: S.gdef.edges.map(e => ({ von: S.gdef.nodes[e.a].label, nach: S.gdef.nodes[e.b].label, gewicht: e.w })), start: S.gdef.nodes[S.s].label, ziel: S.z >= 0 ? S.gdef.nodes[S.z].label : null, nachbarreihenfolge: S.orderGr }
+      : { format: "kieselmark-karte", version: 1, breite: W, hoehe: H, bloecke: TER.map(t => t.key), felder: Array.from(S.world.tiles).map(x => x.toString(36)).join(""), start: [S.s % W, Math.floor(S.s / W)], ziel: S.z >= 0 ? [S.z % W, Math.floor(S.z / W)] : null, nachbarreihenfolge: S.orderKm };
+    return JSON.stringify(out, null, 1);
+  }
+  function importJson(text) {
+    let o; try { o = JSON.parse(text); } catch (e) { throw new Error("Der Text ist kein gültiges JSON."); }
+    if (o.format === "kieselmark-graph") {
+      if (!Array.isArray(o.knoten) || !o.knoten.length || !Array.isArray(o.kanten)) throw new Error("Es fehlen Knoten oder Kanten.");
+      const idx = new Map(); const nodes = o.knoten.map((n, i) => { const label = String(n.name ?? i); if (idx.has(label)) throw new Error(`Der Knotenname ${label} kommt doppelt vor.`); idx.set(label, i); return { label, x: Math.max(NR, Math.min(BW - NR, +n.x || 0)), y: Math.max(NR + 30, Math.min(BH - NR, +n.y || 0)) }; });
+      // Der Graph bleibt schlicht: keine Schleifen, keine Mehrfachkanten, nur Gewichte >= 0 (Voraussetzung für Dijkstra und A*)
+      const seen = new Set();
+      const edges = o.kanten.map(e => {
+        const a = idx.get(String(e.von)), b = idx.get(String(e.nach));
+        if (a === undefined || b === undefined) throw new Error(`Die Kante ${e.von}–${e.nach} verweist auf einen unbekannten Knoten.`);
+        if (a === b) throw new Error(`Die Kante ${e.von}–${e.nach} ist eine Schleife. Schleifen sind nicht erlaubt.`);
+        const key = o.gerichtet ? a + ">" + b : Math.min(a, b) + "-" + Math.max(a, b);
+        if (seen.has(key)) throw new Error(`Die Kante ${e.von}–${e.nach} kommt doppelt vor.`); seen.add(key);
+        const w = e.gewicht === undefined ? 1 : Number(e.gewicht);
+        if (!Number.isFinite(w) || w < 0) throw new Error(`Die Kante ${e.von}–${e.nach} hat kein gültiges Gewicht. Erlaubt sind Zahlen ab 0.`);
+        return { a, b, w };
+      });
+      if (S.wt !== "graph") setWorld("graph");
+      S.gscen = GR_SCEN.length - 1; S.gdef = { directed: !!o.gerichtet, weighted: !!o.gewichtet, nodes, edges };
+      S.s = idx.get(String(o.start)) ?? 0; S.z = o.ziel != null && idx.has(String(o.ziel)) ? idx.get(String(o.ziel)) : -1;
+      if (o.nachbarreihenfolge && KM.GRAPH_ORDERS.some(x => x.id === o.nachbarreihenfolge)) { S.orderGr = o.nachbarreihenfolge; $("orderSel").value = S.orderGr; }
+      $("hint").textContent = `Geladener Graph mit ${nodes.length} Knoten und ${edges.length} Kanten.`;
+      renderChips(); renderToolbox(); rebuild(); return `Graph mit ${nodes.length} Knoten geladen.`;
+    }
+    if (o.format === "kieselmark-karte") {
+      if (o.breite !== W || o.hoehe !== H || typeof o.felder !== "string" || o.felder.length !== W * H) throw new Error(`Die Karte muss ${W} × ${H} Felder haben.`);
+      const keys = Array.isArray(o.bloecke) ? o.bloecke : TER.map(t => t.key);
+      const tiles = new Uint8Array(W * H);
+      for (let i = 0; i < W * H; i++) { const k = keys[parseInt(o.felder[i], 36)]; if (TK[k] === undefined) throw new Error(`Unbekannter Block an Stelle ${i}.`); tiles[i] = TK[k]; }
+      const at = p => Array.isArray(p) ? p[1] * W + p[0] : -1;
+      const s = at(o.start), z = o.ziel ? at(o.ziel) : -1;
+      if (s < 0 || !isFinite(TER[tiles[s]].cost)) throw new Error("Der Start liegt nicht auf einem begehbaren Feld.");
+      if (S.wt !== "km") setWorld("km");
+      S.scen = KM_SCEN.length - 1; S.world = { ...ORIG, tiles }; S.s = s; S.z = z >= 0 && isFinite(TER[tiles[z]].cost) ? z : LM("Schatztruhe");
+      if (o.nachbarreihenfolge && KM.GRID_ORDERS.some(x => x.id === o.nachbarreihenfolge)) { S.orderKm = o.nachbarreihenfolge; $("orderSel").value = S.orderKm; }
+      $("hint").textContent = "Geladene Karte. Baue weiter oder starte die Suche.";
+      renderChips(); renderToolbox(); rebuild(); return "Karte geladen.";
+    }
+    throw new Error("Unbekanntes Format. Erwartet wird „kieselmark-graph“ oder „kieselmark-karte“.");
+  }
+  const msg = (t, err) => { $("dataMsg").textContent = t; $("dataMsg").classList.toggle("err", !!err); };
+  $("expBtn").onclick = () => { $("dataTxt").value = exportJson(); msg("Kopiere den Text und speichere ihn als .json-Datei."); };
+  $("copyBtn").onclick = () => {
+    if (!$("dataTxt").value) $("dataTxt").value = exportJson();
+    const sel = () => { $("dataTxt").focus(); $("dataTxt").select(); msg("Text markiert. Mit Strg+C bzw. ⌘+C kopieren."); };
+    try { navigator.clipboard.writeText($("dataTxt").value).then(() => msg("In die Zwischenablage kopiert."), sel); } catch (e) { sel(); }
+  };
+  $("impBtn").onclick = () => { try { msg(importJson($("dataTxt").value)); } catch (e) { msg(e.message, true); } };
+
+  /* ================= Schleife ================= */
+  const rate = id => Math.round(Math.pow(10, +$(id).value / 100 * 3));
+  function loop(now) {
+    const t = now / 1000;
+    if (S.playing) { const dt = Math.min(0.1, (now - S.last) / 1000); S.last = now; S.acc += dt * rate("rSpeed"); const n = Math.floor(S.acc); if (n > 0) { S.acc -= n; raceSeek(S.k + n); if (S.k >= S.maxK) { S.playing = false; updateRace(); } } }
+    if (S.walking) { const dt = Math.min(0.1, (now - S.wLast) / 1000); S.wLast = now; S.walkT += dt * (isGraph() ? Math.max(1, S.maxCost / 6) : 14); if (S.walkT >= S.maxCost) { S.walkT = S.maxCost; S.walking = false; } updateRace(); }
+    if (S.dPlaying) { const dt = Math.min(0.1, (now - S.dLast) / 1000); S.dLast = now; S.dAcc += dt * rate("dSpeed"); let n = Math.min(Math.floor(S.dAcc), 2000); if (n > 0) { S.dAcc -= n; while (n-- > 0) if (!dFwd()) { S.dPlaying = false; break; } updateDetail(); } }
+    const fbActive = S.feedback && t < S.feedback.until;
+    if (S.dirty || S.walking || fbActive || (S.feedback && !fbActive && S.feedback.until > 0)) {
+      if (S.feedback && !fbActive) S.feedback.until = 0;
+      S.dirty = false;
+      const fb = fbActive ? S.feedback : null;
+      if (S.view === "race") document.querySelectorAll("#race canvas").forEach(cv => { const m = cv.dataset.m, o = { t, R: S.rp[m], m, big: false, walk: true, hover: S.hoverCv === cv ? S.hover : -1, cv, nums: "order" };
+        if (isGraph()) { if (cv._sc) drawGraph(cv.getContext("2d"), { ...o, sc: cv._sc }); } else if (cv._ts) drawKm(cv.getContext("2d"), { ...o, ts: cv._ts }); });
+      else { const cv = $("dMap"), o = { t, R: S.dR, m: S.dMode, big: true, walk: false, hover: S.hoverCv === cv ? S.hover : -1, cv, nums: $("numSel").value, fb };
+        if (isGraph()) { if (cv._sc) drawGraph(cv.getContext("2d"), { ...o, sc: cv._sc }); } else if (cv._ts) drawKm(cv.getContext("2d"), { ...o, ts: cv._ts }); }
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* ================= Bedienung ================= */
+  function stopAll() { S.playing = false; S.dPlaying = false; S.walking = false; }
+  function setSide(open) {
+    $("layout").classList.toggle("collapsed", !open);
+    $("sideBtn").textContent = open ? "Einstellungen ausblenden" : "Einstellungen einblenden";
+    $("sideBtn").setAttribute("aria-expanded", open); sizeCanvases();
+  }
+  $("sideBtn").onclick = () => setSide($("layout").classList.contains("collapsed"));
+  function setView(v) {
+    setSide(v === "race");
+    S.view = v; $("tabRace").setAttribute("aria-pressed", v === "race"); $("tabDetail").setAttribute("aria-pressed", v === "detail");
+    $("raceView").hidden = v !== "race"; $("detailView").hidden = v !== "detail"; stopAll(); sizeCanvases(); updateRace(); updateDetail();
+  }
+  $("tabRace").onclick = () => setView("race"); $("tabDetail").onclick = () => setView("detail");
+  $("worldKm").onclick = () => { if (S.wt !== "km") setWorld("km"); };
+  $("worldGraph").onclick = () => { if (S.wt !== "graph") setWorld("graph"); };
+  $("orderSel").onchange = ev => { if (isGraph()) S.orderGr = ev.target.value; else S.orderKm = ev.target.value; rebuild(true); };
+  $("rPlay").onclick = () => { if (S.playing) S.playing = false; else { if (ORDER.every(done)) raceSeek(0); S.playing = true; S.acc = 0; S.last = performance.now(); } updateRace(); };
+  $("rStep").onclick = () => { S.playing = false; raceSeek(S.k + 1); };
+  $("rEnd").onclick = () => { S.playing = false; raceSeek(S.maxK); };
+  $("rReset").onclick = () => { S.playing = false; raceSeek(0); };
+  $("rScrub").oninput = () => { S.playing = false; raceSeek(+$("rScrub").value); };
+  $("rWalk").onclick = () => { if (S.walking) { S.walkT = S.maxCost; S.walking = false; } else { S.walkT = 0.0001; S.walking = true; S.wLast = performance.now(); } updateRace(); };
+  $("dPlay").onclick = () => { if (S.awaiting >= 0) return; if (S.dPlaying) S.dPlaying = false; else { if (S.dR.i >= S.dR.length) { S.dR.seek(0); S.asked = new Set(); } S.dPlaying = true; S.dAcc = 0; S.dLast = performance.now(); } updateDetail(); };
+  $("dFwd").onclick = () => { S.dPlaying = false; dFwd(); updateDetail(); };
+  $("dBack").onclick = () => { S.dPlaying = false; dBack(); updateDetail(); };
+  $("dStart").onclick = () => { S.dPlaying = false; S.awaiting = -1; $("banner").hidden = true; S.dR.seek(0); S.asked = new Set(); updateDetail(); };
+  $("dEnd").onclick = () => { S.dPlaying = false; S.awaiting = -1; $("banner").hidden = true; S.dR.seek(S.dR.length); updateDetail(); };
+  $("dScrub").oninput = () => { S.dPlaying = false; S.awaiting = -1; $("banner").hidden = true; S.dR.seek(+$("dScrub").value); updateDetail(); };
+  $("bSkip").onclick = () => { if (S.awaiting < 0) return; const R = S.dR; let j = S.awaiting; while (j < R.length && R.ev[j].t !== KM.VISIT[S.dMode]) j++; S.asked.add(S.awaiting); S.awaiting = -1; $("banner").hidden = true; R.seek(j + 1); S.feedback = null; updateDetail(); };
+  $("numSel").onchange = () => { S.dirty = true; };
+  $("guessChk").onchange = () => { if (!$("guessChk").checked && S.awaiting >= 0) $("bSkip").click(); S.hits = 0; S.tries = 0; updateDetail(); };
+  document.addEventListener("keydown", ev => {
+    if (ev.target.closest && ev.target.closest("input, select, button, textarea, summary")) return;
+    if (S.view === "detail") { if (ev.key === "ArrowRight") { S.dPlaying = false; dFwd(); updateDetail(); ev.preventDefault(); } else if (ev.key === "ArrowLeft") { S.dPlaying = false; dBack(); updateDetail(); ev.preventDefault(); } else if (ev.key === " ") { $("dPlay").click(); ev.preventDefault(); } }
+    else { if (ev.key === "ArrowRight") { $("rStep").click(); ev.preventDefault(); } else if (ev.key === " ") { $("rPlay").click(); ev.preventDefault(); } }
+  });
+  const dm = $("dMap");
+  attachEditing(dm);
+  dm.addEventListener("pointermove", ev => {
+    const tip = $("tip"), R = S.dR, m = S.dMode;
+    let v; if (isGraph()) { const [x, y] = boardXY(dm, ev); v = nodeAt(x, y); } else v = tileAt(dm, ev);
+    if (v < 0) { tip.hidden = true; return; }
+    const lines = [];
+    if (R.visitNo[v]) lines.push(`Besuch Nr. ${R.visitNo[v]}`); else if (R.dist[v] < Infinity) lines.push("entdeckt, wartet noch"); else lines.push("noch nicht entdeckt");
+    if (R.dist[v] < Infinity) lines.push(m === "bfs" ? `${R.dist[v]} Schritte vom Start` : m === "dfs" ? `Tiefe ${R.dist[v]}` : m === "dijkstra" ? `Kosten bisher ${f0(R.dist[v])}` : `Kosten bisher ${f0(R.dist[v])}, Schätzung ${f0(S.G.h(v, S.z))}`);
+    if (isGraph()) tip.innerHTML = `<b>Knoten ${esc(Lb(v))}</b><br>${esc(lines.join(" · "))}`;
+    else { const k = TER[S.world.tiles[v]]; tip.innerHTML = `<b>${esc(Lb(v))}</b> · ${esc(k.name)}<br>${isFinite(k.cost) ? `kostet ${k.cost} Ausdauer · ${esc(lines.join(" · "))}` : "nicht begehbar"}`; }
+    tip.hidden = false;
+  });
+  dm.addEventListener("pointerleave", () => { $("tip").hidden = true; });
+  new ResizeObserver(() => sizeCanvases()).observe(document.querySelector(".layout"));
+  new ResizeObserver(() => { const b = document.querySelector("#detailView .ctrlbar"); const pos = getComputedStyle(b).position; document.documentElement.style.setProperty("--ctrlh", (pos === "sticky" ? b.offsetHeight : 0) + "px"); }).observe(document.querySelector("#detailView .ctrlbar"));
+
+  /* ================= Farbschema ================= */
+  function currentTheme() { return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); }
+  function syncThemeBtn() { $("themeBtn").textContent = currentTheme() === "dark" ? "Hell" : "Dunkel"; }
+  $("themeBtn").onclick = () => { const next = currentTheme() === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; try { localStorage.setItem("kieselmark-theme", next); } catch (e) { } };
+  try { const th = localStorage.getItem("kieselmark-theme"); if (th === "light" || th === "dark") document.documentElement.dataset.theme = th; } catch (e) { }
+  new MutationObserver(() => { readCss(); syncThemeBtn(); renderLegend(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { readCss(); syncThemeBtn(); });
+
+  /* ================= Start ================= */
+  function paintIcon(cv, img) { const g = cv.getContext("2d"); g.imageSmoothingEnabled = false; g.clearRect(0, 0, cv.width, cv.height); g.drawImage(img, 0, 0, cv.width, cv.height); }
+  readCss(); syncThemeBtn();
+  paintIcon($("logo"), (() => { const c = document.createElement("canvas"); c.width = c.height = 16; const g = c.getContext("2d"); g.drawImage(tex("gras", 3, 0), 0, 0); g.fillStyle = "rgba(0,0,0,.3)"; g.fillRect(0, 12, 16, 4); g.drawImage(SPR.explorer, 1, 0, 14, 14); return c; })());
+  $("algtabs").innerHTML = ORDER.map(m => `<button class="algtab" type="button" data-m="${m}" aria-pressed="false"><span class="dot" style="background:${MODES[m].color}"></span>${MODES[m].name}</button>`).join("");
+  document.querySelectorAll(".algtab").forEach(b => { b.onclick = () => setDetailMode(b.dataset.m); });
+  setWorld("km");
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { readCss(); });
+  requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>
