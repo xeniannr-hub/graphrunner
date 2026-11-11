@@ -1,5 +1,6 @@
 // Erklärungen ohne DOM: Steckbrief je Verfahren, fokus() für markierte Felder, Erklärsatz und Tooltip-Text.
 // Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion fokus().
+import { RICHTUNGEN } from "../algorithms/raster";
 import type { Replay } from "../replay/replay";
 import type { Algo, FeldId, Pos, Step, TerrainKey } from "../types";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
@@ -138,7 +139,23 @@ export function erklaerSatz(replay: Replay): string {
   }
 }
 
-/** Tooltip-Inhalt für ein Feld (FA-23): Koordinate, Kategorie, Gewichtung, Besuch-Nr. bzw. Status. */
+const PFEIL: Readonly<Record<string, string>> = { oben: "↑", rechts: "→", unten: "↓", links: "←" };
+
+/**
+ * Ausgehende Kanten eines begehbaren Feldes in der festen Nachbarreihenfolge, mit Gewicht.
+ * Die Kante p → q kostet so viel wie das Feld q; „–“ heißt: keine Kante (q liegt außerhalb oder ist nicht begehbar).
+ */
+function kanten(karte: readonly (readonly TerrainKey[])[], p: Pos): string {
+  const teile = RICHTUNGEN.map((r) => {
+    const zeile = karte[p.y + r.dy];
+    const key = zeile?.[p.x + r.dx];
+    const k = key === undefined ? Infinity : TERRAIN_NACH_KEY[key].kosten;
+    return `${PFEIL[r.name]} ${k === Infinity ? "–" : k}`;
+  });
+  return `Kanten: ${teile.join(" · ")}`;
+}
+
+/** Tooltip-Inhalt für ein Feld (FA-23): Koordinate, Kategorie, Gewichtung, ausgehende Kanten, Besuch-Nr. bzw. Status. */
 export function feldInfo(
   karte: readonly (readonly TerrainKey[])[],
   p: Pos,
@@ -149,6 +166,8 @@ export function feldInfo(
   const t = TERRAIN_NACH_KEY[karte[p.y][p.x]];
   const rolle = p.x === start.x && p.y === start.y ? " · Start" : p.x === ziel.x && p.y === ziel.y ? " · Ziel" : "";
   const zeilen = [`Feld ${koord(p)}${rolle}`, t.name, t.kosten === Infinity ? "nicht begehbar" : `Ausdauer ${t.kosten}`];
+  // Nur begehbare Felder sind Knoten des Graphen und haben ausgehende Kanten.
+  if (t.kosten !== Infinity) zeilen.push(kanten(karte, p));
   if (replay && t.kosten !== Infinity) {
     const id = p.y * replay.ergebnis.breite + p.x;
     const nr = replay.besuchNr[id];
