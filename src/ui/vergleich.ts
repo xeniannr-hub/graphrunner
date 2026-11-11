@@ -36,7 +36,7 @@ export class Vergleich {
 
     const legende = document.createElement("div");
     legende.innerHTML = `
-      <span><i class="farben">${ALGOS.map((a) => `<b style="background:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>besucht</span>
+      <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>besucht</span>
       <span><i class="wartet"></i>entdeckt, wartet</span>
       <span><i class="kante"></i>Entdeckungskante</span>
       <span><i class="weg"></i>gefundener Weg</span>`;

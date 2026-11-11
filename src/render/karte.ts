@@ -47,8 +47,8 @@ function gelaende(bild: KartenBild, ts: number): HTMLCanvasElement {
       g.drawImage(textur(bild.karte[y][x], variante), x * ts, y * ts, ts, ts);
     }
   }
-  // Gelände etwas abdunkeln, damit die Suche besser hervortritt.
-  g.fillStyle = "rgba(12, 10, 8, 0.22)";
+  // Gelände nur leicht abdunkeln: Die Suche soll hervortreten, das Gelände aber erkennbar bleiben.
+  g.fillStyle = "rgba(12, 10, 8, 0.12)";
   g.fillRect(0, 0, c.width, c.height);
   hintergrund.set(schluessel, c);
   return c;
@@ -85,17 +85,33 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(gelaende(bild, ts), 0, 0);
 
-  // Besucht: Farbe des Verfahrens. Entdeckt und wartend: weiß mit Punkt (FA-04).
-  ctx.fillStyle = rgba(farbe, 0.55);
-  for (let v = 0; v < n; v++) if (r.besuchNr[v] > 0) ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
-  for (let v = 0; v < n; v++) {
-    if (!r.wartet(v)) continue;
+  // Besucht: leichter Schleier und Rahmen in der Farbe des Verfahrens, damit Muster und Farbe des Geländes
+  // sichtbar bleiben. Entdeckt und wartend: weißer Rahmen mit Punkt (FA-04).
+  const rand = Math.max(1, Math.round(ts * 0.1));
+  const rahmenInnen = (v: FeldId, stil: string) => {
     const x = (v % b) * ts;
     const y = Math.floor(v / b) * ts;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.42)";
-    ctx.fillRect(x, y, ts, ts);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-    const p = Math.max(2, Math.round(ts / 6));
+    ctx.fillStyle = stil;
+    ctx.fillRect(x, y, ts, rand);
+    ctx.fillRect(x, y + ts - rand, ts, rand);
+    ctx.fillRect(x, y + rand, rand, ts - 2 * rand);
+    ctx.fillRect(x + ts - rand, y + rand, rand, ts - 2 * rand);
+  };
+  for (let v = 0; v < n; v++) {
+    if (r.besuchNr[v] === 0) continue;
+    ctx.fillStyle = rgba(farbe, 0.2);
+    ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
+    rahmenInnen(v, rgba(farbe, 0.9));
+  }
+  for (let v = 0; v < n; v++) {
+    if (!r.wartet(v)) continue;
+    rahmenInnen(v, "rgba(255, 255, 255, 0.9)");
+    const x = (v % b) * ts;
+    const y = Math.floor(v / b) * ts;
+    const p = Math.max(2, Math.round(ts / 5));
+    ctx.fillStyle = "#000";
+    ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
+    ctx.fillStyle = "#fff";
     ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);
   }
 
@@ -183,15 +199,18 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
     ctx.strokeRect(bild.hover.x * ts + 1, bild.hover.y * ts + 1, ts - 2, ts - 2);
   }
 
-  // Schatztruhe als Ziel, Fahne am Start, Spielfigur (FA-24).
+  // Start und Ziel: Leuchtrahmen, große Fahne und Truhe, Beschriftung (FA-24).
   const sp = sprites();
-  const zx = (bild.ziel.x + 0.5) * ts;
-  const zy = (bild.ziel.y + 0.5) * ts;
-  const tb = ts * 0.95;
-  ctx.drawImage(sp.truhe, zx - tb / 2, zy - (tb * sp.truhe.height) / sp.truhe.width / 2, tb, (tb * sp.truhe.height) / sp.truhe.width);
   const sx = (bild.start.x + 0.5) * ts;
   const sy = (bild.start.y + 0.5) * ts;
-  ctx.drawImage(sp.fahne, sx - ts * 0.05, sy - ts * 0.95, ts * 0.6, ts * 0.6);
+  const zx = (bild.ziel.x + 0.5) * ts;
+  const zy = (bild.ziel.y + 0.5) * ts;
+  markiere(ctx, ts, bild.start, START_FARBE);
+  markiere(ctx, ts, bild.ziel, ZIEL_FARBE);
+  const tb = ts * 1.5;
+  const th = (tb * sp.truhe.height) / sp.truhe.width;
+  ctx.drawImage(sp.truhe, zx - tb / 2, zy - th / 2, tb, th);
+  ctx.drawImage(sp.fahne, sx - ts * 0.1, sy - ts * 1.25, ts * 0.9, ts * 0.9);
   let fx = sx;
   let fy = sy;
   let laeuft = false;
@@ -206,6 +225,42 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
   ctx.fillRect(fx - gr * 0.3, fy + gr * 0.36, gr * 0.6, gr * 0.1);
   ctx.drawImage(sp.figur, fx - gr / 2, fy - gr * 0.55 - hops, gr, gr);
+  schild(ctx, ts, bild.start, "START", START_FARBE, bild.karte[0].length);
+  schild(ctx, ts, bild.ziel, "ZIEL", ZIEL_FARBE, bild.karte[0].length);
+}
+
+const START_FARBE = "#4cd964";
+const ZIEL_FARBE = "#ffcf33";
+
+/** Leuchtender Rahmen um ein Feld, etwas größer als das Feld selbst. */
+function markiere(ctx: CanvasRenderingContext2D, ts: number, p: Pos, farbe: string): void {
+  const d = Math.max(2, Math.round(ts * 0.16));
+  ctx.lineWidth = d + 2;
+  ctx.strokeStyle = "#000";
+  ctx.strokeRect(p.x * ts - d / 2, p.y * ts - d / 2, ts + d, ts + d);
+  ctx.lineWidth = d;
+  ctx.strokeStyle = farbe;
+  ctx.strokeRect(p.x * ts - d / 2, p.y * ts - d / 2, ts + d, ts + d);
+}
+
+/** Beschriftung über dem Feld (in der obersten Reihe darunter), seitlich in der Karte gehalten. */
+function schild(ctx: CanvasRenderingContext2D, ts: number, p: Pos, text: string, farbe: string, spalten: number): void {
+  const gr = Math.max(9, Math.round(ts * 0.55));
+  ctx.font = `700 ${gr}px "Rubik", system-ui, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const pad = Math.round(gr * 0.35);
+  const b = ctx.measureText(text).width + 2 * pad;
+  const h = gr + pad;
+  const x = Math.min(Math.max((p.x + 0.5) * ts, b / 2 + 1), spalten * ts - b / 2 - 1);
+  const oben = p.y >= 2;
+  const y = oben ? p.y * ts - ts * 0.75 - h / 2 : (p.y + 1) * ts + ts * 0.35 + h / 2;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(Math.round(x - b / 2) - 1, Math.round(y - h / 2) - 1, Math.round(b) + 2, Math.round(h) + 2);
+  ctx.fillStyle = farbe;
+  ctx.fillRect(Math.round(x - b / 2), Math.round(y - h / 2), Math.round(b), Math.round(h));
+  ctx.fillStyle = "#14110d";
+  ctx.fillText(text, x, y + 1);
 }
 
 /**
