@@ -276,6 +276,11 @@ canvas {
   font-family: var(--mono);
 }
 
+.leeren {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
 .werkzeuge {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));

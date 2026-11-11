@@ -126,6 +126,14 @@ export function darfBauen(p: Pos): boolean {
   return true;
 }
 
+/** Eigene Welt: alle Felder werden Wiese, Start und Ziel bleiben, wo sie sind (FA-03). */
+export function leereKarte(): void {
+  if (!istEigeneWelt()) return;
+  Z.karte = Z.karte.map((zeile) => zeile.map((): TerrainKey => "gras"));
+  neuRechnen(true);
+  melde();
+}
+
 /** Wendet das Werkzeug an; alle Verfahren rechnen sofort neu. */
 export function baue(p: Pos): void {
   if (!istEigeneWelt() || !darfBauen(p)) return;
