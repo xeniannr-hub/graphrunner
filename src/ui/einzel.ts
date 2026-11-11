@@ -148,7 +148,7 @@ export class Einzel {
     this.wiedergabe.aktualisiere();
     for (const [b, t] of this.tabs) t.setAttribute("aria-selected", String(a === b));
     this.canvas.setAttribute("aria-label", `Karte ${info.name}`);
-    this.legendeFarbe.style.background = info.farbe;
+    this.legendeFarbe.style.color = info.farbe;
 
     if (this.gezeigtAlgo !== a) {
       this.steckbrief.innerHTML = `
