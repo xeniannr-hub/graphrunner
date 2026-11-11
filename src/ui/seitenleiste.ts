@@ -1,6 +1,7 @@
 // Seitenleiste (FA-22, FA-03): Weltliste mit Algorithmus-Kürzel, „X ist am besten, wenn …“ mit Begründung,
 // darunter „Bauen“ in der Eigenen Welt, sonst „Ausdauer pro Feld“.
 import { sprites, textur } from "../render/textures";
+import type { TerrainKey } from "../types";
 import { TERRAIN } from "../world/terrain";
 import { WELTEN } from "../world/worlds";
 import { ALGO_INFO } from "./erklaerung";
@@ -18,6 +19,9 @@ function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
   g.drawImage(bild, 0, (16 - h) / 2, 16, h);
   return c;
 }
+
+/** Block, der jede Welt in der Liste kennzeichnet (Reihenfolge wie WELTEN): Ruinenhof, Stollen, Flussmoor, Handelsstraße, Eigene Welt. */
+const WELT_BLOCK: readonly TerrainKey[] = ["fels", "wald", "sumpf", "weg", "gras"];
 
 const kosten = (k: number): string => (k === Infinity ? "–" : String(k));
 
@@ -45,6 +49,7 @@ export class Seitenleiste {
       b.className = "welt";
       const kuerzel = w.algo ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>` : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
       b.innerHTML = `<span class="welt-titel">${w.titel}</span>${kuerzel}`;
+      b.prepend(symbol(textur(WELT_BLOCK[i] ?? "gras", 1)));
       b.onclick = () => {
         ladeWelt(i);
         geaendert();
