@@ -55,16 +55,16 @@ function legendeFuer(a: Algo): HTMLElement[] {
   const eintraege: [SymbolArt, string][] =
     a === "dfs"
       ? [
-          ["besucht", "besucht und expandiert: vom Stapel genommen"],
-          ["besuchtWartet", "besucht, liegt noch auf dem Stapel (aktueller Pfad)"],
-          ["entdeckt", "entdeckt, noch nicht aufgelegt"],
+          ["besucht", "fertig (vom Stapel)"],
+          ["besuchtWartet", "auf dem Stapel"],
+          ["entdeckt", "entdeckt"],
         ]
       : [
-          ["besucht", "besucht = expandiert"],
-          ["wartet", a === "bfs" ? "wartet in der Warteschlange" : "wartet in der Prioritätswarteschlange"],
-          ["entdeckt", "entdeckt, noch nicht eingereiht"],
+          ["besucht", "expandiert"],
+          ["wartet", a === "bfs" ? "in der Warteschlange" : "in der Prioritätswarteschlange"],
+          ["entdeckt", "entdeckt"],
         ];
-  eintraege.push(["weg", "finaler Weg"], ["kante", "Entdeckungskante (Vorgänger)"]);
+  eintraege.push(["weg", "Weg"], ["kante", "Vorgänger"]);
   return eintraege.map(([art, text]) => {
     const span = document.createElement("span");
     span.append(symbol(art, f), text);
@@ -160,10 +160,9 @@ export class Einzel {
       "div",
       "",
       `<span class="legende-zustaende"></span>
-      <span><i class="rahmen weiss"></i>wird bearbeitet</span>
-      <span><i class="rahmen gelb"></i>wird geprüft</span>
-      <span><i class="rahmen rot"></i>Prüfung negativ</span>
-      <span class="feldinfo-hinweis">Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten</span>`,
+      <span><i class="rahmen weiss"></i>bearbeitet</span>
+      <span><i class="rahmen gelb"></i>geprüft</span>
+      <span><i class="rahmen rot"></i>Prüfung negativ</span>`,
     );
     this.legendeZustaende = legende.querySelector(".legende-zustaende") as HTMLElement;
     this.wiedergabe = new Wiedergabe(
@@ -202,7 +201,12 @@ export class Einzel {
     this.strukturTitel = struktur.querySelector(".struktur-titel") as HTMLElement;
     this.strukturRegel = struktur.querySelector(".struktur-regel") as HTMLElement;
     this.strukturInhalt = struktur.querySelector(".struktur-inhalt") as HTMLElement;
-    const merkmalBox = element("section", "box merkmal-box", `<h3 class="merkmal-frage"></h3><ul class="merkmal-belege"></ul>`);
+    const merkmalBox = element(
+      "details",
+      "box merkmal-box",
+      `<summary><h3 class="merkmal-frage"></h3></summary><ul class="merkmal-belege"></ul>`,
+    );
+    merkmalBox.setAttribute("open", "");
     this.merkmalFrage = merkmalBox.querySelector(".merkmal-frage") as HTMLElement;
     this.merkmalBelege = merkmalBox.querySelector(".merkmal-belege") as HTMLUListElement;
     links.append(kartenRahmen, struktur, merkmalBox);
@@ -211,12 +215,12 @@ export class Einzel {
     const seite = element(
       "div",
       "einzel-seite",
-      `<section class="box"><dl class="steckbrief"></dl><div class="heuristik"></div></section>
-      <div class="box erklaerung"><span class="zeile-nr"></span><p class="satz" aria-live="off"></p></div>
+      `<div class="box erklaerung"><span class="zeile-nr"></span><p class="satz" aria-live="off"></p></div>
       <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>
-      <section class="box protokoll-box"><h3>Ereignisprotokoll <small class="protokoll-zahl"></small></h3>
-        <p class="hinweis">Klick auf einen Eintrag springt zu diesem Schritt.</p><ol class="protokoll"></ol></section>
-      <div class="box liste-box"><h3>Besuchsreihenfolge</h3><p class="liste-leer">Noch kein Feld besucht.</p><ol class="besuchsliste"></ol></div>`,
+      <details class="box" open><summary><h3>Steckbrief</h3></summary><dl class="steckbrief"></dl><div class="heuristik"></div></details>
+      <details class="box protokoll-box" open><summary><h3>Ereignisprotokoll <small class="protokoll-zahl"></small></h3></summary>
+        <p class="hinweis">Klick auf einen Eintrag springt zu diesem Schritt.</p><ol class="protokoll"></ol></details>
+      <details class="box liste-box"><summary><h3>Besuchsreihenfolge</h3></summary><p class="liste-leer">Noch kein Feld besucht.</p><ol class="besuchsliste"></ol></details>`,
     );
     this.steckbrief = seite.querySelector(".steckbrief") as HTMLElement;
     this.heuristik = seite.querySelector(".heuristik") as HTMLElement;

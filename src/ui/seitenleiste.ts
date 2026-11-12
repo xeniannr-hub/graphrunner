@@ -34,6 +34,7 @@ export class Seitenleiste {
   private readonly wannEl: HTMLElement;
   private readonly warumEl: HTMLElement;
   private readonly lernEl: HTMLElement;
+  private gezeigteWelt = -1;
   private readonly bauen: HTMLElement;
   private readonly ausdauer: HTMLElement;
   private readonly werkzeuge = new Map<Werkzeug, HTMLButtonElement>();
@@ -69,7 +70,7 @@ export class Seitenleiste {
     this.wannEl = document.createElement("p");
     this.wannEl.className = "wann";
     this.warumEl = document.createElement("p");
-    this.lernEl = document.createElement("p");
+    this.lernEl = document.createElement("details");
     this.lernEl.className = "lernpunkt";
     begruendung.append(this.wannEl, this.warumEl, this.lernEl);
 
@@ -159,8 +160,15 @@ export class Seitenleiste {
     }
     this.warumEl.textContent = w.warum;
     this.lernEl.hidden = w.lernpunkt === "";
-    this.lernEl.innerHTML = w.lernpunkt ? `<b>Lernpunkt:</b> ` : "";
-    this.lernEl.append(w.lernpunkt);
+    // Aufklappbar, damit die Seitenleiste ruhig bleibt. Nur beim Weltwechsel neu schreiben,
+    // sonst klappt er bei jeder Aktualisierung wieder zu.
+    if (this.gezeigteWelt !== Z.weltIndex) {
+      this.gezeigteWelt = Z.weltIndex;
+      this.lernEl.innerHTML = "<summary>Lernpunkt</summary>";
+      const text = document.createElement("p");
+      text.textContent = w.lernpunkt;
+      this.lernEl.append(text);
+    }
     const eigen = istEigeneWelt();
     this.bauen.hidden = !eigen;
     this.ausdauer.hidden = eigen;

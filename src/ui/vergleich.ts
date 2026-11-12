@@ -38,20 +38,19 @@ export class Vergleich {
       span.append(...symbole, text);
       return span;
     };
-    const hinweis = document.createElement("span");
-    hinweis.className = "feldinfo-hinweis";
-    hinweis.textContent = "Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten";
     legende.append(
       eintrag(
         ALGOS.map((a) => symbol("besucht", ALGO_INFO[a].farbe)),
-        "besucht (wie der Zähler „besucht“; DFS zählt beim Auflegen, die anderen beim Expandieren)",
+        "besucht",
       ),
-      eintrag([symbol("wartet", "#fff")], "wartet in Warteschlange oder Prioritätswarteschlange"),
-      eintrag([symbol("besuchtWartet", ALGO_INFO.dfs.farbe)], "DFS: besucht, liegt noch auf dem Stapel"),
-      eintrag([symbol("weg", "#fff")], "finaler Weg"),
-      eintrag([symbol("kante", "#1e1e1e")], "Entdeckungskante (Vorgänger, in der Farbe des Verfahrens)"),
-      hinweis,
+      eintrag([symbol("wartet", "#fff")], "wartet"),
+      eintrag([symbol("besuchtWartet", ALGO_INFO.dfs.farbe)], "auf dem Stapel (DFS)"),
+      eintrag([symbol("weg", "#fff")], "Weg"),
+      eintrag([symbol("kante", "#1e1e1e")], "Vorgänger"),
     );
+    // Genaue Bedeutung für Neugierige im Tooltip, damit die Legende kurz bleibt.
+    legende.title =
+      "besucht: wie der Zähler „besucht“ (DFS zählt beim Auflegen, die anderen beim Expandieren) · wartet: in Warteschlange oder Prioritätswarteschlange · Vorgänger: Entdeckungskante in der Farbe des Verfahrens";
     this.wiedergabe = new Wiedergabe(
       { position: () => Z.k, laenge: vergleichMax, gehe: geheVergleich },
       {
@@ -83,8 +82,8 @@ export class Vergleich {
           <div class="name"><span class="farbfeld"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
             <span class="gewicht-marke" title="Bei dieser Karte kosten Felder verschieden viel; ${info.name} beachtet das nicht.">ignoriert Gewichte</span></div>
           <div class="zaehler" aria-live="off"></div>
-          <div class="struktur-zeile"></div>
           <div class="status"></div>
+          <div class="struktur-zeile"></div>
         </header>`;
       // Farbfeld im Kopf: dasselbe Symbol wie ein besuchtes Feld auf der Karte, damit die Farben sicher übereinstimmen.
       karte.querySelector(".farbfeld")?.replaceWith(symbol("besucht", info.farbe));
