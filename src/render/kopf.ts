@@ -105,18 +105,18 @@ export function zeichneBanner(canvas: HTMLCanvasElement): void {
   const g = canvas.getContext("2d") as CanvasRenderingContext2D;
   const r = zufall(7);
 
-  const himmel = ["#0b1a33", "#0f2242", "#132b52", "#183563", "#1d4074", "#234c86"];
+  // Taghimmel (helles Farbschema): oben kräftiges Blau, zum Horizont heller.
+  const himmel = ["#4f9ee6", "#62abeb", "#76b8ef", "#8bc5f3", "#a1d1f6", "#b7ddf9"];
   himmel.forEach((f, i) => px(g, 0, Math.floor((i * h) / himmel.length), f, b, Math.ceil(h / himmel.length) + 1));
-  for (let k = 0; k < b / 6; k++) px(g, Math.floor(r() * b), Math.floor(r() * h * 0.4), "rgba(255, 255, 255, 0.5)");
 
   // Wolken aus Rechtecken.
   for (let k = 0; k < Math.max(3, b / 70); k++) {
     const x = Math.floor(b * 0.35 + r() * b * 0.65);
     const y = Math.floor(2 + r() * h * 0.35);
     const w = 10 + Math.floor(r() * 14);
-    px(g, x, y, "#2d5c97", w, 2);
-    px(g, x + 3, y - 2, "#2d5c97", w - 7, 2);
-    px(g, x + 1, y + 2, "#26518a", w - 2, 1);
+    px(g, x, y, "#ffffff", w, 2);
+    px(g, x + 3, y - 2, "#ffffff", w - 7, 2);
+    px(g, x + 1, y + 2, "#dceefb", w - 2, 1);
   }
 
   // Berge: Höhe je Spalte als Summe von Spitzen, in Stufen zu 2 Pixeln.
@@ -133,12 +133,12 @@ export function zeichneBanner(canvas: HTMLCanvasElement): void {
       const hang = y - (h - berg);
       const farbe =
         hang < 2 && berg > h * 0.55
-          ? "#d7dde6"
+          ? "#ffffff"
           : (x + y) % 7 === 0
-            ? "#4f5d70"
+            ? "#7f8b99"
             : (Math.floor(x / 3) + Math.floor(y / 3)) % 2
-              ? "#5d6c80"
-              : "#677890";
+              ? "#8f9bab"
+              : "#9ca8b7";
       px(g, x, y, farbe);
     }
   }
@@ -149,7 +149,7 @@ export function zeichneBanner(canvas: HTMLCanvasElement): void {
     const fuss = h - Math.floor(r() * 3);
     for (let i = 0; i < t; i++) {
       const halb = Math.floor((i * 4) / t) + (i % 3 === 2 ? 1 : 0);
-      px(g, x - halb, fuss - t + i, i % 3 === 0 ? "#2c7a3a" : "#1f5a2e", 2 * halb + 1, 1);
+      px(g, x - halb, fuss - t + i, i % 3 === 0 ? "#4caf3a" : "#3a8f30", 2 * halb + 1, 1);
     }
     px(g, x, fuss, "#4a2f17", 1, 2);
   }

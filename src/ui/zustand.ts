@@ -39,6 +39,10 @@ export interface Zustand {
   billigstes: number;
   /** Kosten der Felder verschieden? Dann ignorieren BFS und DFS etwas Wesentliches. */
   gewichtet: boolean;
+  /** Wie viele Felder das billigste Feld stellen; wenige heißt: Sie bestimmen h trotzdem auf der ganzen Karte. */
+  billigsteAnzahl: number;
+  /** Faktor, den die Schätzung ohne diese billigsten Felder hätte (Infinity, wenn es keine anderen gibt). */
+  naechstBilligstes: number;
 }
 
 const beobachter: (() => void)[] = [];
@@ -62,10 +66,18 @@ function replays(e: Record<Algo, SearchResult>): Record<Algo, Replay> {
 }
 
 /** Schätzung, billigstes Feld und ob die Karte verschiedene Kosten hat. */
-function kennzahlen(karte: Karte, ziel: Pos): Pick<Zustand, "h" | "billigstes" | "gewichtet"> {
+function kennzahlen(karte: Karte, ziel: Pos): Pick<Zustand, "h" | "billigstes" | "gewichtet" | "billigsteAnzahl" | "naechstBilligstes"> {
   const grid = zuGrid(karte);
-  const kosten = new Set(grid.flat().filter((k) => k !== Infinity));
-  return { h: schaetzung(grid, ziel), billigstes: billigstesFeld(grid), gewichtet: kosten.size > 1 };
+  const begehbar = grid.flat().filter((k) => k !== Infinity);
+  const billigstes = billigstesFeld(grid);
+  const teurere = begehbar.filter((k) => k > billigstes);
+  return {
+    h: schaetzung(grid, ziel),
+    billigstes,
+    gewichtet: new Set(begehbar).size > 1,
+    billigsteAnzahl: begehbar.length - teurere.length,
+    naechstBilligstes: teurere.length > 0 ? Math.min(...teurere) : Infinity,
+  };
 }
 
 const erste = WELTEN[0];

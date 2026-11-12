@@ -2,29 +2,22 @@
 // Ergebnistabelle mit ★. Regeln in CLAUDE.md, Abschnitt 8.
 import { ALGOS } from "../algorithms";
 import type { Algo, SearchResult } from "../types";
-import type { Welt } from "../world/worlds";
-import { ALGO_INFO } from "./erklaerung";
+import type { Mass, Welt } from "../world/worlds";
+import { ALGO_INFO } from "../info/algo-info";
 
 export type Ergebnisse = Readonly<Record<Algo, SearchResult>>;
 
-/** Was „optimaler Weg“ heißt: wenigste Felder oder wenigste Ausdauer. */
-type Mass = "felder" | "kosten";
-/** Wonach unter den Verfahren mit optimalem Weg gewählt wird: nur gemessene Größen. */
-type Wahl = "schritte" | "besucht";
-
-/** Festes Kriterium je Welt. Die Eigene Welt hat keins und deshalb keine „Beste Wahl“. */
-const KRITERIUM: Readonly<Record<string, { readonly mass: Mass; readonly wahl: Wahl }>> = {
-  ruinenhof: { mass: "felder", wahl: "schritte" },
-  stollen: { mass: "kosten", wahl: "besucht" },
-  // A* besucht hier etwas weniger Felder, rechnet aber für jedes eingefügte Feld h(v) aus und braucht mehr Rechenschritte.
-  flussmoor: { mass: "kosten", wahl: "schritte" },
-  handelsstrasse: { mass: "kosten", wahl: "besucht" },
-};
+/**
+ * Schwelle nur für den Fazit-Satz „die Schätzung hilft hier kaum“: A* besucht mehr als 85 % der Felder von Dijkstra.
+ * Eigene Festlegung für den Text, unabhängig von den Weltbedingungen in worlds.test.ts, die anders bezogen sind
+ * (Ruinenhof: A* > 85 % von BFS; Flussmoor: A* > 95 % von Dijkstra).
+ */
+const KAUM_ERSPARNIS = 0.85;
 
 const STERN = '<span class="stern" aria-label="bester Wert" title="bester Wert">★</span>';
 const zahl = (x: number): string => x.toLocaleString("de-DE");
 const name = (a: Algo): string => ALGO_INFO[a].name;
-const massVon = (welt: Welt): Mass => KRITERIUM[welt.id]?.mass ?? "kosten";
+const massVon = (welt: Welt): Mass => welt.kriterium?.mass ?? "kosten";
 const rechenschritte = (e: SearchResult): number => e.schritte.length;
 
 /** Verfahren, die den optimalen Weg der Welt gefunden haben (Ruinenhof: wenigste Felder, sonst wenigste Ausdauer). */
@@ -46,7 +39,7 @@ export interface BesteWahl {
 
 /** Beste Wahl nach dem festen Kriterium der Welt; null in der Eigenen Welt oder ohne Weg. */
 export function besteWahl(welt: Welt, E: Ergebnisse): BesteWahl | null {
-  const k = KRITERIUM[welt.id];
+  const k = welt.kriterium;
   if (!k) return null;
   const opt = optimale(welt, E);
   if (opt.length === 0) return null;
@@ -132,10 +125,9 @@ export function fazitText(welt: Welt, E: Ergebnisse): string {
       ? `Er ist hier zugleich der günstigste Weg mit ${zahl(dij.kosten)} Ausdauer.`
       : `Der günstigste Weg ist aber ein anderer: Dijkstra und A* zahlen ${zahl(dij.kosten)} statt ${zahl(bfs.kosten)} Ausdauer.`,
   );
-  // Ab 85 % gilt die Ersparnis als gering, wie in der Bedingung des Ruinenhofs (CLAUDE.md, Abschnitt 7).
   if (astar.besucht === dij.besucht)
     s.push(`A* besucht genauso viele Felder wie Dijkstra (${zahl(astar.besucht)}); die Schätzung hilft hier nicht.`);
-  else if (astar.besucht < dij.besucht && astar.besucht > 0.85 * dij.besucht)
+  else if (astar.besucht < dij.besucht && astar.besucht > KAUM_ERSPARNIS * dij.besucht)
     s.push(
       `A* besucht mit ${zahl(astar.besucht)} fast so viele Felder wie Dijkstra (${zahl(dij.besucht)}); die Schätzung hilft hier kaum.`,
     );

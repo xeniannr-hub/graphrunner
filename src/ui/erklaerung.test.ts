@@ -5,7 +5,8 @@ import { leseKarte, zuGrid } from "../world/terrain";
 import type { TerrainKey } from "../types";
 import { WELTEN } from "../world/worlds";
 import { schaetzung } from "../algorithms";
-import { erklaerSatz, feldInfo, fokus, kartenBeschreibung, merkmal, protokoll } from "./erklaerung";
+import { fokus } from "../info/fokus";
+import { erklaerSatz, feldInfo, kartenBeschreibung, merkmal, protokoll } from "./erklaerung";
 
 const KOORD = /\((\d+)\|(\d+)\)/g;
 

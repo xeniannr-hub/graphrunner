@@ -33,7 +33,7 @@ trenner.className = "trenner";
 trenner.setAttribute("aria-hidden", "true");
 const titel = document.createElement("div");
 titel.className = "titel";
-titel.innerHTML = `<h1><span class="graph">Graph</span><span class="runner">Runner</span></h1><p>Wann ist welcher Suchalgorithmus der beste?</p>`;
+titel.innerHTML = `<h1><span class="graph">Graph</span><span class="runner">Runner</span></h1><p lang="en">Explore the World of Pathfinding</p>`;
 const umschalter = document.createElement("div");
 umschalter.className = "umschalter";
 umschalter.setAttribute("role", "group");

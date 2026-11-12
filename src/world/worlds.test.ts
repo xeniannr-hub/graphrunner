@@ -1,7 +1,7 @@
 // Hält die messbaren Bedingungen der Welten fest (CLAUDE.md, Abschnitt 7) und damit die Aussagen
 // in `wann` und `warum`. Die Grenzwerte stammen aus der Tabelle in Abschnitt 7.
 import { describe, expect, it } from "vitest";
-import { ALGOS, SUCHE, nachbarn } from "../algorithms";
+import { ALGOS, SUCHE, nachbarn, schaetzung } from "../algorithms";
 import type { Algo, SearchResult } from "../types";
 import { BREITE, HOEHE, leseKarte, zuGrid } from "./terrain";
 import { WELTEN, type Welt } from "./worlds";
@@ -17,6 +17,11 @@ function welt(id: string): Welt {
  * oben, rechts, unten, links; FA-19 ist Won't). Zählt Besuche wie dfs.ts beim Auflegen.
  */
 function dfsBesuche(w: Welt, reihenfolge: readonly string[]): number {
+  return dfsLauf(w, reihenfolge).besucht;
+}
+
+/** Wie dfsBesuche, zusätzlich mit der Länge des gefundenen Weges in Kanten (Stapelhöhe − 1 am Ziel). */
+function dfsLauf(w: Welt, reihenfolge: readonly string[]): { besucht: number; weg: number } {
   const grid = zuGrid(leseKarte(w.karte));
   const schritt: Record<string, [number, number]> = { o: [0, -1], r: [1, 0], u: [0, 1], l: [-1, 0] };
   const nb = (id: number): number[] =>
@@ -31,7 +36,7 @@ function dfsBesuche(w: Welt, reihenfolge: readonly string[]): number {
   const stapel = [s];
   while (stapel.length > 0) {
     const u = stapel[stapel.length - 1];
-    if (u === z) return entdeckt.size;
+    if (u === z) return { besucht: entdeckt.size, weg: stapel.length - 1 };
     const n = nb(u);
     const i = geprueft.get(u) ?? 0;
     if (i < n.length) {
@@ -42,7 +47,7 @@ function dfsBesuche(w: Welt, reihenfolge: readonly string[]): number {
       }
     } else stapel.pop();
   }
-  return entdeckt.size;
+  return { besucht: entdeckt.size, weg: Infinity };
 }
 
 function alleReihenfolgen(a: readonly string[]): string[][] {
@@ -83,23 +88,39 @@ describe("Welten allgemein", () => {
 describe("Ruinenhof: BFS ist am besten, wenn jeder Schritt gleich viel kostet", () => {
   const w = welt("ruinenhof");
   const r = laeufe(w);
-  it("nur Wiese und Felsmauern", () => {
+  const grid = zuGrid(leseKarte(w.karte));
+  const begehbar = grid.flat().filter((k) => k !== Infinity).length;
+  it("nur Wiese und Mauerreste (Fels)", () => {
     expect(new Set(w.karte.join(""))).toEqual(new Set([".", "^"]));
   });
-  it("BFS-Kosten = Dijkstra-Kosten", () => {
-    expect(r.bfs.kosten).toBe(r.dijkstra.kosten);
+  it("offener Hof: Start und Ziel in gegenüberliegenden Ecken, BFS sucht mehr als 60 % der begehbaren Felder ab", () => {
+    expect([w.start, w.ziel]).toEqual([
+      { x: BREITE - 1, y: 0 },
+      { x: 0, y: HOEHE - 1 },
+    ]);
+    expect(r.bfs.besucht).toBeGreaterThan(0.6 * begehbar);
   });
-  it("A* und Dijkstra besuchen > 85 % der Felder von BFS (sparen kaum)", () => {
+  it("BFS-Kosten = Dijkstra-Kosten = A*-Kosten (kürzester Weg ist zugleich der günstigste)", () => {
+    expect(r.bfs.kosten).toBe(r.dijkstra.kosten);
+    expect(r.astar.kosten).toBe(r.dijkstra.kosten);
+  });
+  it("A* und Dijkstra besuchen > 85 % der Felder von BFS (die Schätzung schließt kaum etwas aus)", () => {
     expect(r.astar.besucht).toBeGreaterThan(0.85 * r.bfs.besucht);
     expect(r.dijkstra.besucht).toBeGreaterThan(0.85 * r.bfs.besucht);
   });
-  it("DFS besucht > 2 × so viele Felder, Weg > 1,5 × so lang", () => {
-    expect(r.dfs.besucht).toBeGreaterThan(2 * r.bfs.besucht);
-    expect(r.dfs.felder).toBeGreaterThan(1.5 * r.bfs.felder);
+  it("BFS braucht von allen Verfahren mit optimalem Weg die wenigsten Rechenschritte", () => {
+    expect(r.bfs.schritte.length).toBeLessThan(r.dijkstra.schritte.length);
+    expect(r.bfs.schritte.length).toBeLessThan(r.astar.schritte.length);
   });
-  it("Modellannahme: Mit „rechts“ vorne hätte DFS Glück und wäre so sparsam wie BFS", () => {
-    for (const o of alleReihenfolgen(["r", "o", "u", "l"]).filter((x) => x[0] === "r"))
-      expect(dfsBesuche(w, o)).toBeLessThanOrEqual(r.bfs.besucht);
+  it("DFS findet mit der festen Reihenfolge einen Weg von 456 statt 50 Kanten (> 3 × so lang)", () => {
+    expect(r.dfs.felder).toBeGreaterThan(3 * r.bfs.felder);
+    expect([r.dfs.felder, r.bfs.felder]).toEqual([456, 50]); // TODO: von Hand nachrechnen
+  });
+  it("Lernpunkt: Mit 8 der 24 Reihenfolgen liefe DFS direkt zum Ziel, z. B. unten, links, oben, rechts", () => {
+    expect(dfsLauf(w, ["o", "r", "u", "l"])).toEqual({ besucht: r.dfs.besucht, weg: r.dfs.felder });
+    const direkt = alleReihenfolgen(["o", "r", "u", "l"]).filter((o) => dfsLauf(w, o).weg === r.bfs.felder);
+    expect(direkt.length).toBe(8); // TODO: von Hand nachrechnen
+    expect(dfsLauf(w, ["u", "l", "o", "r"]).weg).toBe(r.bfs.felder);
   });
 });
 
@@ -200,5 +221,19 @@ describe("Handelsstraße: A* ist am besten, wenn das Ziel weit weg liegt und sei
 describe("Eigene Welt", () => {
   it("startet als leere Wiese", () => {
     expect(new Set(welt("eigene").karte.join(""))).toEqual(new Set(["."]));
+  });
+  it("Lernpunkt: Ein einziges Weg-Feld fern vom Weg halbiert h überall, A* besucht dann mehr Felder", () => {
+    const w = welt("eigene");
+    const karte = leseKarte(w.karte);
+    const vorher = SUCHE.astar(zuGrid(karte), w.start, w.ziel);
+    karte[0][0] = "weg";
+    const grid = zuGrid(karte);
+    const nachher = SUCHE.astar(grid, w.start, w.ziel);
+    // Reine Wiese: h = Manhattan × 2. Mit einem Weg-Feld: h = Manhattan × 1, also halb so groß.
+    expect(schaetzung(grid, w.ziel)(w.start.y * BREITE + w.start.x)).toBe(
+      schaetzung(zuGrid(leseKarte(w.karte)), w.ziel)(w.start.y * BREITE + w.start.x) / 2,
+    );
+    expect(nachher.kosten).toBe(vorher.kosten);
+    expect(nachher.besucht).toBeGreaterThan(vorher.besucht);
   });
 });

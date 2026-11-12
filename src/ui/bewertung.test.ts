@@ -4,7 +4,7 @@ import type { Algo, Grid, Pos } from "../types";
 import { leseKarte, zuGrid } from "../world/terrain";
 import { WELTEN, type Welt } from "../world/worlds";
 import { besteWahl, fazitText, tabellenZeilen, type Ergebnisse } from "./bewertung";
-import { ALGO_INFO } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
 
 const rechne = (grid: Grid, start: Pos, ziel: Pos): Ergebnisse =>
   Object.fromEntries(ALGOS.map((a) => [a, SUCHE[a](grid, start, ziel)])) as Record<Algo, Ergebnisse[Algo]>;

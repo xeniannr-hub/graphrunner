@@ -1,27 +1,33 @@
-/* GraphRunner: nur dunkles Schema in Nachtblau (QA-09 ist Won't), Pixelwelt im Klötzchenstil. Pixelschrift nur in Überschriften. */
+/* GraphRunner: helles Farbschema im Blockstil (an Minecraft-Oberflächen angelehnt, eigener Entwurf, keine fremden Grafiken).
+   Flächen wie hellgraue Steinblöcke: Licht oben links, Schatten unten rechts, schwarzer Rand, keine runden Ecken.
+   Pixelschrift nur in Überschriften. */
 :root {
-  color-scheme: dark;
-  --grund: #0b111d;
-  --flaeche: #131b2a;
-  --flaeche-2: #1a2436;
-  --linie: #26344b;
-  --text: #e9eef6;
-  --gedaempft: #a3b1c6;
-  --orange: #f5a623;
-  /* Klötzchenstil: keine runden Ecken, harte Pixel-Schatten statt weicher. */
-  --rund: 0;
-  --schatten: 4px 4px 0 rgba(0, 0, 0, 0.45);
-  /* Abschrägung wie bei einem Block: Licht oben links, Schatten unten rechts. */
-  --hoch: inset 2px 2px 0 rgba(255, 255, 255, 0.14), inset -2px -2px 0 rgba(0, 0, 0, 0.5);
-  --tief: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(255, 255, 255, 0.08);
-  --stein: #2b3446;
-  --stein-hell: #3a465d;
-  --rand: #05080e;
+  color-scheme: light;
+  /* Grundfarben */
+  --grund: #dfe8f1;
+  --flaeche: #d6d6d6;
+  --flaeche-2: #c6c6c6;
+  --flaeche-hell: #ececec;
+  --slot: #a9a9a9;
+  --linie: #8b8b8b;
+  --rand: #262626;
+  --text: #1c1c1c;
+  --gedaempft: #4b4b4b;
+  --orange: #e8890c;
   --akzent: #ffd400;
+  --akzent-dunkel: #8a6d00;
+  --fokus: #0b57d0;
+  /* Feste Farben der Verfahren (CLAUDE.md, Abschnitt 8) */
   --bfs: #ff4d73;
   --dfs: #a56bff;
   --dijkstra: #ff8a2b;
   --astar: #ffd400;
+  /* Blockstil */
+  --rund: 0;
+  --hoch: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #7a7a7a;
+  --tief: inset 2px 2px 0 #6f6f6f, inset -2px -2px 0 #f4f4f4;
+  --schatten: 3px 3px 0 rgba(0, 0, 0, 0.25);
+  /* Schriften */
   --pixel: "Pixelify Sans", system-ui, sans-serif;
   --ui: "Rubik", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
@@ -34,7 +40,6 @@
 html,
 body {
   margin: 0;
-  background: var(--grund);
   color: var(--text);
   font-family: var(--ui);
   font-size: 15px;
@@ -44,6 +49,10 @@ body {
 body {
   min-width: 0;
   overflow-x: hidden;
+  /* Heller Untergrund mit feinem Pixelraster. */
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.35) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.025) 0 4px, transparent 4px 8px), var(--grund);
 }
 
 h1,
@@ -72,7 +81,7 @@ input {
 }
 
 :focus-visible {
-  outline: 3px solid var(--akzent);
+  outline: 3px solid var(--fokus);
   outline-offset: 2px;
 }
 
@@ -84,7 +93,102 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* ---------- Kopf: Banner mit Pixel-Landschaft, Logo-Insel, zweifarbiger Titel ---------- */
+/* Nur für Screenreader sichtbar. */
+.nur-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Blöcke: gemeinsame Optik für Flächen ---------- */
+.panel,
+.wiedergabe,
+.karte-box,
+.ergebnis,
+.begruendung,
+.box,
+.karte-einzel,
+.hinweis-box {
+  background: var(--flaeche);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch), var(--schatten);
+}
+
+/* Knöpfe wie Steinblöcke: Hover = heller Rand, gedrückt oder gewählt = eingedrückt. */
+.knopf,
+.tab,
+.welt,
+.werkzeug,
+.umschalter button,
+.auswahl select {
+  background: linear-gradient(#e2e2e2, #c3c3c3);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.knopf:hover:not(:disabled),
+.tab:hover,
+.welt:hover,
+.werkzeug:hover,
+.umschalter button:hover {
+  background: linear-gradient(#f2f2f2, #d4d4d4);
+  border-color: var(--fokus);
+}
+
+.knopf:active:not(:disabled),
+.tab[aria-selected="true"],
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"],
+.umschalter button[aria-pressed="true"] {
+  box-shadow: var(--tief);
+}
+
+.knopf {
+  min-width: 2.4rem;
+  padding: 0.35rem 0.55rem;
+  font-family: var(--mono);
+}
+
+.knopf.haupt,
+.umschalter button[aria-pressed="true"] {
+  background: linear-gradient(#ffe25a, #f0b800);
+  color: #1a1408;
+  font-family: var(--ui);
+  font-weight: 700;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.6),
+    inset -2px -2px 0 #9c7400;
+}
+
+.knopf.haupt {
+  min-width: 6.5rem;
+}
+
+.knopf.haupt:hover {
+  background: linear-gradient(#fff07f, #ffc61a);
+}
+
+.knopf.los {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+.knopf:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leeren {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* ---------- Kopf: Pixel-Landschaft bei Tag, Logo-Insel, zweifarbiger Titel ---------- */
 .kopf {
   position: relative;
   isolation: isolate;
@@ -94,8 +198,9 @@ canvas {
   flex-wrap: wrap;
   padding: 0.6rem 1.2rem;
   min-height: 116px;
-  border-bottom: 3px solid var(--orange);
-  background: #0f2242;
+  border-bottom: 4px solid var(--orange);
+  box-shadow: 0 2px 0 var(--rand);
+  background: #76b8ef;
   overflow: hidden;
 }
 
@@ -107,27 +212,27 @@ canvas {
   z-index: -2;
 }
 
-/* Links dunkler, damit der Titel gut lesbar bleibt. */
+/* Links heller, damit der Titel auf dem Himmel gut lesbar bleibt. */
 .kopf::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(8, 14, 26, 0.92) 0%, rgba(8, 14, 26, 0.75) 35%, rgba(8, 14, 26, 0.1) 70%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.55) 35%, rgba(255, 255, 255, 0) 70%);
 }
 
 .logo {
   width: 96px;
   height: 96px;
   flex: none;
-  filter: drop-shadow(0 0 10px rgba(255, 196, 40, 0.25));
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.25));
 }
 
 .trenner {
   align-self: stretch;
   width: 3px;
   margin: 0.6rem 0.2rem;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .titel {
@@ -141,12 +246,13 @@ canvas {
   letter-spacing: 0.01em;
 }
 
+/* „Graph“ steingrau, „Runner“ orange (CLAUDE.md, Abschnitt 1). */
 .titel h1 .graph {
-  color: #dfe3e8;
+  color: #8d949d;
   text-shadow:
-    0 3px 0 #7d8590,
-    0 5px 0 #262b33,
-    3px 6px 0 rgba(0, 0, 0, 0.6);
+    0 3px 0 #5a6069,
+    0 5px 0 #2f3338,
+    3px 6px 0 rgba(0, 0, 0, 0.25);
 }
 
 .titel h1 .runner {
@@ -154,37 +260,28 @@ canvas {
   text-shadow:
     0 3px 0 #b75a08,
     0 5px 0 #4a2304,
-    3px 6px 0 rgba(0, 0, 0, 0.6);
+    3px 6px 0 rgba(0, 0, 0, 0.25);
 }
 
 .titel p {
   margin: 0.55rem 0 0;
-  color: #d6deea;
+  color: #1f2a36;
   font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .umschalter {
   display: flex;
   gap: 0.25rem;
   padding: 0.3rem;
-  border-radius: 999px;
-  background: rgba(8, 14, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--flaeche-2);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
 .umschalter button {
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
   padding: 0.5rem 1rem;
-  cursor: pointer;
   font-weight: 500;
-}
-
-.umschalter button[aria-pressed="true"] {
-  background: var(--akzent);
-  color: #1a1408;
-  font-weight: 700;
 }
 
 @media (max-width: 720px) {
@@ -200,16 +297,16 @@ canvas {
     display: none;
   }
   .kopf::before {
-    background: rgba(8, 14, 26, 0.72);
+    background: rgba(255, 255, 255, 0.7);
   }
   .titel h1 {
     font-size: 2rem;
   }
 }
 
-/* ---------- Grundlayout ---------- */
-/* Desktop: links Welten und darunter Begründung, rechts die Ansicht.
-   Handy: Welten, dann Steuerung und Karten, dann Begründung (Kriterium 8: Bedienelemente früh). */
+/* ---------- Grundlayout ----------
+   Desktop: links Welten und darunter Begründung, rechts die Ansicht.
+   Handy (≤ 960 px): Welten, dann Steuerung und Karten, dann Begründung, damit „Abspielen“ früh kommt. */
 .rumpf {
   display: grid;
   grid-template-columns: 17rem minmax(0, 1fr);
@@ -287,20 +384,13 @@ canvas {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 0.65rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
   text-align: left;
 }
 
-.welt:hover {
-  border-color: var(--gedaempft);
-}
-
-.welt[aria-pressed="true"] {
-  border-color: var(--akzent);
-  background: var(--flaeche-2);
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"] {
+  background: #fff4c2;
+  border-color: var(--akzent-dunkel);
 }
 
 .welt-titel {
@@ -312,21 +402,18 @@ canvas {
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.05rem 0.4rem;
-  border-radius: var(--rund);
   background: var(--farbe);
   color: #1a1408;
+  border: 1px solid var(--rand);
 }
 
 .bauen-kuerzel {
-  background: var(--linie);
-  color: var(--text);
+  background: var(--flaeche-hell);
 }
 
 .begruendung {
-  background: var(--flaeche);
-  border-left: 4px solid var(--akzent);
+  border-left: 6px solid var(--akzent);
   padding: 0.6rem 0.75rem;
-  border-radius: var(--rund);
 }
 
 .begruendung p {
@@ -338,10 +425,15 @@ canvas {
   margin-bottom: 0.35rem;
 }
 
+.lernpunkt {
+  margin-top: 0.6rem !important;
+  padding: 0.45rem 0.55rem;
+  background: #eaf3ff;
+  border: 2px solid var(--fokus);
+  font-size: 0.9rem;
+}
+
 .panel {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
   padding: 0.65rem 0.75rem;
 }
 
@@ -359,7 +451,7 @@ canvas {
   width: 20px;
   height: 20px;
   flex: none;
-  border: 1px solid #0006;
+  border: 1px solid var(--rand);
 }
 
 .kosten {
@@ -383,11 +475,6 @@ canvas {
   font-family: var(--mono);
 }
 
-.leeren {
-  margin-top: 0.5rem;
-  width: 100%;
-}
-
 .werkzeuge {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
@@ -396,14 +483,6 @@ canvas {
 
 .werkzeug {
   padding: 0.35rem 0.45rem;
-  background: var(--flaeche-2);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
-}
-
-.werkzeug[aria-pressed="true"] {
-  border-color: var(--akzent);
 }
 
 /* ---------- Wiedergabeleiste ---------- */
@@ -412,9 +491,6 @@ canvas {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 1rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
   padding: 0.55rem 0.7rem;
   margin-bottom: 0.8rem;
 }
@@ -422,39 +498,6 @@ canvas {
 .knoepfe {
   display: flex;
   gap: 0.3rem;
-}
-
-.knopf {
-  min-width: 2.4rem;
-  padding: 0.35rem 0.55rem;
-  background: var(--flaeche-2);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
-  font-family: var(--mono);
-}
-
-.knopf:hover:not(:disabled) {
-  border-color: var(--gedaempft);
-}
-
-.knopf.haupt {
-  min-width: 6.5rem;
-  background: var(--akzent);
-  border-color: var(--akzent);
-  color: #1a1408;
-  font-family: var(--ui);
-  font-weight: 700;
-}
-
-.knopf.los {
-  font-family: var(--ui);
-  font-weight: 700;
-}
-
-.knopf:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .tempo {
@@ -466,6 +509,13 @@ canvas {
 
 .tempo input {
   width: 6rem;
+}
+
+.tempo-wert {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  min-width: 6.5rem;
+  color: var(--text);
 }
 
 .fortschritt {
@@ -487,14 +537,39 @@ canvas {
   white-space: nowrap;
 }
 
+/* Regler blockig: eingedrückte Bahn, eckiger gelber Griff. */
 input[type="range"] {
-  accent-color: var(--akzent);
+  appearance: none;
+  height: 12px;
+  background: var(--slot);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 22px;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  box-shadow: inset -2px -2px 0 #9c7400;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 20px;
+  border-radius: 0;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  cursor: pointer;
+}
+
+/* ---------- Legende: Symbole sind dieselben Zeichnungen wie auf der Karte ---------- */
 .legende {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.9rem;
+  gap: 0.3rem 0.9rem;
   width: 100%;
   font-size: 0.85rem;
   color: var(--gedaempft);
@@ -506,6 +581,21 @@ input[type="range"] {
   gap: 0.35rem;
 }
 
+.legende-zustaende {
+  display: contents !important;
+}
+
+.symbol-legende {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1px solid var(--rand);
+}
+
+.symbol-legende + .symbol-legende {
+  margin-left: -0.25rem;
+}
+
 .legende i {
   display: inline-block;
   width: 14px;
@@ -513,47 +603,10 @@ input[type="range"] {
   flex: none;
 }
 
-.legende .farben {
-  display: inline-flex;
-  width: auto;
-  gap: 1px;
-}
-
-.legende .farben b,
-.legende .besucht {
-  display: inline-block;
-  width: 9px;
-  height: 14px;
-}
-
-.legende .besucht {
-  width: 14px;
-}
-
-/* Wie auf der Karte: durchscheinende Farbe über Wiese. */
-.legende .farben b,
-.legende .besucht {
-  background: color-mix(in srgb, currentColor 50%, #3f9e2f);
-}
-
-.legende .wartet {
-  background: radial-gradient(#fff 0 2px, #000 2.5px 3.5px, #8cc581 4px);
-}
-
-.legende .kante {
-  height: 2px;
-  background: var(--gedaempft);
-}
-
-.legende .weg {
-  height: 5px;
-  background: #fff;
-  outline: 1px solid #000;
-}
-
 .legende .rahmen {
   border: 3px solid;
-  outline: 1px solid #000;
+  outline: 1px solid var(--rand);
+  background: #3f9e2f;
 }
 
 .legende .weiss {
@@ -566,6 +619,10 @@ input[type="range"] {
 
 .legende .rot {
   border-color: #ff4b4b;
+}
+
+.feldinfo-hinweis {
+  font-style: italic;
 }
 
 /* ---------- Karten ---------- */
@@ -582,10 +639,7 @@ input[type="range"] {
 }
 
 .karte-box {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-top: 4px solid var(--farbe);
-  border-radius: var(--rund);
+  border-top: 5px solid var(--farbe);
   padding: 0.5rem;
   min-width: 0;
 }
@@ -615,8 +669,8 @@ input[type="range"] {
   display: inline-block;
   width: 10px;
   height: 10px;
-  border-radius: var(--rund);
   background: var(--farbe);
+  border: 1px solid var(--rand);
   margin-right: 0.35rem;
 }
 
@@ -639,15 +693,31 @@ input[type="range"] {
   color: var(--text);
 }
 
+.struktur-zeile {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--gedaempft);
+}
+
+.gewicht-marke {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  background: #ffe1d2;
+  color: #8a2b0b;
+  border: 1px solid #c2410c;
+}
+
 .karte-box canvas,
 .karte-einzel canvas {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 32 / 20;
-  border-radius: var(--rund);
+  border: 2px solid var(--rand);
   cursor: crosshair;
-  /* Wischen scrollt die Seite; nur in der Eigenen Welt wird auf den Karten gemalt (unten). */
+  /* Wischen scrollt die Seite; nur in der Eigenen Welt wird auf den Karten gemalt. */
   touch-action: manipulation;
 }
 
@@ -656,28 +726,9 @@ input[type="range"] {
   touch-action: none;
 }
 
-.karte-box canvas:focus-visible,
-.karte-einzel canvas:focus-visible {
-  outline: 3px solid var(--akzent);
-  outline-offset: 2px;
-}
-
-/* Nur für Screenreader sichtbar. */
-.nur-vorlesen {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 /* ---------- Ergebnis ---------- */
 .ergebnis {
   margin-top: 1rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
   padding: 0.75rem;
 }
 
@@ -685,13 +736,22 @@ input[type="range"] {
   margin: 0.4rem 0 0;
   padding: 0.45rem 0.6rem;
   max-width: 75ch;
-  border-left: 4px solid var(--akzent);
-  background: rgba(255, 212, 0, 0.08);
+  border-left: 6px solid var(--akzent);
+  background: #fff6cc;
+}
+
+.beste-wahl small {
+  color: var(--gedaempft);
 }
 
 .fazit {
   margin: 0.4rem 0 0.7rem;
   max-width: 75ch;
+}
+
+.modell {
+  max-width: 75ch;
+  margin-top: 0.6rem;
 }
 
 .tabelle-rahmen {
@@ -702,6 +762,8 @@ table {
   border-collapse: collapse;
   width: 100%;
   font-size: 0.9rem;
+  background: var(--flaeche-hell);
+  border: 2px solid var(--rand);
 }
 
 th,
@@ -715,6 +777,7 @@ thead th {
   color: var(--gedaempft);
   font-weight: 500;
   font-family: var(--ui);
+  background: var(--flaeche-2);
 }
 
 td {
@@ -727,7 +790,7 @@ tbody th {
 }
 
 .stern {
-  color: var(--akzent);
+  color: var(--akzent-dunkel);
   margin-left: 0.3rem;
 }
 
@@ -741,7 +804,7 @@ tbody th {
   }
 }
 
-/* ---------- Einzelansicht ---------- */
+/* ---------- Einzelansicht (Debugger) ---------- */
 .einzel-kopf {
   display: flex;
   flex-wrap: wrap;
@@ -759,17 +822,15 @@ tbody th {
 
 .tab {
   padding: 0.4rem 0.8rem;
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  cursor: pointer;
   font-weight: 500;
 }
 
 .tab[aria-selected="true"] {
-  border-color: var(--farbe);
-  background: var(--flaeche-2);
-  box-shadow: inset 0 -3px 0 var(--farbe);
+  background: var(--flaeche-hell);
+  border-color: var(--rand);
+  box-shadow:
+    var(--tief),
+    inset 0 -5px 0 var(--farbe);
 }
 
 .auswahl {
@@ -780,10 +841,34 @@ tbody th {
 }
 
 .auswahl select {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
   padding: 0.25rem 0.4rem;
+}
+
+.hinweis-box {
+  margin: 0 0 0.8rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.hinweis-box.warnung {
+  border-left: 8px solid #c2410c;
+  background: #ffe8dc;
+}
+
+.hinweis-box.warnung::before {
+  content: "⚠ ";
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.hinweis-box.info {
+  border-left: 8px solid #2e8b3a;
+  background: #e5f5e2;
+}
+
+.hinweis-box.klein {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+  box-shadow: none;
 }
 
 .einzel-inhalt {
@@ -799,25 +884,26 @@ tbody th {
   }
 }
 
-.karte-einzel {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.5rem;
-  min-width: 0;
-}
-
+.einzel-links,
 .einzel-seite {
   display: grid;
   gap: 0.6rem;
   min-width: 0;
+  align-content: start;
 }
 
-.einzel-seite > * {
-  background: var(--flaeche);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
+.karte-einzel {
+  padding: 0.5rem;
+  min-width: 0;
+}
+
+.box {
   padding: 0.6rem 0.7rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.steckbrief {
   margin: 0;
 }
 
@@ -844,8 +930,41 @@ tbody th {
   }
 }
 
+.heuristik {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 2px dashed var(--linie);
+}
+
+.formel {
+  margin: 0.2rem 0;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  background: #fffbe6;
+  color: #5c4700;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.merkmal-box ul,
+.heuristik ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.merkmal-box li,
+.heuristik li {
+  margin-bottom: 0.3rem;
+}
+
+.merkmal-box {
+  border-left: 8px solid var(--farbe, var(--akzent));
+}
+
 .erklaerung {
-  border-left: 4px solid var(--akzent) !important;
+  border-left: 8px solid var(--akzent);
 }
 
 .zeile-nr {
@@ -854,7 +973,7 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   padding: 0.05rem 0.4rem;
-  border-radius: var(--rund);
+  border: 1px solid var(--rand);
 }
 
 .satz {
@@ -864,16 +983,18 @@ tbody th {
 
 .code {
   margin: 0;
-  padding-left: 2.2rem;
+  padding: 0.3rem 0.3rem 0.3rem 2.4rem;
   font-family: var(--mono);
   font-size: 0.8rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  background: var(--flaeche-hell);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
 .code li {
   padding: 0.05rem 0.3rem;
-  border-radius: var(--rund);
 }
 
 .code li::marker {
@@ -884,265 +1005,12 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   font-weight: 600;
+  box-shadow: inset 4px 0 0 #1a1408;
 }
 
-.besuchsliste {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: besuch;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  max-height: 9rem;
-  overflow-y: auto;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-}
-
-.besuchsliste li {
-  counter-increment: besuch;
-  background: var(--flaeche-2);
-  border-radius: var(--rund);
-  padding: 0.05rem 0.3rem;
-}
-
-.besuchsliste li::before {
-  content: counter(besuch) ". ";
-  color: var(--gedaempft);
-}
-
-.liste-leer {
-  margin: 0;
-  color: var(--gedaempft);
-}
-
-/* ---------- Tooltip ---------- */
-.tooltip {
-  position: fixed;
-  z-index: 10;
-  pointer-events: none;
-  background: rgba(14, 11, 8, 0.95);
-  border: 2px solid var(--linie);
-  border-radius: var(--rund);
-  padding: 0.35rem 0.55rem;
-  font-size: 0.85rem;
-  max-width: 16rem;
-}
-
-.tt-kopf {
-  font-family: var(--mono);
-  font-weight: 600;
-}
-
-/* ---------- Klötzchenstil: Flächen und Knöpfe wie Blöcke (eigener Entwurf, keine fremden Grafiken) ---------- */
-.panel,
-.wiedergabe,
-.karte-box,
-.ergebnis,
-.begruendung,
-.box,
-.karte-einzel,
-.hinweis-box {
-  border: 2px solid var(--rand);
-  box-shadow: var(--hoch), var(--schatten);
-  background:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 4px, transparent 4px 8px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 4px, transparent 4px 8px), var(--flaeche);
-}
-
-.karte-box {
-  border-top: 4px solid var(--farbe);
-}
-
-.begruendung {
-  border-color: var(--rand);
-  border-left: 4px solid var(--akzent);
-}
-
-/* Knöpfe: Steinblock mit Abschrägung; gedrückt = eingedrückt; Hover = heller Rahmen. */
-.knopf,
-.tab,
-.welt,
-.werkzeug,
-.umschalter button,
-.auswahl select {
-  border: 2px solid var(--rand);
-  background: linear-gradient(var(--stein-hell), var(--stein));
-  box-shadow: var(--hoch);
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
-  transition: none;
-}
-
-.knopf:hover:not(:disabled),
-.tab:hover,
-.welt:hover,
-.werkzeug:hover,
-.umschalter button:hover {
-  border-color: #e9eef6;
-  background: linear-gradient(#4a5875, #36425a);
-}
-
-.knopf:active:not(:disabled),
-.tab[aria-selected="true"],
-.welt[aria-pressed="true"],
-.werkzeug[aria-pressed="true"],
-.umschalter button[aria-pressed="true"] {
-  box-shadow: var(--tief);
-}
-
-.welt[aria-pressed="true"],
-.werkzeug[aria-pressed="true"] {
-  border-color: var(--akzent);
-  background: #1b2232;
-}
-
-.tab[aria-selected="true"] {
-  border-color: var(--farbe);
-  background: #1b2232;
-  box-shadow:
-    var(--tief),
-    inset 0 -4px 0 var(--farbe);
-}
-
-.knopf.haupt,
-.umschalter button[aria-pressed="true"] {
-  background: linear-gradient(#ffe25a, #f0b800);
-  color: #1a1408;
-  text-shadow: none;
-  box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
-    inset -2px -2px 0 #9c7400;
-}
-
-.knopf.haupt:hover {
-  background: linear-gradient(#fff07f, #ffc61a);
-  border-color: #fff;
-}
-
-.umschalter {
-  border-radius: 0;
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
-}
-
-.umschalter button {
-  border-radius: 0;
-}
-
-.kuerzel,
-.zeile-nr,
-.punkt {
-  border-radius: 0;
-}
-
-.kuerzel {
-  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.3);
-}
-
-h2,
-h3 {
-  text-shadow: 2px 2px 0 #000;
-}
-
-/* Regler blockig: eckiger Griff, eingedrückte Bahn. */
-input[type="range"] {
-  appearance: none;
-  height: 10px;
-  background: #0b0f18;
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
-}
-
-input[type="range"]::-webkit-slider-thumb {
-  appearance: none;
-  width: 14px;
-  height: 20px;
-  background: linear-gradient(#ffe25a, #f0b800);
-  border: 2px solid var(--rand);
-  box-shadow: inset -2px -2px 0 #9c7400;
-  cursor: pointer;
-}
-
-input[type="range"]::-moz-range-thumb {
-  width: 12px;
-  height: 18px;
-  border-radius: 0;
-  background: linear-gradient(#ffe25a, #f0b800);
-  border: 2px solid var(--rand);
-  cursor: pointer;
-}
-
-.tempo-wert {
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  min-width: 6.5rem;
-  color: var(--text);
-}
-
-/* Tooltip wie eine Pixel-Infotafel: dunkel mit violettem Innenrahmen. */
-.tooltip {
-  border-radius: 0;
-  background: rgba(16, 4, 22, 0.96);
-  border: 2px solid #05000a;
-  box-shadow:
-    inset 0 0 0 2px #3b1a7a,
-    4px 4px 0 rgba(0, 0, 0, 0.5);
-  padding: 0.45rem 0.65rem;
-  max-width: 21rem;
-  text-shadow: 1px 1px 0 #000;
-}
-
-.tt-kopf {
-  color: #ffe25a;
-}
-
-.legende i.entdeckt {
-  border: 2px dashed #fff;
-  outline: 1px solid #000;
-  background: #3f9e2f;
-}
-
-/* ---------- Einzelansicht als Debugger ---------- */
-.hinweis-box {
-  margin: 0 0 0.8rem;
-  padding: 0.55rem 0.75rem;
-  max-width: none;
-}
-
-.hinweis-box.warnung {
-  border-left: 6px solid #ff6b3d;
-  background: #2a1a14;
-}
-
-.hinweis-box.warnung::before {
-  content: "⚠ ";
-  color: #ff8a5c;
-  font-weight: 700;
-}
-
-.hinweis-box.info {
-  border-left: 6px solid #4cd964;
-}
-
-.einzel-links {
-  display: grid;
-  gap: 0.6rem;
-  min-width: 0;
-}
-
-.box {
-  padding: 0.6rem 0.7rem;
-  margin: 0;
-  min-width: 0;
-}
-
-.einzel-seite > * {
-  border: 2px solid var(--rand);
-}
-
+/* Datenstruktur: Einträge als Inventar-Slots. */
 .struktur-box {
-  border-top: 4px solid var(--farbe, var(--akzent));
+  border-top: 5px solid var(--farbe, var(--akzent));
 }
 
 .struktur-regel,
@@ -1157,7 +1025,6 @@ input[type="range"]::-moz-range-thumb {
   font-family: var(--mono);
 }
 
-/* Datenstruktur als Reihe von Inventar-Slots. */
 .slots {
   display: flex;
   flex-wrap: wrap;
@@ -1180,9 +1047,10 @@ input[type="range"]::-moz-range-thumb {
   align-items: center;
   min-width: 3.6rem;
   padding: 0.2rem 0.3rem;
-  background: #0d121c;
+  background: var(--slot);
   border: 2px solid var(--rand);
   box-shadow: var(--tief);
+  color: #111;
 }
 
 .slots.dfs .slot {
@@ -1193,39 +1061,23 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .slot small {
-  color: var(--gedaempft);
+  color: #2b2b2b;
 }
 
 .slot.naechster,
 .pq tr.naechster td {
-  background: color-mix(in srgb, var(--farbe, var(--akzent)) 30%, #0d121c);
-  border-color: var(--farbe, var(--akzent));
+  background: color-mix(in srgb, var(--farbe, var(--akzent)) 45%, #ffffff);
+}
+
+.slot.naechster {
+  border-color: var(--rand);
+  outline: 2px solid var(--farbe, var(--akzent));
 }
 
 .slot.neu,
 .pq tr.neu td {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--fokus);
   outline-offset: -2px;
-}
-
-.pq tr.veraltet td {
-  color: var(--gedaempft);
-  text-decoration: line-through;
-}
-
-.rand {
-  align-self: center;
-  font-family: var(--ui);
-  font-size: 0.75rem;
-  color: var(--gedaempft);
-  padding: 0 0.2rem;
-}
-
-.mehr {
-  align-self: center;
-  color: var(--gedaempft);
-  font-size: 0.8rem;
-  padding: 0.2rem;
 }
 
 .pq {
@@ -1237,44 +1089,29 @@ input[type="range"]::-moz-range-thumb {
   padding: 0.2rem 0.4rem;
 }
 
+.pq tr.veraltet td {
+  color: var(--gedaempft);
+  text-decoration: line-through;
+}
+
+.rand,
+.mehr {
+  align-self: center;
+  color: var(--gedaempft);
+  font-size: 0.78rem;
+  padding: 0 0.2rem;
+}
+
+.rand {
+  font-family: var(--ui);
+}
+
 .struktur-box .tabelle-rahmen {
   max-height: 18rem;
   overflow-y: auto;
 }
 
-.merkmal-box {
-  border-left: 6px solid var(--farbe, var(--akzent));
-}
-
-.merkmal-box ul,
-.heuristik ul {
-  margin: 0.4rem 0 0;
-  padding-left: 1.2rem;
-  font-size: 0.9rem;
-}
-
-.merkmal-box li,
-.heuristik li {
-  margin-bottom: 0.3rem;
-}
-
-.heuristik {
-  margin-top: 0.6rem;
-  padding-top: 0.6rem;
-  border-top: 2px dashed var(--linie);
-}
-
-.formel {
-  margin: 0.2rem 0;
-  font-family: var(--mono);
-  font-weight: 600;
-  background: #0d121c;
-  box-shadow: var(--tief);
-  border: 2px solid var(--rand);
-  padding: 0.3rem 0.5rem;
-  color: var(--astar);
-}
-
+/* Ereignisprotokoll: Farbleiste je Art des Ereignisses, Klick springt zum Schritt. */
 .protokoll {
   margin: 0.3rem 0 0;
   padding: 0;
@@ -1283,7 +1120,7 @@ input[type="range"]::-moz-range-thumb {
   overflow-y: auto;
   font-family: var(--mono);
   font-size: 0.76rem;
-  background: #0b0f18;
+  background: var(--flaeche-hell);
   border: 2px solid var(--rand);
   box-shadow: var(--tief);
 }
@@ -1294,13 +1131,13 @@ input[type="range"]::-moz-range-thumb {
   text-align: left;
   background: none;
   border: 0;
+  border-left: 5px solid transparent;
   padding: 0.12rem 0.4rem;
   cursor: pointer;
-  border-left: 4px solid transparent;
 }
 
 .protokoll button:hover {
-  background: #1b2232;
+  background: #fff;
 }
 
 .protokoll .nr {
@@ -1308,7 +1145,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .protokoll .ein button {
-  border-left-color: #6fb8ff;
+  border-left-color: #2f7fd8;
 }
 
 .protokoll .aus button,
@@ -1317,80 +1154,89 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .protokoll .besser button {
-  border-left-color: #4cd964;
+  border-left-color: #2e8b3a;
 }
 
 .protokoll .veraltet button {
-  border-left-color: #6b7280;
+  border-left-color: #8b8b8b;
   color: var(--gedaempft);
 }
 
 .protokoll .zurueck button {
-  border-left-color: #ff6b3d;
+  border-left-color: #c2410c;
 }
 
 .protokoll .ziel button,
 .protokoll .keinWeg button {
-  border-left-color: #ffcf33;
+  border-left-color: var(--akzent-dunkel);
   font-weight: 600;
 }
 
 .protokoll li.aktuell button {
-  background: #24304a;
-  color: #fff;
+  background: #fff4c2;
 }
 
 .protokoll-box small {
   font-family: var(--mono);
   color: var(--gedaempft);
   font-weight: 400;
-  text-shadow: none;
+}
+
+.besuchsliste {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: besuch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-height: 9rem;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 0.78rem;
 }
 
 .besuchsliste li {
-  background: #0d121c;
-  border: 1px solid var(--rand);
+  counter-increment: besuch;
+  background: var(--flaeche-hell);
+  border: 1px solid var(--linie);
+  padding: 0.05rem 0.3rem;
 }
 
-.code li.aktiv {
-  box-shadow: inset 4px 0 0 #1a1408;
+.besuchsliste li::before {
+  content: counter(besuch) ". ";
+  color: var(--gedaempft);
 }
 
-.struktur-zeile {
-  width: 100%;
+.liste-leer {
+  margin: 0;
+  color: var(--gedaempft);
+}
+
+/* ---------- Tooltip: dunkle Pixel-Infotafel mit violettem Innenrahmen, gut lesbar über der hellen Seite ---------- */
+.tooltip {
+  position: fixed;
+  z-index: 10;
+  pointer-events: none;
+  padding: 0.45rem 0.65rem;
+  max-width: 21rem;
+  font-size: 0.85rem;
+  color: #f4f4f4;
+  background: rgba(16, 4, 22, 0.96);
+  border: 2px solid #05000a;
+  box-shadow:
+    inset 0 0 0 2px #3b1a7a,
+    3px 3px 0 rgba(0, 0, 0, 0.35);
+}
+
+.tt-kopf {
   font-family: var(--mono);
-  font-size: 0.78rem;
-  color: var(--gedaempft);
-}
-
-.gewicht-marke {
-  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.05rem 0.35rem;
-  background: #4a2414;
-  color: #ffb08c;
-  border: 1px solid #ff6b3d;
+  color: #ffe25a;
 }
 
-.karte-box canvas,
-.karte-einzel canvas {
-  border: 2px solid var(--rand);
-  box-shadow: 0 0 0 2px #3a465d;
-}
-
-.einzel-seite {
-  align-content: start;
-}
-
-.modell {
-  max-width: 75ch;
-  margin-top: 0.6rem;
-}
-
-.beste-wahl small {
-  color: var(--gedaempft);
-}
-
-.feldinfo-hinweis {
-  font-style: italic;
+.karte-box canvas:focus-visible,
+.karte-einzel canvas:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 2px;
 }

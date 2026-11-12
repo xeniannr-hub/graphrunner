@@ -2,10 +2,11 @@
 // ein Verfahren Zeile für Zeile. Links die Karte, darunter Datenstruktur und „Woran erkenne ich …?“;
 // rechts Steckbrief (mit Heuristik bei A*), Erklärsatz mit „Zeile n“, Pseudocode, Ereignisprotokoll, Besuchsreihenfolge.
 import { ALGOS, PSEUDOCODE } from "../algorithms";
-import { zeichneLeinwand, type Zahlen } from "../render/karte";
+import { symbol, zeichneLeinwand, type SymbolArt, type Zahlen } from "../render/karte";
 import type { Eintrag, Replay } from "../replay/replay";
 import type { Algo, FeldId } from "../types";
-import { ALGO_INFO, erklaerSatz, kartenBeschreibung, koord, merkmal, protokoll, type ProtokollEintrag } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
+import { erklaerSatz, kartenBeschreibung, koord, merkmal, protokoll, type ProtokollEintrag } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
 import { Wiedergabe } from "./wiedergabe";
@@ -48,12 +49,36 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, klasse: string, 
   return e;
 }
 
+/** Zustände in der Legende, mit denselben Symbolen wie auf der Karte und den Begriffen des Verfahrens. */
+function legendeFuer(a: Algo): HTMLElement[] {
+  const f = ALGO_INFO[a].farbe;
+  const eintraege: [SymbolArt, string][] =
+    a === "dfs"
+      ? [
+          ["besucht", "besucht und expandiert: vom Stapel genommen"],
+          ["besuchtWartet", "besucht, liegt noch auf dem Stapel (aktueller Pfad)"],
+          ["entdeckt", "entdeckt, noch nicht aufgelegt"],
+        ]
+      : [
+          ["besucht", "besucht = expandiert"],
+          ["wartet", a === "bfs" ? "wartet in der Warteschlange" : "wartet in der Prioritätswarteschlange"],
+          ["entdeckt", "entdeckt, noch nicht eingereiht"],
+        ];
+  eintraege.push(["weg", "finaler Weg"], ["kante", "Entdeckungskante (Vorgänger)"]);
+  return eintraege.map(([art, text]) => {
+    const span = document.createElement("span");
+    span.append(symbol(art, f), text);
+    return span;
+  });
+}
+
 export class Einzel {
   readonly element: HTMLElement;
   readonly wiedergabe: Wiedergabe;
   private readonly tabs = new Map<Algo, HTMLButtonElement>();
   private readonly canvas: HTMLCanvasElement;
   private readonly select: HTMLSelectElement;
+  private readonly panel: HTMLElement;
   private readonly hinweis: HTMLElement;
   private readonly steckbrief: HTMLElement;
   private readonly heuristik: HTMLElement;
@@ -69,8 +94,7 @@ export class Einzel {
   private readonly protokollZahl: HTMLElement;
   private readonly liste: HTMLOListElement;
   private readonly listeLeer: HTMLElement;
-  private readonly legendeFarbe: HTMLElement;
-  private readonly legendeWartet: HTMLElement;
+  private readonly legendeZustaende: HTMLElement;
   private gezeigtAlgo: Algo | null = null;
   private gezeigtListe = 0;
   private gezeigtVersion = -1;
@@ -89,21 +113,36 @@ export class Einzel {
       const t = element("button", "tab", `<span class="punkt" aria-hidden="true"></span>${ALGO_INFO[a].name}`);
       t.type = "button";
       t.setAttribute("role", "tab");
+      t.id = `tab-${a}`;
+      t.setAttribute("aria-controls", "einzel-panel");
       t.style.setProperty("--farbe", ALGO_INFO[a].farbe);
-      t.onclick = () => {
-        Z.einzelAlgo = a;
+      // Mausklick und Tastatur wechseln gleich: Die Wiedergabe hält an.
+      const waehle = (b: Algo) => {
+        Z.einzelAlgo = b;
         Z.spielt = false;
         geaendert();
       };
+      t.onclick = () => waehle(a);
       t.onkeydown = (ev) => {
-        // Pfeiltasten wechseln zwischen den Tabs (übliches Tab-Muster).
-        if (ev.key !== "ArrowLeft" && ev.key !== "ArrowRight") return;
+        // Tab-Muster (WAI-ARIA): Pfeiltasten wechseln, Pos1/Ende springen zum ersten/letzten Tab.
+        // Roving tabindex: Nur der gewählte Tab ist per Tab-Taste erreichbar (siehe aktualisiere()).
+        const n = ALGOS.length;
+        const i = ALGOS.indexOf(a);
+        const ziel =
+          ev.key === "ArrowRight"
+            ? (i + 1) % n
+            : ev.key === "ArrowLeft"
+              ? (i + n - 1) % n
+              : ev.key === "Home"
+                ? 0
+                : ev.key === "End"
+                  ? n - 1
+                  : -1;
+        if (ziel < 0) return;
         ev.preventDefault();
         ev.stopPropagation();
-        const i = (ALGOS.indexOf(a) + (ev.key === "ArrowRight" ? 1 : ALGOS.length - 1)) % ALGOS.length;
-        Z.einzelAlgo = ALGOS[i];
-        geaendert();
-        this.tabs.get(ALGOS[i])?.focus();
+        waehle(ALGOS[ziel]);
+        this.tabs.get(ALGOS[ziel])?.focus();
       };
       this.tabs.set(a, t);
       tabliste.append(t);
@@ -116,21 +155,17 @@ export class Einzel {
     };
     leiste.append(tabliste, zahlen);
 
+    // Die Zustandssymbole hängen vom Verfahren ab und werden in aktualisiere() gezeichnet.
     const legende = element(
       "div",
       "",
-      `<span><i class="besucht"></i>expandiert</span>
-      <span><i class="wartet"></i><span class="wartet-text">wartet</span></span>
-      <span><i class="entdeckt"></i>entdeckt, noch nicht eingereiht</span>
-      <span><i class="weg"></i>finaler Weg</span>
-      <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>
+      `<span class="legende-zustaende"></span>
       <span><i class="rahmen weiss"></i>wird bearbeitet</span>
       <span><i class="rahmen gelb"></i>wird geprüft</span>
       <span><i class="rahmen rot"></i>Prüfung negativ</span>
       <span class="feldinfo-hinweis">Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten</span>`,
     );
-    this.legendeFarbe = legende.querySelector(".besucht") as HTMLElement;
-    this.legendeWartet = legende.querySelector(".wartet-text") as HTMLElement;
+    this.legendeZustaende = legende.querySelector(".legende-zustaende") as HTMLElement;
     this.wiedergabe = new Wiedergabe(
       {
         position: () => Z.einzel[Z.einzelAlgo].position,
@@ -177,7 +212,7 @@ export class Einzel {
       "div",
       "einzel-seite",
       `<section class="box"><dl class="steckbrief"></dl><div class="heuristik"></div></section>
-      <div class="box erklaerung"><span class="zeile-nr"></span><p class="satz" aria-live="polite"></p></div>
+      <div class="box erklaerung"><span class="zeile-nr"></span><p class="satz" aria-live="off"></p></div>
       <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>
       <section class="box protokoll-box"><h3>Ereignisprotokoll <small class="protokoll-zahl"></small></h3>
         <p class="hinweis">Klick auf einen Eintrag springt zu diesem Schritt.</p><ol class="protokoll"></ol></section>
@@ -202,6 +237,8 @@ export class Einzel {
 
     const inhalt = element("div", "einzel-inhalt");
     inhalt.setAttribute("role", "tabpanel");
+    inhalt.id = "einzel-panel";
+    this.panel = inhalt;
     inhalt.append(links, seite);
 
     el.append(leiste, this.wiedergabe.element, this.hinweis, inhalt);
@@ -232,14 +269,18 @@ export class Einzel {
     const r = Z.einzel[a];
     const neu = this.gezeigtAlgo !== a || this.gezeigtVersion !== Z.version;
     this.wiedergabe.aktualisiere();
-    for (const [b, t] of this.tabs) t.setAttribute("aria-selected", String(a === b));
+    for (const [b, t] of this.tabs) {
+      t.setAttribute("aria-selected", String(a === b));
+      t.tabIndex = a === b ? 0 : -1;
+    }
+    // Während der Wiedergabe würde jeder Schritt angesagt (bis zu 140 pro Sekunde); nur angehalten vorlesen.
+    this.satz.setAttribute("aria-live", Z.spielt ? "off" : "polite");
+    this.panel.setAttribute("aria-labelledby", `tab-${a}`);
     this.canvas.setAttribute("aria-label", kartenBeschreibung(r));
-    this.legendeFarbe.style.color = info.farbe;
-    this.legendeWartet.textContent =
-      a === "bfs" ? "in der Warteschlange" : a === "dfs" ? "auf dem Stapel" : "in der Prioritätswarteschlange";
     this.element.style.setProperty("--farbe", info.farbe);
 
     if (this.gezeigtAlgo !== a) {
+      this.legendeZustaende.replaceChildren(...legendeFuer(a));
       const optionen = ZAHLEN_OPTIONEN[a];
       if (!optionen.some(([w]) => w === Z.zahlen)) Z.zahlen = "kosten";
       this.select.replaceChildren(
@@ -313,6 +354,17 @@ export class Einzel {
     const hs = Z.h(s);
     const c = Z.billigstes;
     const pruefung = e.gefunden ? `Am Start: h = ${zahl(hs)} ≤ tatsächliche Kosten ${zahl(e.kosten)} ✓` : `Am Start: h = ${zahl(hs)}`;
+    const n = Z.billigsteAnzahl;
+    const c2 = Z.naechstBilligstes;
+    const abhaengig =
+      c2 === Infinity
+        ? "Hier kosten alle begehbaren Felder gleich viel."
+        : `Hier gibt es ${zahl(n)} ${n === 1 ? "Feld" : "Felder"} mit Kosten ${zahl(c)}. Ohne ${n === 1 ? "dieses" : "diese"} wäre der Faktor ${zahl(c2)} und h überall ${zahl(c2 / Math.max(c, 1e-9))}-mal so groß${c === 0 ? " (mit Kosten 0 ist h überall 0, A* rechnet dann wie Dijkstra)" : ""}.`;
+    // Wenige billige Felder drücken h auf der ganzen Karte: Dann wirkt A* schwächer, ohne dass sich am Weg etwas ändert.
+    const warnung =
+      c2 !== Infinity && n <= 3
+        ? `<p class="hinweis-box warnung klein">Nur ${zahl(n)} ${n === 1 ? "Feld bestimmt" : "Felder bestimmen"} den Faktor ${zahl(c)} für die ganze Karte. A* lenkt deshalb schwächer und besucht mehr Felder, als es mit Faktor ${zahl(c2)} müsste.</p>`
+        : "";
     this.heuristik.innerHTML = `
       <h3>Heuristik (offengelegt)</h3>
       <p class="formel">h(v) = ${zahl(c)} · (|x − ${e.ziel.x}| + |y − ${e.ziel.y}|)</p>
@@ -321,7 +373,8 @@ export class Einzel {
         <li><b>× ${zahl(c)}</b> = Kosten des billigsten begehbaren Feldes dieser Karte. Jeder Schritt kostet mindestens so viel.</li>
         <li><b>Zulässig:</b> h überschätzt die tatsächlichen Restkosten nie, auch bei verschiedenen Kosten. ${pruefung}</li>
         <li><b>Konsistent:</b> h(u) ≤ kosten(u → v) + h(v); deshalb steigen die entnommenen f-Werte nie.</li>
-      </ul>
+        <li><b>Hängt von der ganzen Karte ab:</b> Der Faktor ist das billigste Feld <em>irgendwo</em> auf der Karte, nicht in der Nähe des Weges. ${abhaengig}</li>
+      </ul>${warnung}
       <p class="hinweis">„Zahlen auf der Karte“ zeigt g, h und f für jedes Feld.</p>`;
   }
 

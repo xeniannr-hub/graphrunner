@@ -23,7 +23,7 @@ Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier G
 4. **Kleine Schritte:** ein Thema pro Branch und Pull Request. Vor jedem Commit laufen `npm test` und `npm run build` fehlerfrei durch.
 5. **Sollwerte in Tests legst du nicht fest** (Abschnitt 10). Du schreibst den Rechenweg als Kommentar und markierst neue Werte mit `// TODO: von Hand nachrechnen`.
 6. **Bei Änderungen an Welten oder Texten:** Prüfe, ob die Aussagen in `worlds.ts` noch stimmen; die Tests in `worlds.test.ts` halten sie fest.
-7. **Sprache:** Deutsch in Oberfläche, Kommentaren, Commit-Nachrichten und Dokumentation. Bezeichner im Code ebenfalls deutsch (`kosten`, `besucht`, `weg`), Fachbegriffe wie `Step`, `Replay` und `Heap` bleiben englisch.
+7. **Sprache:** Deutsch in Oberfläche, Kommentaren, Commit-Nachrichten und Dokumentation (einzige Ausnahme: der Untertitel „Explore the World of Pathfinding“). Bezeichner im Code ebenfalls deutsch (`kosten`, `besucht`, `weg`), Fachbegriffe wie `Step`, `Replay` und `Heap` bleiben englisch.
 8. Nach jeder Aufgabe nennst du kurz: Was wurde geändert, welche Anforderung (FA/QA) betrifft es, was ist offen.
 
 ---
@@ -74,7 +74,8 @@ src/
                       + *.test.ts direkt daneben
   replay/             Replay: Steps vor- und zurückspielen
   world/              terrain (Gelände), worlds (die Welten als Textkarten)
-  render/             textures (Pixelgrafik), karte (Karte zeichnen)
+  info/               algo-info (ALGO_INFO: Name, Farbe, Datenstruktur je Verfahren), fokus (markierte Felder eines Steps)
+  render/             textures (Pixelgrafik), karte (Karte zeichnen), kopf (Banner, Logo)
   ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, bewertung, einzel,
                       seitenleiste, karten-interaktion (Tooltip, Bauen), erklaerung
 prototype/            erster Prototyp, nur Referenz
@@ -88,7 +89,8 @@ docs/                 screenshot.png
 | `algorithms/` | nur `types` |
 | `replay/` | `algorithms`, `types` |
 | `world/` | `types` |
-| `render/` | `algorithms`, `replay`, `world`, `types`, `ui/erklaerung` |
+| `info/` | `types` |
+| `render/` | `algorithms`, `replay`, `world`, `types`, `info` |
 | `ui/` | alles |
 
 Datenfluss: Karte (`world`) → `Grid` → Generator (`algorithms`) → Aufzeichnung (`SearchResult`) → `Replay` → `render` und `ui`.
@@ -162,6 +164,7 @@ SUCHE.bfs(grid, start, ziel)      // = aufzeichnen("bfs", SCHRITTE.bfs(...)) →
 - Dijkstra und A* teilen sich den Kern `bestensuche(h, …)`; Dijkstra ist A* mit h = 0 (`h = null`: es wird nichts geschätzt). **Bei A* ist das Berechnen von h(v) ein eigener Rechenschritt** (Step `schaetze`, eigene Pseudocode-Zeilen `hs ← h(s)` und `hv ← h(v)`): Die Schätzung kostet Arbeit, und nur so zeigt „Rechenschritte“, was A* für weniger besuchte Felder bezahlt.
 - Gleichstand im Heap: Der ältere Eintrag gewinnt (`seq`). Jeder Lauf ist damit reproduzierbar (QA-02).
 - **A*-Heuristik:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld der Karte`.
+  - **Hängt von der ganzen Karte ab:** Ein einziges billiges Feld irgendwo (z. B. ein Weg-Feld in der Eigenen Welt) senkt den Faktor von 2 auf 1 und halbiert h überall; A* lenkt dann schwächer. Die Oberfläche erklärt das im Heuristik-Kasten (mit Warnung, wenn ≤ 3 Felder den Faktor bestimmen) und im Lernpunkt der Eigenen Welt; ein Test hält es fest.
   - **Zulässig:** Jeder Weg braucht mindestens so viele Schritte wie der Manhattan-Abstand, und jeder Schritt kostet mindestens das billigste Feld. Die Schätzung liegt also nie zu hoch, und A* findet immer den günstigsten Weg.
   - **Konsistent:** Ein Schritt ändert den Abstand um genau 1 und kostet mindestens das Minimum.
   - Warum nicht Euklid: Auch Euklid wäre zulässig, liegt bei 4er-Nachbarschaft aber immer unter Manhattan und lenkt A* deshalb schwächer.
@@ -179,7 +182,7 @@ Genau fünf Welten in `world/worlds.ts`, jede als Textkarte (20 Zeilen × 32 Zei
 
 | Welt | Algo | „… am besten, wenn …“ | Messbare Bedingung (Test) |
 | --- | --- | --- | --- |
-| Ruinenhof | BFS | jeder Schritt gleich viel kostet | nur Wiese und Felsmauern; BFS-Kosten = Dijkstra-Kosten; A* besucht > 85 % von BFS; DFS besucht > 2 × BFS, Weg > 1,5 × so lang |
+| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht die wenigsten Rechenschritte; DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
 | Stollen | DFS | es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen; Modellannahme: nur 12 von 24 Nachbarreihenfolgen erfüllen das, mit „rechts“ vorne > 240 Felder |
 | Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte als A*; BFS zahlt > 1,5 ×, DFS > 2 × |
 | Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; A* braucht < 25 % der Rechenschritte von Dijkstra; BFS zahlt > 1,2 × |
@@ -189,16 +192,16 @@ Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra 
 
 ### Modellannahmen (offen benennen, auch im Bericht)
 
-1. **Rechenschritte = ausgeführte Pseudocode-Zeilen.** Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)) und das Berechnen von h(v). Dijkstra hat pro Nachbar eine Zeile mehr als BFS (`rechne` und `vergleiche` statt einer Prüfung). Dass BFS im Ruinenhof am wenigsten rechnet (536 statt 748), folgt also teilweise daraus, wie der Pseudocode geschrieben ist. Die Oberfläche nennt das unter der Ergebnistabelle.
-2. **Nachbarreihenfolge oben, rechts, unten, links.** Der DFS-Vorteil im Stollen hängt daran: Nur 12 von 24 Reihenfolgen erfüllen „< 70 % jedes anderen“; beginnt sie mit „rechts“, besucht DFS 241 bis 273 statt 61 Felder. Umgekehrt wäre DFS im Ruinenhof mit „rechts“ vorne so sparsam wie BFS (52 Felder). DFS hat im Stollen also Glück. Tests in `worlds.test.ts` halten das fest; die Texte der Welten sagen es.
+1. **Rechenschritte = ausgeführte Pseudocode-Zeilen.** Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)) und das Berechnen von h(v). Dijkstra hat pro Nachbar eine Zeile mehr als BFS (`rechne` und `vergleiche` statt einer Prüfung). Dass BFS im Ruinenhof am wenigsten rechnet (6.982 statt 9.928 bei Dijkstra), folgt also teilweise daraus, wie der Pseudocode geschrieben ist. Die Oberfläche nennt das unter der Ergebnistabelle.
+2. **Nachbarreihenfolge oben, rechts, unten, links.** Der DFS-Vorteil im Stollen hängt daran: Nur 12 von 24 Reihenfolgen erfüllen „< 70 % jedes anderen“; beginnt sie mit „rechts“, besucht DFS 241 bis 273 statt 61 Felder. Im Ruinenhof liefe DFS mit 8 der 24 Reihenfolgen (z. B. unten, links, oben, rechts) direkt zum Ziel, mit der festen Reihenfolge findet es einen Weg von 456 statt 50 Kanten. DFS hat im Stollen also Glück. Tests in `worlds.test.ts` halten das fest; die Texte der Welten sagen es.
 
 ---
 
 ## 8. Oberfläche (Kurzfassung)
 
-- **Kopf:** Banner mit Pixel-Landschaft, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
-- **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
-- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Zeile k von n“ (Einzelansicht: ausgeführte Codezeilen) bzw. „Feld k von n“ (Vergleich: besuchte Felder je Verfahren). Der Erklärsatz nennt die „Pseudocode-Zeile n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht).
+- **Kopf:** Banner mit Pixel-Landschaft bei Tag, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Explore the World of Pathfinding“ (ausdrücklich gewünscht, einzige englische Zeile, `lang="en"`), Umschalter **Alle vergleichen** / **Einzelansicht**.
+- **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung und, falls die Welt einen hat, einen **Lernpunkt** (`lernpunkt` in `worlds.ts`: Ruinenhof und Stollen zur Nachbarreihenfolge der DFS, Eigene Welt zur Abhängigkeit der A*-Schätzung von der ganzen Karte); das Bewertungskriterium steht als `kriterium` direkt in der Welt; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
+- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Zeile k von n“ (Einzelansicht: ausgeführte Codezeilen) bzw. „Feld k von n“ (Vergleich: besuchte Felder je Verfahren). Der Erklärsatz nennt die „Pseudocode-Zeile n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht). Die Tabs der Einzelansicht folgen dem WAI-ARIA-Tab-Muster mit Roving tabindex (Pfeiltasten, Pos1, Ende); ein Tabwechsel hält die Wiedergabe an, mit Maus wie mit Tastatur.
 - **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Marke „ignoriert Gewichte“ (BFS und DFS auf gewichteter Karte), Zähler „besucht“, Datenstruktur (Größe und nächster Eintrag), Status. BFS-Ergebnis heißt „kürzester Weg nach Kantenzahl“. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
   - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten und wenigste Rechenschritte (Dijkstra), der Satz nennt zusätzlich, dass A* weniger Felder besucht, aber für jedes eingefügte Feld h(v) berechnet; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). Darunter steht das Kriterium der Welt in Worten. Ein Test prüft je Welt, dass beste Wahl, ★ und Fazit sich nicht widersprechen. In der Eigenen Welt gibt es keine solche Zeile.
   - Fazit-Absatz in ganzen Sätzen. „Am wenigsten gesucht hat *X*“ steht nur, wenn *X* einen optimalen Weg gefunden hat; sonst z. B. „DFS hat zwar nur 70 Felder angesehen, zahlt aber 176 statt 64 Ausdauer.“
@@ -218,7 +221,7 @@ Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra 
   Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
 - **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Zustand mit Besuch-Nr., dazu d (BFS/DFS: Kanten ab Start) bzw. bei A* g, h und f einzeln, und der Vorgänger. So wird die Karte als Graph aus Knoten und Kanten sichtbar. Feldinfo gibt es per Maus, per Antippen (bleibt stehen, bis woanders hingetippt wird) und per Tastatur: Tab auf die Karte, Pfeiltasten bewegen einen Feld-Cursor, Enter/Leertaste baut, Esc verlässt die Karte; eine `aria-live`-Region liest die Feldinfo vor, `aria-label` beschreibt den Stand jeder Karte (`kartenBeschreibung`).
 - **Bauen:** Start, Ziel und die sieben Geländearten; klicken, ziehen, antippen oder per Tastatur, auf jeder Karte. Nur in der Eigenen Welt haben die Karten `touch-action: none` (zum Malen); sonst scrollt eine Wischgeste die Seite. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
-- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Oberfläche im Blockstil (an Minecraft angelehnt, aber eigener Entwurf): keine runden Ecken, Flächen und Knöpfe mit Pixel-Abschrägung (hell oben links, dunkel unten rechts), gedrückte Knöpfe eingedrückt, Datenstruktur als Inventar-Slots, harte Pixel-Schatten. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Auf schmalen Bildschirmen (≤ 960 px) steht die Reihenfolge Weltliste (und Bauen) → Steuerung und Karten → Begründung und Ausdauer, damit „Abspielen“ früh kommt. Fokusrahmen und `aria`-Attribute.
+- **Darstellung:** nur **helles** Schema (Flächen wie hellgraue Steinblöcke, Untergrund Hellblau), orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Oberfläche im Blockstil (an Minecraft angelehnt, aber eigener Entwurf): keine runden Ecken, Flächen und Knöpfe mit Pixel-Abschrägung (hell oben links, dunkel unten rechts), gedrückte Knöpfe eingedrückt, Datenstruktur als Inventar-Slots, harte Pixel-Schatten. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. **Die Farbe des Verfahrens markiert genau die Felder, die als „besucht“ gezählt sind** (Zähler, Tabelle, Besuchsreihenfolge); bei DFS also schon beim Auflegen, Felder auf dem Stapel tragen zusätzlich den weißen Punkt. Legendensymbole werden mit derselben Funktion gezeichnet wie die Karte (`symbol()` in `render/karte.ts`). Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Auf schmalen Bildschirmen (≤ 960 px) steht die Reihenfolge Weltliste (und Bauen) → Steuerung und Karten → Begründung und Ausdauer, damit „Abspielen“ früh kommt. Fokusrahmen und `aria`-Attribute.
 
 ---
 
@@ -239,7 +242,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-07 | Dijkstra auf der gewichteten Karte darstellen | Should | `algorithms/dijkstra.ts` |
 | FA-08 | A* mit zulässiger Heuristik darstellen | Should | `algorithms/astar.ts`, Abschnitt 6 |
 | FA-09 | Vor- und zurückschalten (Einzelansicht je Codezeile, Vergleich je besuchtem Feld), zum Anfang und Ende springen, Abspielen mit einstellbarem Tempo | Should | `replay/`, `ui/wiedergabe.ts` |
-| FA-11 | Pseudocode mit aktueller Zeile und Erklärsatz | Should | `algorithms/pseudocode.ts`, `ui/erklaerung.ts` |
+| FA-11 | Pseudocode mit aktueller Zeile und Erklärsatz (Screenreader sagt ihn nur bei angehaltener Wiedergabe an) | Should | `algorithms/pseudocode.ts`, `ui/erklaerung.ts` |
 | FA-12 | Datenstruktur anzeigen: Warteschlange, Stapel bzw. Prioritätswarteschlange (bei A* mit g, h, f) | Should | `replay/` (`inhalt`), `ui/einzel.ts` |
 | FA-25 | Ereignisprotokoll mit allen relevanten Aktionen, Klick springt zum Schritt | Should | `ui/erklaerung.ts` (`protokoll`), `ui/einzel.ts` |
 | FA-26 | Erkennungsmerkmale je Verfahren mit Belegen aus dem Lauf („Woran erkenne ich Dijkstra statt BFS?“) | Should | `ui/erklaerung.ts` (`merkmal`) |
@@ -259,7 +262,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | --- | --- | --- | --- |
 | QA-01 | Korrekte Ergebnisse: BFS minimale Feldzahl, Dijkstra und A* minimale Kosten | Must | 0 Abweichungen von Bellman-Ford auf 300 Zufallskarten (`vergleich.test.ts`) |
 | QA-02 | Gleiche Eingabe ergibt stets denselben Ablauf | Must | Replay-Test: hin und zurück ergibt identischen Zustand |
-| QA-03 | Neuberechnung aller vier Verfahren ohne spürbare Wartezeit | Should | < 100 ms je Welt (`leistung.test.ts`) |
+| QA-03 | Neuberechnung aller vier Verfahren ohne spürbare Wartezeit | Should | < 100 ms je Welt, Median aus 5 Läufen (`npm run test:leistung`; in der CI nur zur Information, damit ein langsamer CI-Rechner keine Veröffentlichung verhindert) |
 | QA-04 | Ohne Einweisung bedienbar | Should | kein Tutorial nötig; SUS ≥ 71,4 in der Nutzerstudie |
 | QA-05 | Farbe immer mit Legende oder Text ergänzt; Bedienung per Tastatur, Touch und Screenreader | Should | Legende in jeder Ansicht; jeder Zustand hat eine eigene Form; Pfeiltasten, Leertaste, Pos1, Ende; Feld-Cursor auf der Karte; Feldinfo per Antippen; `aria-label` und `aria-live` |
 | QA-06 | Läuft ohne Installation im Browser, ohne Server-Backend | Must | Live-Version auf GitHub Pages |
@@ -286,7 +289,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-18 | DFS-Kantentypen | gehörte zum Graph-Modus |
 | FA-19 | wählbare Nachbarreihenfolge | fest oben, rechts, unten, links |
 | FA-20 | Mitraten | gestrichen |
-| QA-09 | helles Farbschema | nur dunkel |
+| QA-09 | dunkles Farbschema bzw. Umschalter | nur hell (auf Wunsch geändert, vorher nur dunkel) |
 | AB-01 | diagonale Schritte | eigene Kostenregeln nötig |
 | AB-02 | negative Kosten (werden mit `RangeError` abgelehnt; Kosten 0 sind erlaubt) | Dijkstra und A* setzen nichtnegative Kosten voraus |
 | AB-03 | Benutzerkonten, Server | nicht nötig |
@@ -299,7 +302,8 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 
 ### Unit Tests (Vitest)
 
-- Tests liegen neben der Datei: `dijkstra.ts` → `dijkstra.test.ts`. `npx vitest` startet alle.
+- Tests liegen neben der Datei: `dijkstra.ts` → `dijkstra.test.ts`. `npm test` startet alle außer der Zeitmessung, `npm run test:leistung` nur diese.
+- Der Architekturtest erkennt alle Importformen: `import … from`, `export … from`, Side-Effect-Imports `import "…"` und dynamische Imports `import("…")`.
 - **Pro Algorithmus mindestens:** ein einfacher Fall, ein Fall mit Hindernis, ein Fall ohne Weg.
 - **Sollwerte rechnet ein Mensch auf Papier aus.** Die KI schreibt die Tests, aber nicht die erwarteten Zahlen, sonst prüft sie ihren eigenen Fehler. Zu jedem Sollwert gehört der Rechenweg als Kommentar:
 
@@ -345,8 +349,10 @@ Pflichtinhalte:
 
 - **Branches:** `main` ist immer lauffähig. Pro Thema ein Branch, z. B. `feature/algorithmen`, `feature/welten`, `feature/render`, `feature/ui`, `fix/tooltip-rand`.
 - **Pull Requests:** Jeder PR wird von einer anderen Person reviewt. Die PR-Beschreibung nennt die betroffenen FA/QA-IDs.
-- **Commits:** kurz, deutsch, im Imperativ („Dijkstra-Test mit Sumpf ergänzen“).
+- **Commits:** kurz, deutsch, im Imperativ („Dijkstra-Test mit Sumpf ergänzen“). Bekannte Ausnahme in der Geschichte: `3cc20d5` „Add files via upload“ (Upload über die GitHub-Weboberfläche). Sie bleibt stehen, weil `main` nicht umgeschrieben wird (Force-Push würde allen die Geschichte ändern); `pruefen.yml` verhindert Wiederholungen. Dateien nicht über die Weboberfläche hochladen.
 - **Formatierung:** Prettier (`.prettierrc.json`, Zeilenbreite 140). `npm run format` formatiert, `npm run format:check` prüft; Markdown und `prototype/` sind ausgenommen.
+- **Prüfen:** `.github/workflows/pruefen.yml` läuft bei jedem Pull Request und Push auf andere Branches: Formatierung, Tests, Build, Zeitmessung (nicht blockierend) und Commit-Nachrichten (keine Standardtexte der GitHub-Weboberfläche wie „Add files via upload“). So bleibt `main` lauffähig.
+- **Editor:** `.editorconfig` und `.vscode/settings.json` (Prettier beim Speichern) gelten für alle.
 - **Deploy:** `.github/workflows/deploy.yml` läuft bei jedem Push auf `main`: `npm ci` → `npm run format:check` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig: Settings → Pages → Source „GitHub Actions“. `vite.config.ts` nutzt `base: "./"`.
 
 ---

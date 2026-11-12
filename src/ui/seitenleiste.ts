@@ -3,7 +3,7 @@
 import { sprites, textur } from "../render/textures";
 import { TERRAIN } from "../world/terrain";
 import { WELTEN } from "../world/worlds";
-import { ALGO_INFO } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
 import { Z, istEigeneWelt, ladeWelt, leereKarte, type Werkzeug } from "./zustand";
 
 function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
@@ -29,6 +29,7 @@ export class Seitenleiste {
   private readonly welten: HTMLButtonElement[] = [];
   private readonly wannEl: HTMLElement;
   private readonly warumEl: HTMLElement;
+  private readonly lernEl: HTMLElement;
   private readonly bauen: HTMLElement;
   private readonly ausdauer: HTMLElement;
   private readonly werkzeuge = new Map<Werkzeug, HTMLButtonElement>();
@@ -63,7 +64,9 @@ export class Seitenleiste {
     this.wannEl = document.createElement("p");
     this.wannEl.className = "wann";
     this.warumEl = document.createElement("p");
-    begruendung.append(this.wannEl, this.warumEl);
+    this.lernEl = document.createElement("p");
+    this.lernEl.className = "lernpunkt";
+    begruendung.append(this.wannEl, this.warumEl, this.lernEl);
 
     // Bauen: Start, Ziel und die sieben Geländearten.
     this.bauen = document.createElement("section");
@@ -150,6 +153,9 @@ export class Seitenleiste {
       this.wannEl.textContent = "Baue deine eigene Welt.";
     }
     this.warumEl.textContent = w.warum;
+    this.lernEl.hidden = w.lernpunkt === "";
+    this.lernEl.innerHTML = w.lernpunkt ? `<b>Lernpunkt:</b> ` : "";
+    this.lernEl.append(w.lernpunkt);
     const eigen = istEigeneWelt();
     this.bauen.hidden = !eigen;
     this.ausdauer.hidden = eigen;

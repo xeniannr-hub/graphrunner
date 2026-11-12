@@ -1,108 +1,10 @@
-// Erklärungen ohne DOM: Steckbrief je Verfahren, fokus() für markierte Felder, Erklärsatz und Tooltip-Text.
-// Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion fokus().
+// Erklärungen ohne DOM: Erklärsatz, Tooltip-Text, Ereignisprotokoll, Erkennungsmerkmale, Kartenbeschreibung.
+// Der Erklärsatz nennt genau die Felder, die fokus() (info/fokus.ts) markiert.
 import { RICHTUNGEN } from "../algorithms/raster";
 import type { FeldZustand, Replay } from "../replay/replay";
-import type { Algo, FeldId, Pos, Step, TerrainKey } from "../types";
+import { ALGO_INFO } from "../info/algo-info";
+import type { Algo, FeldId, Pos, TerrainKey } from "../types";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
-
-export interface AlgoInfo {
-  readonly name: string;
-  readonly farbe: string;
-  readonly kurz: string;
-  /** Steckbrief: Verfahren · Wählt als Nächstes · Findet. */
-  readonly verfahren: string;
-  readonly waehlt: string;
-  readonly findet: string;
-  /** Name der Datenstruktur im Satz („in die Warteschlange“). */
-  readonly liste: string;
-  /** Datenstruktur mit Prinzip, z. B. „Warteschlange (FIFO)“. */
-  readonly struktur: string;
-  /** Wie die Datenstruktur arbeitet, ein Satz. */
-  readonly strukturRegel: string;
-  /** Zentrales Prinzip: was auf der Karte sichtbar sein muss. */
-  readonly prinzip: string;
-  /** Beachtet das Verfahren die Kantengewichte? */
-  readonly gewichte: boolean;
-}
-
-export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
-  bfs: {
-    name: "BFS",
-    farbe: "#ff4d73",
-    kurz: "Breitensuche",
-    verfahren: "Breitensuche mit Warteschlange",
-    waehlt: "das Feld, das am längsten wartet (vorne in der Warteschlange)",
-    findet: "den kürzesten Weg nach Anzahl der Kanten; Kantengewichte werden ignoriert",
-    liste: "Warteschlange",
-    struktur: "Warteschlange (FIFO)",
-    strukturRegel: "Hinten wird angefügt, vorne entnommen: Wer zuerst kommt, wird zuerst expandiert.",
-    prinzip: "Felder werden schichtweise expandiert: erst alle mit 1 Kante Abstand, dann alle mit 2 usw.",
-    gewichte: false,
-  },
-  dfs: {
-    name: "DFS",
-    farbe: "#a56bff",
-    kurz: "Tiefensuche",
-    verfahren: "Tiefensuche mit Stapel",
-    waehlt: "einen Nachbarn des zuletzt aufgelegten Feldes (oben auf dem Stapel)",
-    findet: "irgendeinen Weg; Kantengewichte werden ignoriert",
-    liste: "Stapel",
-    struktur: "Stapel (LIFO)",
-    strukturRegel: "Oben wird aufgelegt und oben entnommen: Das zuletzt entdeckte Feld kommt zuerst dran.",
-    prinzip: "Ein Suchpfad wird so tief wie möglich verfolgt; in einer Sackgasse geht es zurück (Backtracking).",
-    gewichte: false,
-  },
-  dijkstra: {
-    name: "Dijkstra",
-    farbe: "#ff8a2b",
-    kurz: "günstigster Weg",
-    verfahren: "Dijkstra mit Prioritätswarteschlange (Min-Heap)",
-    waehlt: "das Feld mit den kleinsten bisher bekannten Kosten d",
-    findet: "den günstigsten Weg (Gewichte ≥ 0, auch 0 ist erlaubt)",
-    liste: "Prioritätswarteschlange",
-    struktur: "Prioritätswarteschlange (Min-Heap, Schlüssel d)",
-    strukturRegel: "Entnommen wird immer der Eintrag mit dem kleinsten d, egal wann er eingefügt wurde.",
-    prinzip: "Der jeweils günstigste bekannte Knoten wird expandiert; danach kann sein d nicht mehr sinken.",
-    gewichte: true,
-  },
-  astar: {
-    name: "A*",
-    farbe: "#ffd400",
-    kurz: "günstigster Weg mit Schätzung",
-    verfahren: "A* mit Prioritätswarteschlange (Min-Heap) und Schätzung h",
-    waehlt: "das Feld mit dem kleinsten f = g + h (bisherige Kosten plus geschätzte Restkosten)",
-    findet: "den günstigsten Weg, weil h nie überschätzt",
-    liste: "Prioritätswarteschlange",
-    struktur: "Prioritätswarteschlange (Min-Heap, Schlüssel f = g + h)",
-    strukturRegel: "Entnommen wird immer der Eintrag mit dem kleinsten f = g + h.",
-    prinzip: "Tatsächliche bisherige Kosten g und geschätzte Restkosten h bestimmen gemeinsam die Priorität f.",
-    gewichte: true,
-  },
-};
-
-export interface Fokus {
-  /** Weißer Rahmen: wird bearbeitet. */
-  readonly bearbeitet: FeldId | null;
-  /** Gelber Rahmen: wird geprüft. */
-  readonly geprueft: FeldId | null;
-  /** Roter statt gelber Rahmen: Prüfung negativ. */
-  readonly negativ: boolean;
-}
-
-/** Feld, das der Step bearbeitet (u), und Feld, das er prüft, setzt oder einfügt (v). */
-function felderVon(step: Step): { u: FeldId | undefined; v: FeldId | undefined } {
-  return { u: "u" in step ? step.u : undefined, v: "v" in step ? step.v : undefined };
-}
-
-/** Welche Felder der Step markiert. */
-export function fokus(step: Step | undefined): Fokus {
-  if (!step) return { bearbeitet: null, geprueft: null, negativ: false };
-  const { u, v } = felderVon(step);
-  // Ohne u: d[s] ← 0, h(s) und das erste Einfügen bearbeiten den Start.
-  if (u === undefined) return { bearbeitet: v ?? null, geprueft: null, negativ: false };
-  const negativ = (step.art === "markiertPruefung" || step.art === "vergleiche") && !step.ok;
-  return { bearbeitet: u, geprueft: v ?? null, negativ };
-}
 
 export const koord = (p: Pos): string => `(${p.x}|${p.y})`;
 
@@ -380,6 +282,7 @@ export function merkmal(replay: Replay): Merkmal {
           `Der Stapel ist der aktuelle Suchpfad: ${n} Felder hoch.`,
           `Rücksprünge (Backtracking) bisher: ${replay.ruecksprunge}. Bei jedem wird das oberste Feld vom Stapel genommen und es geht beim Feld darunter weiter.`,
           "Kantengewichte spielen keine Rolle; der gefundene Weg ist meist nicht der kürzeste.",
+          "Lernpunkt: Der Verlauf hängt an der Nachbarreihenfolge (hier fest: oben, rechts, unten, links). Mit einer anderen Reihenfolge findet DFS auf derselben Karte oft einen ganz anderen Weg und besucht viel mehr oder viel weniger Felder.",
         ],
       };
     }

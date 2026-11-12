@@ -1,11 +1,12 @@
 // Ansicht „Alle vergleichen“ (FA-13, FA-14, FA-21): vier Karten im 2 × 2-Raster, ein Schritt = jedes
 // Verfahren besucht ein weiteres Feld. Darunter beste Wahl, Fazit und Ergebnistabelle (Regeln in bewertung.ts).
 import { ALGOS } from "../algorithms";
-import { zeichneLeinwand } from "../render/karte";
+import { symbol, zeichneLeinwand } from "../render/karte";
 import type { Algo } from "../types";
 import { WELTEN } from "../world/worlds";
 import { angekommen, besteWahl, fazitText, platz, tabellenZeilen } from "./bewertung";
-import { ALGO_INFO, kartenBeschreibung } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
+import { kartenBeschreibung } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { Wiedergabe } from "./wiedergabe";
 import { Z, geheVergleich, vergleichMax } from "./zustand";
@@ -30,13 +31,27 @@ export class Vergleich {
     el.className = "ansicht vergleich";
     el.setAttribute("aria-label", "Alle vergleichen");
 
+    // Symbole wie auf der Karte gezeichnet, damit die Farben übereinstimmen.
     const legende = document.createElement("div");
-    legende.innerHTML = `
-      <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>expandiert</span>
-      <span><i class="wartet"></i>wartet in Warteschlange, Stapel oder Prioritätswarteschlange</span>
-      <span><i class="weg"></i>finaler Weg</span>
-      <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>
-      <span class="feldinfo-hinweis">Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten</span>`;
+    const eintrag = (symbole: HTMLCanvasElement[], text: string) => {
+      const span = document.createElement("span");
+      span.append(...symbole, text);
+      return span;
+    };
+    const hinweis = document.createElement("span");
+    hinweis.className = "feldinfo-hinweis";
+    hinweis.textContent = "Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten";
+    legende.append(
+      eintrag(
+        ALGOS.map((a) => symbol("besucht", ALGO_INFO[a].farbe)),
+        "besucht (wie der Zähler „besucht“; DFS zählt beim Auflegen, die anderen beim Expandieren)",
+      ),
+      eintrag([symbol("wartet", "#fff")], "wartet in Warteschlange oder Prioritätswarteschlange"),
+      eintrag([symbol("besuchtWartet", ALGO_INFO.dfs.farbe)], "DFS: besucht, liegt noch auf dem Stapel"),
+      eintrag([symbol("weg", "#fff")], "finaler Weg"),
+      eintrag([symbol("kante", "#1e1e1e")], "Entdeckungskante (Vorgänger, in der Farbe des Verfahrens)"),
+      hinweis,
+    );
     this.wiedergabe = new Wiedergabe(
       { position: () => Z.k, laenge: vergleichMax, gehe: geheVergleich },
       {
