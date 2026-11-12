@@ -158,7 +158,7 @@ export function feldInfo(
 ): string[] {
   const t = TERRAIN_NACH_KEY[karte[p.y][p.x]];
   const rolle = p.x === start.x && p.y === start.y ? " · Start" : p.x === ziel.x && p.y === ziel.y ? " · Ziel" : "";
-  const zeilen = [`Feld ${koord(p)}${rolle}`, t.name, t.kosten === Infinity ? "nicht begehbar" : `Ausdauer ${t.kosten}`];
+  const zeilen = [`Feld ${koord(p)}${rolle}`, t.name, t.kosten === Infinity ? "Ausdauer ∞ (nicht begehbar)" : `Ausdauer ${t.kosten}`];
   // Nur begehbare Felder sind Knoten des Graphen und haben ausgehende Kanten.
   if (t.kosten !== Infinity) zeilen.push(kanten(karte, p));
   if (replay && t.kosten !== Infinity) {
