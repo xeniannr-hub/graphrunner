@@ -80,12 +80,14 @@ export class Vergleich {
       karte.style.setProperty("--farbe", info.farbe);
       karte.innerHTML = `
         <header>
-          <div class="name"><span class="punkt" aria-hidden="true"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
+          <div class="name"><span class="farbfeld"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
             <span class="gewicht-marke" title="Bei dieser Karte kosten Felder verschieden viel; ${info.name} beachtet das nicht.">ignoriert Gewichte</span></div>
           <div class="zaehler" aria-live="off"></div>
           <div class="struktur-zeile"></div>
           <div class="status"></div>
         </header>`;
+      // Farbfeld im Kopf: dasselbe Symbol wie ein besuchtes Feld auf der Karte, damit die Farben sicher übereinstimmen.
+      karte.querySelector(".farbfeld")?.replaceWith(symbol("besucht", info.farbe));
       const canvas = document.createElement("canvas");
       canvas.setAttribute("role", "application");
       canvas.setAttribute("aria-roledescription", "Karte");

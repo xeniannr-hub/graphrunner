@@ -1,20 +1,25 @@
-/* GraphRunner: helles Farbschema im Blockstil (an Minecraft-Oberflächen angelehnt, eigener Entwurf, keine fremden Grafiken).
-   Flächen wie hellgraue Steinblöcke: Licht oben links, Schatten unten rechts, schwarzer Rand, keine runden Ecken.
+/* GraphRunner: helles Farbschema im Blockstil (an Minecraft angelehnt, eigener Entwurf, keine fremden Grafiken).
+   Flächen wie Blöcke mit Grasnarbe: grüner Streifen oben, Licht oben links, Schatten unten rechts, keine runden Ecken.
    Pixelschrift nur in Überschriften. */
 :root {
   color-scheme: light;
-  /* Grundfarben */
-  --grund: #dfe8f1;
-  --flaeche: #d6d6d6;
-  --flaeche-2: #c6c6c6;
-  --flaeche-hell: #ececec;
-  --slot: #a9a9a9;
-  --linie: #8b8b8b;
-  --rand: #262626;
-  --text: #1c1c1c;
-  --gedaempft: #4b4b4b;
+  /* Grundfarben: warmes Papierweiß auf hellem Himmelblau, Ränder in dunklem Erdbraun */
+  --grund: #e8f2fa;
+  --flaeche: #fbf8f1;
+  --flaeche-2: #efe8d9;
+  --flaeche-hell: #fffdf8;
+  --slot: #e6dece;
+  --linie: #c7bca6;
+  --rand: #3b352d;
+  --text: #2a2620;
+  --gedaempft: #625b50;
+  /* Akzente: Grün wie ein Grasblock für Hauptaktionen, Gelb für Auswahl, Blau für Fokus */
+  --gras: #5aac34;
+  --gras-hell: #8ad457;
+  --gras-dunkel: #2f6b1a;
   --orange: #e8890c;
   --akzent: #ffd400;
+  --auswahl: #fff1b0;
   --akzent-dunkel: #8a6d00;
   --fokus: #0b57d0;
   /* Feste Farben der Verfahren (CLAUDE.md, Abschnitt 8) */
@@ -22,11 +27,11 @@
   --dfs: #a56bff;
   --dijkstra: #ff8a2b;
   --astar: #ffd400;
-  /* Blockstil */
+  /* Blockstil: Licht oben links, Schatten unten rechts */
   --rund: 0;
-  --hoch: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #7a7a7a;
-  --tief: inset 2px 2px 0 #6f6f6f, inset -2px -2px 0 #f4f4f4;
-  --schatten: 3px 3px 0 rgba(0, 0, 0, 0.25);
+  --hoch: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #d9cfbb;
+  --tief: inset 2px 2px 0 #cdc2ac, inset -2px -2px 0 #ffffff;
+  --schatten: 3px 3px 0 rgba(59, 53, 45, 0.18);
   /* Schriften */
   --pixel: "Pixelify Sans", system-ui, sans-serif;
   --ui: "Rubik", system-ui, sans-serif;
@@ -117,6 +122,24 @@ canvas {
   box-shadow: var(--hoch), var(--schatten);
 }
 
+/* Grasnarbe: Allgemeine Flächen tragen oben einen grünen Streifen wie ein Grasblock.
+   Flächen, die zu einem Verfahren gehören, tragen stattdessen dessen Farbe (Karten, Datenstruktur). */
+.panel,
+.wiedergabe,
+.ergebnis,
+.box:not(.struktur-box):not(.merkmal-box):not(.erklaerung) {
+  border-top: 6px solid var(--gras);
+  box-shadow:
+    inset 0 2px 0 var(--gras-hell),
+    var(--hoch),
+    var(--schatten);
+}
+
+h2,
+h3 {
+  color: #2b3a22;
+}
+
 /* Knöpfe wie Steinblöcke: Hover = heller Rand, gedrückt oder gewählt = eingedrückt. */
 .knopf,
 .tab,
@@ -124,7 +147,7 @@ canvas {
 .werkzeug,
 .umschalter button,
 .auswahl select {
-  background: linear-gradient(#e2e2e2, #c3c3c3);
+  background: linear-gradient(#fffdf8, #e8e0cf);
   border: 2px solid var(--rand);
   box-shadow: var(--hoch);
   color: var(--text);
@@ -136,8 +159,8 @@ canvas {
 .welt:hover,
 .werkzeug:hover,
 .umschalter button:hover {
-  background: linear-gradient(#f2f2f2, #d4d4d4);
-  border-color: var(--fokus);
+  background: linear-gradient(#ffffff, #f0e9da);
+  border-color: var(--gras-dunkel);
 }
 
 .knopf:active:not(:disabled),
@@ -154,23 +177,31 @@ canvas {
   font-family: var(--mono);
 }
 
-.knopf.haupt,
+/* Hauptaktion (Abspielen) grün wie ein Grasblock. */
+.knopf.haupt {
+  min-width: 6.5rem;
+  background: linear-gradient(var(--gras-hell), var(--gras));
+  color: #fff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: 1px 1px 0 var(--gras-dunkel);
+  box-shadow:
+    inset 2px 2px 0 #b9ef93,
+    inset -2px -2px 0 var(--gras-dunkel);
+}
+
+.knopf.haupt:hover:not(:disabled) {
+  background: linear-gradient(#9de36a, #66bb3e);
+}
+
+/* Gewählte Ansicht: gelb, eingedrückt. */
 .umschalter button[aria-pressed="true"] {
   background: linear-gradient(#ffe25a, #f0b800);
   color: #1a1408;
-  font-family: var(--ui);
   font-weight: 700;
   box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.6),
-    inset -2px -2px 0 #9c7400;
-}
-
-.knopf.haupt {
-  min-width: 6.5rem;
-}
-
-.knopf.haupt:hover {
-  background: linear-gradient(#fff07f, #ffc61a);
+    inset 2px 2px 0 #9c7400,
+    inset -2px -2px 0 #fff3a6;
 }
 
 .knopf.los {
@@ -389,8 +420,16 @@ canvas {
 
 .welt[aria-pressed="true"],
 .werkzeug[aria-pressed="true"] {
-  background: #fff4c2;
-  border-color: var(--akzent-dunkel);
+  background: var(--auswahl);
+  border-color: var(--rand);
+  box-shadow:
+    var(--tief),
+    inset 6px 0 0 var(--akzent);
+}
+
+/* Farbfeld im Kopf der Karten: dasselbe Symbol wie ein besuchtes Feld auf der Karte. */
+.name .symbol-legende {
+  align-self: center;
 }
 
 .welt-titel {
@@ -709,8 +748,8 @@ input[type="range"]::-moz-range-thumb {
   border: 1px solid #c2410c;
 }
 
-.karte-box canvas,
-.karte-einzel canvas {
+.karte-box > canvas,
+.karte-einzel > canvas {
   display: block;
   width: 100%;
   height: auto;
@@ -721,8 +760,8 @@ input[type="range"]::-moz-range-thumb {
   touch-action: manipulation;
 }
 
-.bauen-aktiv .karte-box canvas,
-.bauen-aktiv .karte-einzel canvas {
+.bauen-aktiv .karte-box > canvas,
+.bauen-aktiv .karte-einzel > canvas {
   touch-action: none;
 }
 
@@ -736,8 +775,9 @@ input[type="range"]::-moz-range-thumb {
   margin: 0.4rem 0 0;
   padding: 0.45rem 0.6rem;
   max-width: 75ch;
-  border-left: 6px solid var(--akzent);
-  background: #fff6cc;
+  border: 2px solid var(--rand);
+  border-left: 8px solid var(--akzent);
+  background: var(--auswahl);
 }
 
 .beste-wahl small {
@@ -787,6 +827,10 @@ td {
 tbody th {
   font-weight: 500;
   white-space: nowrap;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--flaeche-2);
 }
 
 .stern {
@@ -1173,7 +1217,7 @@ tbody th {
 }
 
 .protokoll li.aktuell button {
-  background: #fff4c2;
+  background: var(--auswahl);
 }
 
 .protokoll-box small {
@@ -1235,8 +1279,8 @@ tbody th {
   color: #ffe25a;
 }
 
-.karte-box canvas:focus-visible,
-.karte-einzel canvas:focus-visible {
+.karte-box > canvas:focus-visible,
+.karte-einzel > canvas:focus-visible {
   outline: 3px solid var(--fokus);
   outline-offset: 2px;
 }

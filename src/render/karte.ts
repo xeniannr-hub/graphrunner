@@ -61,11 +61,19 @@ function gelaende(bild: KartenBild, ts: number): HTMLCanvasElement {
 /** Darstellungen eines Feldes; dieselbe Funktion zeichnet Karte und Legende, damit beide gleich aussehen. */
 export type FeldArt = "besucht" | "wartet" | "besuchtWartet" | "entdeckt";
 
-/** Deckkraft der Verfahrensfarbe auf besuchten Feldern: Farbe klar erkennbar, Gelände noch sichtbar. */
-const DECKKRAFT = 0.6;
+/**
+ * Besuchte Felder: Erst wird das Gelände aufgehellt, dann kommt die Farbe des Verfahrens darüber.
+ * Ohne Aufhellen mischt sich die Farbe mit dem Gelände (Gelb auf Wiese wird oliv, Rosa auf Sumpf braun) und
+ * passt nicht mehr zur Farbe des Verfahrens in Kopf, Tabs und Legende. So bleibt der Farbton erhalten,
+ * das Muster des Geländes scheint aber noch durch.
+ */
+const AUFHELLEN = 0.4;
+const DECKKRAFT = 0.72;
 
 function zeichneFeld(ctx: CanvasRenderingContext2D, x: number, y: number, ts: number, art: FeldArt, farbe: string): void {
   if (art === "besucht" || art === "besuchtWartet") {
+    ctx.fillStyle = `rgba(255, 255, 255, ${AUFHELLEN})`;
+    ctx.fillRect(x, y, ts, ts);
     ctx.fillStyle = rgba(farbe, DECKKRAFT);
     ctx.fillRect(x, y, ts, ts);
   }
