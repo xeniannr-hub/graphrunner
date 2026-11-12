@@ -49,7 +49,7 @@ describe("Erklärsatz und fokus()", () => {
       // Start: 0 Kanten ab Start, kein Vorgänger.
       "d = 0 Kanten ab Start · Vorgänger –",
     ]);
-    expect(feldInfo(karte, { x: 0, y: 9 }, w.start, w.ziel, r)).toEqual(["Feld (0|9)", "Wasser", "nicht begehbar"]);
+    expect(feldInfo(karte, { x: 0, y: 9 }, w.start, w.ziel, r)).toEqual(["Feld (0|9)", "Wasser", "Ausdauer ∞ (nicht begehbar)"]);
   });
 
   it("Tooltip nennt die ausgehenden Kanten mit Gewicht (Karte als Graph)", () => {
@@ -65,7 +65,7 @@ describe("Erklärsatz und fokus()", () => {
     // Ecke (0|0): oben außerhalb → keine Kante, rechts (1|0) Wald → 4, unten (0|1) Wiese → 2, links außerhalb → keine Kante.
     expect(feldInfo(k, { x: 0, y: 0 }, s, z)[3]).toBe("Kanten: ↑ – · → 4 · ↓ 2 · ← –"); // TODO: von Hand nachrechnen
     // Fels (0|2) ist kein Knoten: keine Kantenzeile.
-    expect(feldInfo(k, { x: 0, y: 2 }, s, z)).toEqual(["Feld (0|2)", "Fels", "nicht begehbar"]); // TODO: von Hand nachrechnen
+    expect(feldInfo(k, { x: 0, y: 2 }, s, z)).toEqual(["Feld (0|2)", "Fels", "Ausdauer ∞ (nicht begehbar)"]); // TODO: von Hand nachrechnen
   });
 
   it("A*: Tooltip zeigt g, h und f einzeln", () => {

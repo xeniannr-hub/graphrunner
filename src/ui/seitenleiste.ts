@@ -20,10 +20,64 @@ function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
   return c;
 }
 
-/** Block, der jede Welt in der Liste kennzeichnet (Reihenfolge wie WELTEN): Ruinenhof, Stollen, Flussmoor, Handelsstraße, Eigene Welt. */
-const WELT_BLOCK: readonly TerrainKey[] = ["fels", "wald", "sumpf", "weg", "gras"];
+/**
+ * Symbol je Welt, aus den Geländetexturen zusammengesetzt, damit es zum Aussehen der Welt passt:
+ * Grundgelände plus Rechtecke (x, y, b, h in 16 × 16 Pixeln) aus einem zweiten Gelände.
+ */
+interface WeltSymbol {
+  readonly grund: TerrainKey;
+  readonly muster?: TerrainKey;
+  readonly teile?: readonly [number, number, number, number][];
+  /** Dunkler Rand um die Teile, damit sie sich vom Grund abheben (z. B. ein in den Fels gehauener Gang). */
+  readonly rand?: string;
+}
 
-const kosten = (k: number): string => (k === Infinity ? "–" : String(k));
+const WELT_SYMBOL: Readonly<Record<string, WeltSymbol>> = {
+  // Wiese mit einem Mauerrest in L-Form.
+  ruinenhof: {
+    grund: "gras",
+    muster: "fels",
+    teile: [
+      [2, 3, 3, 10],
+      [2, 10, 10, 3],
+    ],
+  },
+  // Fels mit einem gewundenen Gang aus Weg: ein Stück Labyrinth.
+  stollen: {
+    grund: "fels",
+    muster: "weg",
+    teile: [
+      [0, 3, 10, 3],
+      [7, 3, 3, 10],
+      [7, 10, 9, 3],
+    ],
+    rand: "#1f1d1a",
+  },
+  // Sumpf mit einem Wasserlauf.
+  flussmoor: { grund: "sumpf", muster: "wasser", teile: [[10, 0, 3, 16]] },
+  // Wiese mit einer Straße.
+  handelsstrasse: { grund: "gras", muster: "weg", teile: [[0, 6, 16, 4]] },
+  eigene: { grund: "gras" },
+};
+
+function weltSymbol(id: string): HTMLCanvasElement {
+  const m: WeltSymbol = WELT_SYMBOL[id] ?? { grund: "gras" };
+  const c = symbol(textur(m.grund, 1));
+  const g = c.getContext("2d") as CanvasRenderingContext2D;
+  if (m.muster && m.teile) {
+    const t = textur(m.muster, 1);
+    const f = t.width / 16;
+    if (m.rand) {
+      g.fillStyle = m.rand;
+      for (const [x, y, b, h] of m.teile) g.fillRect(x - 1, y - 1, b + 2, h + 2);
+    }
+    for (const [x, y, b, h] of m.teile) g.drawImage(t, x * f, y * f, b * f, h * f, x, y, b, h);
+  }
+  return c;
+}
+
+/** Kosten fürs Betreten; ∞ wie im Modell: Wasser und Fels kosten unendlich viel und sind damit Hindernisse. */
+const kosten = (k: number): string => (k === Infinity ? "∞" : String(k));
 
 export class Seitenleiste {
   /** Weltliste und (in der Eigenen Welt) Bauen: steht auf dem Handy über der Karte. */
@@ -56,7 +110,7 @@ export class Seitenleiste {
         ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>`
         : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
       b.innerHTML = `<span class="welt-titel">${w.titel}</span>${kuerzel}`;
-      b.prepend(symbol(textur(WELT_BLOCK[i] ?? "gras", 1)));
+      b.prepend(weltSymbol(w.id));
       b.onclick = () => {
         ladeWelt(i);
         geaendert();
@@ -99,7 +153,7 @@ export class Seitenleiste {
       if (preis) {
         const p = document.createElement("b");
         p.textContent = preis;
-        p.title = preis === "–" ? "nicht begehbar" : `Ausdauer ${preis}`;
+        p.title = preis === "∞" ? "unendlich: nicht begehbar" : `Ausdauer ${preis}`;
         b.append(p);
       }
       b.onclick = () => {
@@ -138,7 +192,8 @@ export class Seitenleiste {
     }
     const fuss = document.createElement("p");
     fuss.className = "hinweis";
-    fuss.textContent = "„–“ heißt: nicht begehbar. Ein Schritt kostet so viel wie das Feld, das man betritt.";
+    fuss.textContent =
+      "Ein Schritt kostet so viel wie das Feld, das man betritt. „∞“: unendlich teuer, also nicht begehbar; die Algorithmen legen keine Kante dorthin.";
     this.ausdauer.append(tabelle, fuss);
 
     el.append(titel, liste, this.bauen);

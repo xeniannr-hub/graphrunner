@@ -68,8 +68,8 @@ Weil eine Kante so viel kostet wie das Feld, das man betritt, haben alle Kanten 
 | Wiese | 2 | `.` |
 | Wald | 4 | `T` |
 | Sumpf | 7 | `%` |
-| Wasser | nicht begehbar | `~` |
-| Fels | nicht begehbar | `^` |
+| Wasser | ∞ (nicht begehbar) | `~` |
+| Fels | ∞ (nicht begehbar) | `^` |
 
 | Verfahren | Datenstruktur | Findet | Besuch zählt beim |
 | --- | --- | --- | --- |
