@@ -57,7 +57,10 @@ export function pruefeEingabe(grid: Grid, start: Pos, ziel: Pos): void {
   for (const zeile of grid) {
     if (zeile.length !== b) throw new RangeError("Alle Zeilen der Karte müssen gleich lang sein.");
     for (const k of zeile) {
-      if (Number.isNaN(k) || k <= 0) throw new RangeError("Jedes Feld muss positive Kosten haben.");
+      if (Number.isNaN(k)) throw new RangeError("Jedes Feld braucht eine Zahl als Kosten.");
+      // Dijkstra und A* setzen Kantengewichte ≥ 0 voraus: Ein abgeschlossenes Feld darf nie mehr günstiger werden.
+      // Kosten 0 sind erlaubt und werden korrekt behandelt (Test in dijkstra.test.ts).
+      if (k < 0) throw new RangeError("Negative Kantengewichte sind nicht erlaubt: Dijkstra und A* setzen Gewichte ≥ 0 voraus.");
     }
   }
   if (!imRaster(grid, start)) throw new RangeError("Der Start liegt außerhalb der Karte.");
@@ -66,8 +69,8 @@ export function pruefeEingabe(grid: Grid, start: Pos, ziel: Pos): void {
   if (grid[ziel.y][ziel.x] === Infinity) throw new RangeError("Das Ziel liegt auf einem Hindernis.");
 }
 
-/** Kosten des billigsten begehbaren Feldes der Karte. */
-function billigstesFeld(grid: Grid): number {
+/** Kosten des billigsten begehbaren Feldes der Karte (Faktor der A*-Schätzung). */
+export function billigstesFeld(grid: Grid): number {
   let min = Infinity;
   for (const zeile of grid) for (const k of zeile) if (k < min) min = k;
   return min;

@@ -49,7 +49,7 @@ export function verbindeKarte(canvas: HTMLCanvasElement, replay: () => Replay, g
   const zeige = (ev: PointerEvent, p: Pos) => {
     const t = tooltipElement();
     t.replaceChildren(
-      ...feldInfo(Z.karte, p, Z.start, Z.ziel, replay()).map((zeile, i) => {
+      ...feldInfo(Z.karte, p, Z.start, Z.ziel, replay(), Z.h).map((zeile, i) => {
         const d = document.createElement("div");
         if (i === 0) d.className = "tt-kopf";
         d.textContent = zeile;

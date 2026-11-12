@@ -8,8 +8,15 @@
   --text: #e9eef6;
   --gedaempft: #a3b1c6;
   --orange: #f5a623;
-  --rund: 8px;
-  --schatten: 0 3px 10px rgba(0, 0, 0, 0.35);
+  /* Klötzchenstil: keine runden Ecken, harte Pixel-Schatten statt weicher. */
+  --rund: 0;
+  --schatten: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  /* Abschrägung wie bei einem Block: Licht oben links, Schatten unten rechts. */
+  --hoch: inset 2px 2px 0 rgba(255, 255, 255, 0.14), inset -2px -2px 0 rgba(0, 0, 0, 0.5);
+  --tief: inset 2px 2px 0 rgba(0, 0, 0, 0.55), inset -2px -2px 0 rgba(255, 255, 255, 0.08);
+  --stein: #2b3446;
+  --stein-hell: #3a465d;
+  --rand: #05080e;
   --akzent: #ffd400;
   --bfs: #ff4d73;
   --dfs: #a56bff;
@@ -875,19 +882,444 @@ tbody th {
   font-weight: 600;
 }
 
-/* ---------- Karten und Knöpfe: dunkle Flächen mit weichem Schatten ---------- */
+/* ---------- Klötzchenstil: Flächen und Knöpfe wie Blöcke (eigener Entwurf, keine fremden Grafiken) ---------- */
 .panel,
 .wiedergabe,
 .karte-box,
 .ergebnis,
-.begruendung {
-  box-shadow: var(--schatten);
+.begruendung,
+.box,
+.karte-einzel,
+.hinweis-box {
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch), var(--schatten);
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 4px, transparent 4px 8px),
+    var(--flaeche);
 }
 
-.knopf.haupt {
-  box-shadow: 0 2px 0 #b98f00;
+.karte-box {
+  border-top: 4px solid var(--farbe);
 }
 
 .begruendung {
-  border: 2px solid var(--akzent);
+  border-color: var(--rand);
+  border-left: 4px solid var(--akzent);
+}
+
+/* Knöpfe: Steinblock mit Abschrägung; gedrückt = eingedrückt; Hover = heller Rahmen. */
+.knopf,
+.tab,
+.welt,
+.werkzeug,
+.umschalter button,
+.auswahl select {
+  border: 2px solid var(--rand);
+  background: linear-gradient(var(--stein-hell), var(--stein));
+  box-shadow: var(--hoch);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+  transition: none;
+}
+
+.knopf:hover:not(:disabled),
+.tab:hover,
+.welt:hover,
+.werkzeug:hover,
+.umschalter button:hover {
+  border-color: #e9eef6;
+  background: linear-gradient(#4a5875, #36425a);
+}
+
+.knopf:active:not(:disabled),
+.tab[aria-selected="true"],
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"],
+.umschalter button[aria-pressed="true"] {
+  box-shadow: var(--tief);
+}
+
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"] {
+  border-color: var(--akzent);
+  background: #1b2232;
+}
+
+.tab[aria-selected="true"] {
+  border-color: var(--farbe);
+  background: #1b2232;
+  box-shadow: var(--tief), inset 0 -4px 0 var(--farbe);
+}
+
+.knopf.haupt,
+.umschalter button[aria-pressed="true"] {
+  background: linear-gradient(#ffe25a, #f0b800);
+  color: #1a1408;
+  text-shadow: none;
+  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.55), inset -2px -2px 0 #9c7400;
+}
+
+.knopf.haupt:hover {
+  background: linear-gradient(#fff07f, #ffc61a);
+  border-color: #fff;
+}
+
+.umschalter {
+  border-radius: 0;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.umschalter button {
+  border-radius: 0;
+}
+
+.kuerzel,
+.zeile-nr,
+.punkt {
+  border-radius: 0;
+}
+
+.kuerzel {
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+}
+
+h2,
+h3 {
+  text-shadow: 2px 2px 0 #000;
+}
+
+/* Regler blockig: eckiger Griff, eingedrückte Bahn. */
+input[type="range"] {
+  appearance: none;
+  height: 10px;
+  background: #0b0f18;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 20px;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  box-shadow: inset -2px -2px 0 #9c7400;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 18px;
+  border-radius: 0;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  cursor: pointer;
+}
+
+.tempo-wert {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  min-width: 6.5rem;
+  color: var(--text);
+}
+
+/* Tooltip wie eine Pixel-Infotafel: dunkel mit violettem Innenrahmen. */
+.tooltip {
+  border-radius: 0;
+  background: rgba(16, 4, 22, 0.96);
+  border: 2px solid #05000a;
+  box-shadow: inset 0 0 0 2px #3b1a7a, 4px 4px 0 rgba(0, 0, 0, 0.5);
+  padding: 0.45rem 0.65rem;
+  max-width: 21rem;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.tt-kopf {
+  color: #ffe25a;
+}
+
+.legende i.entdeckt {
+  border: 2px dashed #fff;
+  outline: 1px solid #000;
+  background: #3f9e2f;
+}
+
+/* ---------- Einzelansicht als Debugger ---------- */
+.hinweis-box {
+  margin: 0 0 0.8rem;
+  padding: 0.55rem 0.75rem;
+  max-width: none;
+}
+
+.hinweis-box.warnung {
+  border-left: 6px solid #ff6b3d;
+  background: #2a1a14;
+}
+
+.hinweis-box.warnung::before {
+  content: "⚠ ";
+  color: #ff8a5c;
+  font-weight: 700;
+}
+
+.hinweis-box.info {
+  border-left: 6px solid #4cd964;
+}
+
+.einzel-links {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.box {
+  padding: 0.6rem 0.7rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.einzel-seite > * {
+  border: 2px solid var(--rand);
+}
+
+.struktur-box {
+  border-top: 4px solid var(--farbe, var(--akzent));
+}
+
+.struktur-regel,
+.entnommen {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+  color: var(--gedaempft);
+}
+
+.entnommen b {
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+/* Datenstruktur als Reihe von Inventar-Slots. */
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.slots.dfs {
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.slot {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.6rem;
+  padding: 0.2rem 0.3rem;
+  background: #0d121c;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.slots.dfs .slot {
+  flex-direction: row;
+  gap: 0.6rem;
+  min-width: 9rem;
+  justify-content: space-between;
+}
+
+.slot small {
+  color: var(--gedaempft);
+}
+
+.slot.naechster,
+.pq tr.naechster td {
+  background: color-mix(in srgb, var(--farbe, var(--akzent)) 30%, #0d121c);
+  border-color: var(--farbe, var(--akzent));
+}
+
+.slot.neu,
+.pq tr.neu td {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+.pq tr.veraltet td {
+  color: var(--gedaempft);
+  text-decoration: line-through;
+}
+
+.rand {
+  align-self: center;
+  font-family: var(--ui);
+  font-size: 0.75rem;
+  color: var(--gedaempft);
+  padding: 0 0.2rem;
+}
+
+.mehr {
+  align-self: center;
+  color: var(--gedaempft);
+  font-size: 0.8rem;
+  padding: 0.2rem;
+}
+
+.pq {
+  font-size: 0.8rem;
+}
+
+.pq td,
+.pq th {
+  padding: 0.2rem 0.4rem;
+}
+
+.struktur-box .tabelle-rahmen {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.merkmal-box {
+  border-left: 6px solid var(--farbe, var(--akzent));
+}
+
+.merkmal-box ul,
+.heuristik ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.merkmal-box li,
+.heuristik li {
+  margin-bottom: 0.3rem;
+}
+
+.heuristik {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 2px dashed var(--linie);
+}
+
+.formel {
+  margin: 0.2rem 0;
+  font-family: var(--mono);
+  font-weight: 600;
+  background: #0d121c;
+  box-shadow: var(--tief);
+  border: 2px solid var(--rand);
+  padding: 0.3rem 0.5rem;
+  color: var(--astar);
+}
+
+.protokoll {
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  background: #0b0f18;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.protokoll button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0.12rem 0.4rem;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+}
+
+.protokoll button:hover {
+  background: #1b2232;
+}
+
+.protokoll .nr {
+  color: var(--gedaempft);
+}
+
+.protokoll .ein button {
+  border-left-color: #6fb8ff;
+}
+
+.protokoll .aus button,
+.protokoll .fertig button {
+  border-left-color: var(--farbe, var(--akzent));
+}
+
+.protokoll .besser button {
+  border-left-color: #4cd964;
+}
+
+.protokoll .veraltet button {
+  border-left-color: #6b7280;
+  color: var(--gedaempft);
+}
+
+.protokoll .zurueck button {
+  border-left-color: #ff6b3d;
+}
+
+.protokoll .ziel button,
+.protokoll .keinWeg button {
+  border-left-color: #ffcf33;
+  font-weight: 600;
+}
+
+.protokoll li.aktuell button {
+  background: #24304a;
+  color: #fff;
+}
+
+.protokoll-box small {
+  font-family: var(--mono);
+  color: var(--gedaempft);
+  font-weight: 400;
+  text-shadow: none;
+}
+
+.besuchsliste li {
+  background: #0d121c;
+  border: 1px solid var(--rand);
+}
+
+.code li.aktiv {
+  box-shadow: inset 4px 0 0 #1a1408;
+}
+
+.struktur-zeile {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--gedaempft);
+}
+
+.gewicht-marke {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  background: #4a2414;
+  color: #ffb08c;
+  border: 1px solid #ff6b3d;
+}
+
+.karte-box canvas,
+.karte-einzel canvas {
+  border: 2px solid var(--rand);
+  box-shadow: 0 0 0 2px #3a465d;
+}
+
+.einzel-seite {
+  align-content: start;
 }

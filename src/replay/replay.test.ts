@@ -19,6 +19,10 @@ function zustand(r: Replay) {
     vorg: Array.from(r.vorg),
     besuchNr: Array.from(r.besuchNr),
     inListe: Array.from(r.inListe),
+    expandiert: Array.from(r.expandiert),
+    inhalt: r.inhalt(),
+    entnommenePrio: [...r.entnommenePrio],
+    zaehler: [r.verbesserungen, r.ueberholt, r.ruecksprunge],
     reihenfolge: [...r.reihenfolge],
     gefunden: r.gefunden,
     position: r.position,
@@ -72,4 +76,67 @@ describe("Replay", () => {
       expect(r.fertig).toBe(true);
     });
   }
+
+  for (const algo of ALGOS) {
+    it(`${algo}: Datenstruktur enthält genau die Felder, die laut inListe warten, und entnimmt, was der Step sagt`, () => {
+      const r = new Replay(SUCHE[algo](GRID, START, ZIEL));
+      while (r.vor()) {
+        const zaehlung = new Map<number, number>();
+        for (const e of r.inhalt()) zaehlung.set(e.v, (zaehlung.get(e.v) ?? 0) + 1);
+        r.inListe.forEach((n, v) => expect(zaehlung.get(v) ?? 0).toBe(n));
+        const s = r.aktuell;
+        if (s?.art === "entnehmen" && s.prio !== undefined) expect(r.entnommenePrio.at(-1)).toBe(s.prio);
+      }
+    });
+  }
+
+  it("BFS: Warteschlange ist FIFO, nichts wird überholt, d wird nie verbessert", () => {
+    const r = new Replay(SUCHE.bfs(GRID, START, ZIEL));
+    r.gehe(r.laenge);
+    expect(r.ueberholt).toBe(0);
+    expect(r.verbesserungen).toBe(0);
+  });
+
+  it("Dijkstra: entnommene Prioritäten steigen nie (Kosten ≥ 0)", () => {
+    const r = new Replay(SUCHE.dijkstra(GRID, START, ZIEL));
+    r.gehe(r.laenge);
+    const p = r.entnommenePrio;
+    for (let i = 1; i < p.length; i++) expect(p[i]).toBeGreaterThanOrEqual(p[i - 1]);
+  });
+
+  it("Dijkstra: auf gewichteter Karte wird ein jüngerer Eintrag vor einem älteren entnommen (also kein FIFO)", () => {
+    const r = new Replay(SUCHE.dijkstra(GRID, START, ZIEL));
+    r.gehe(r.laenge);
+    expect(r.ueberholt).toBeGreaterThan(0);
+  });
+
+  it("Zustände: Start ist nach dem Einfügen „wartet“, am Ende liegt der Weg im Zustand „weg“", () => {
+    const r = new Replay(SUCHE.bfs(GRID, START, ZIEL));
+    const s = START.y * 5 + START.x;
+    expect(r.zustand(s)).toBe("unbekannt");
+    r.gehe(2); // init, d[s] ← 0
+    expect(r.zustand(s)).toBe("entdeckt");
+    r.gehe(3); // Q.hintenAnfügen(s)
+    expect(r.zustand(s)).toBe("wartet");
+    r.gehe(5); // schleife, entnehmen
+    expect(r.zustand(s)).toBe("expandiert");
+    r.gehe(r.laenge);
+    for (const v of r.ergebnis.wegIds) expect(r.zustand(v)).toBe("weg");
+  });
+
+  it("Dijkstra verbessert ein gesetztes d nie: Jede Kante in ein Feld kostet gleich viel (Kosten des Feldes)", () => {
+    // Begründung: Felder werden mit aufsteigendem d expandiert; der erste Fund von v kommt vom kleinsten d[u],
+    // und d[u] + kosten(v) kann von keinem später expandierten u' unterboten werden.
+    let s = 3;
+    const r = () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
+    const K = [0, 1, 2, 4, 7, I];
+    for (let i = 0; i < 100; i++) {
+      const grid = Array.from({ length: 6 }, () => Array.from({ length: 8 }, () => K[Math.floor(r() * K.length)]));
+      grid[0][0] = 1;
+      grid[5][7] = 1;
+      const rp = new Replay(SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 7, y: 5 }));
+      rp.gehe(rp.laenge);
+      expect(rp.verbesserungen).toBe(0);
+    }
+  });
 });

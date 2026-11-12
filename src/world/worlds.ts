@@ -24,7 +24,7 @@ export const WELTEN: readonly Welt[] = [
     algo: "bfs",
     wann: "jeder Schritt gleich viel kostet",
     warum:
-      "Im Ruinenhof gibt es nur Wiese, jeder Schritt kostet 2 Ausdauer. Dann ist der Weg mit den wenigsten Feldern zugleich der günstigste, und BFS findet ihn mit einer einfachen Warteschlange. Dijkstra und A* finden denselben Weg, sparen aber kaum Felder, weil die Mauern die Schätzung von A* in die Irre führen; DFS irrt lange über die Wiese.",
+      "Im Ruinenhof gibt es nur Wiese, jeder Schritt kostet 2 Ausdauer. Dann ist der kürzeste Weg nach Anzahl der Kanten zugleich der günstigste, und BFS findet ihn mit einer einfachen Warteschlange. Dijkstra und A* finden denselben Weg, sparen aber kaum Felder, weil die Mauern die Schätzung von A* in die Irre führen; DFS irrt lange über die Wiese.",
     karte: [
       "................................",
       "........^^...^..................",

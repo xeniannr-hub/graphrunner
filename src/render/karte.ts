@@ -6,7 +6,8 @@ import { ALGO_INFO, fokus } from "../ui/erklaerung";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
 import { sprites, textur } from "./textures";
 
-export type Zahlen = "keine" | "reihenfolge" | "kosten";
+/** Zahlen auf der Karte: Besuchsnummer, d bzw. g, und nur bei A* h und f. */
+export type Zahlen = "keine" | "reihenfolge" | "kosten" | "h" | "f";
 
 export interface KartenBild {
   readonly karte: readonly (readonly TerrainKey[])[];
@@ -25,6 +26,8 @@ export interface KartenBild {
   readonly hoverOk: boolean;
   /** Zeit in ms für kleine Bewegungen der Figur. */
   readonly zeit: number;
+  /** A*-Schätzung für die Zahlen h und f. */
+  readonly h: (id: FeldId) => number;
 }
 
 const hintergrund = new Map<string, HTMLCanvasElement>();
@@ -85,22 +88,36 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(gelaende(bild, ts), 0, 0);
 
-  // Besucht: durchscheinende Farbe des Verfahrens, Muster und Farbe des Geländes bleiben sichtbar.
-  // Entdeckt und wartend: heller Schleier mit weißem Punkt (FA-04).
-  ctx.fillStyle = rgba(farbe, 0.5);
-  for (let v = 0; v < n; v++) if (r.besuchNr[v] > 0) ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
+  // Vier algorithmisch verschiedene Zustände (FA-04), jeweils mit eigener Form, nicht nur Farbe:
+  // expandiert = durchscheinende Farbe des Verfahrens (Gelände bleibt sichtbar),
+  // wartet (in Warteschlange, Stapel oder Heap) = heller Schleier mit weißem Punkt,
+  // entdeckt (d gesetzt, noch nicht eingereiht) = gestrichelter weißer Rahmen,
+  // Weg = weiße Linie mit dunklem Rand (unten).
   const p = Math.max(2, Math.round(ts / 5));
+  ctx.setLineDash([Math.max(2, ts * 0.18), Math.max(2, ts * 0.12)]);
   for (let v = 0; v < n; v++) {
-    if (!r.wartet(v)) continue;
+    const z = r.zustand(v);
+    if (z === "unbekannt") continue;
     const x = (v % b) * ts;
     const y = Math.floor(v / b) * ts;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
-    ctx.fillRect(x, y, ts, ts);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-    ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);
+    if (z === "expandiert" || z === "weg") {
+      ctx.fillStyle = rgba(farbe, 0.5);
+      ctx.fillRect(x, y, ts, ts);
+    } else if (z === "wartet") {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
+      ctx.fillRect(x, y, ts, ts);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);
+    } else {
+      const l = Math.max(1.5, ts * 0.1);
+      ctx.lineWidth = l;
+      ctx.strokeStyle = "#fff";
+      ctx.strokeRect(x + l, y + l, ts - 2 * l, ts - 2 * l);
+    }
   }
+  ctx.setLineDash([]);
 
   // Entdeckungskanten: von jedem Feld zu seinem Vorgänger (FA-05).
   ctx.strokeStyle = rgba(farbe, 0.95);
@@ -150,14 +167,19 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
     ctx.setLineDash([]);
   }
 
-  // Zahlen auf der Karte: Besuchsnummer (FA-06) oder bisherige Kosten d.
+  // Zahlen auf der Karte: Besuchsnummer (FA-06), bisherige Kosten d bzw. g, bei A* auch h und f.
   if (bild.zahlen !== "keine" && ts >= 14) {
     ctx.font = `600 ${Math.round(ts * 0.42)}px "JetBrains Mono", monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (let v = 0; v < n; v++) {
-      const wert = bild.zahlen === "reihenfolge" ? r.besuchNr[v] : r.d[v];
-      if (bild.zahlen === "reihenfolge" ? wert === 0 : wert === Infinity) continue;
+      let wert: number;
+      if (bild.zahlen === "reihenfolge") wert = r.besuchNr[v] || Infinity;
+      else if (bild.zahlen === "kosten") wert = r.d[v];
+      // h ist für jedes begehbare Feld bekannt, auch ohne Suche: So sieht man die Schätzung selbst.
+      else if (bild.zahlen === "h") wert = TERRAIN_NACH_KEY[bild.karte[Math.floor(v / b)][v % b]].kosten === Infinity ? Infinity : bild.h(v);
+      else wert = r.d[v] + bild.h(v);
+      if (wert === Infinity) continue;
       const [x, y] = mitte(v);
       ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
       ctx.fillText(String(wert), x + 1, y + 1);

@@ -18,7 +18,10 @@ const zahl = (x: number): string => x.toLocaleString("de-DE");
 export class Vergleich {
   readonly element: HTMLElement;
   readonly wiedergabe: Wiedergabe;
-  private readonly karten = new Map<Algo, { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement }>();
+  private readonly karten = new Map<
+    Algo,
+    { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement; struktur: HTMLElement; gewicht: HTMLElement }
+  >();
   private readonly wahl: HTMLParagraphElement;
   private readonly fazit: HTMLParagraphElement;
   private readonly tabelle: HTMLTableSectionElement;
@@ -30,14 +33,15 @@ export class Vergleich {
 
     const legende = document.createElement("div");
     legende.innerHTML = `
-      <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>besucht</span>
-      <span><i class="wartet"></i>entdeckt, wartet</span>
-      <span><i class="kante"></i>Entdeckungskante</span>
-      <span><i class="weg"></i>gefundener Weg</span>`;
+      <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>expandiert</span>
+      <span><i class="wartet"></i>wartet in Warteschlange, Stapel oder Prioritätswarteschlange</span>
+      <span><i class="weg"></i>finaler Weg</span>
+      <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>`;
     this.wiedergabe = new Wiedergabe(
       { position: () => Z.k, laenge: vergleichMax, gehe: geheVergleich },
       {
         zumEnde: false,
+        einheit: "Felder",
         legende,
         geaendert,
         loslaufen: {
@@ -59,8 +63,10 @@ export class Vergleich {
       karte.style.setProperty("--farbe", info.farbe);
       karte.innerHTML = `
         <header>
-          <div class="name"><span class="punkt" aria-hidden="true"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span></div>
+          <div class="name"><span class="punkt" aria-hidden="true"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
+            <span class="gewicht-marke" title="Bei dieser Karte kosten Felder verschieden viel; ${info.name} beachtet das nicht.">ignoriert Gewichte</span></div>
           <div class="zaehler" aria-live="off"></div>
+          <div class="struktur-zeile"></div>
           <div class="status"></div>
         </header>`;
       const canvas = document.createElement("canvas");
@@ -73,6 +79,8 @@ export class Vergleich {
         canvas,
         zaehler: karte.querySelector(".zaehler") as HTMLElement,
         status: karte.querySelector(".status") as HTMLElement,
+        struktur: karte.querySelector(".struktur-zeile") as HTMLElement,
+        gewicht: karte.querySelector(".gewicht-marke") as HTMLElement,
       });
     }
 
@@ -84,7 +92,7 @@ export class Vergleich {
       <p class="fazit" aria-live="polite"></p>
       <div class="tabelle-rahmen">
         <table>
-          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes">Rechenschritte</th><th scope="col">Weglänge (Felder)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
+          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>`;
@@ -124,6 +132,7 @@ export class Vergleich {
         hover,
         hoverOk: hoverOk(hover),
         zeit,
+        h: Z.h,
       });
     }
   }
@@ -134,12 +143,25 @@ export class Vergleich {
       const k = this.karten.get(a);
       if (!k) continue;
       const e = Z.ergebnisse[a];
+      const r = Z.vergleich[a];
       k.zaehler.innerHTML = `<b>${zahl(Math.min(Z.k, e.besucht))}</b> besucht`;
+      k.gewicht.hidden = ALGO_INFO[a].gewichte || !Z.gewichtet;
+      // Inhalt der Datenstruktur kurz: Größe und das Feld, das als Nächstes drankommt.
+      const inhalt = r.inhalt().filter((x) => !r.veraltet(x));
+      const b = e.breite;
+      const fertigA = r.fertig;
+      const naechster = inhalt[0] && !fertigA ? ` · als Nächstes (${inhalt[0].v % b}|${Math.floor(inhalt[0].v / b)})` : fertigA && inhalt.length ? " übrig (Suche beendet)" : "";
+      const wert = inhalt[0] && !fertigA && a === "dijkstra" ? `, d = ${zahl(inhalt[0].prio)}` : inhalt[0] && !fertigA && a === "astar" ? `, f = ${zahl(inhalt[0].prio)}` : "";
+      k.struktur.textContent = `${ALGO_INFO[a].liste}: ${inhalt.length}${naechster}${wert}`;
       let status: string;
       if (Z.k === 0) status = "bereit";
       else if (!fertig(a)) status = "sucht …";
       else if (!e.gefunden) status = "kein Weg gefunden";
-      else if (Z.laufzeit === null) status = `Ziel gefunden: ${zahl(e.felder)} Felder, ${zahl(e.kosten)} Ausdauer`;
+      else if (Z.laufzeit === null)
+        status =
+          a === "bfs"
+            ? `Ziel gefunden: kürzester Weg nach Kantenzahl, ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`
+            : `Ziel gefunden: ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`;
       else if (angekommen(Z.ergebnisse, a, Z.laufzeit)) status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
       else status = `läuft … ${zahl(Math.floor(Z.laufzeit))} von ${zahl(e.kosten)} Ausdauer`;
       k.status.innerHTML = status;

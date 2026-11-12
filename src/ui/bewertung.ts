@@ -124,7 +124,7 @@ export function fazitText(welt: Welt, E: Ergebnisse): string {
   const { bfs, dfs, dijkstra: dij, astar } = E;
   if (!bfs.gefunden) return "Zwischen Start und Ziel gibt es keinen Weg. Jedes Verfahren hat alle erreichbaren Felder abgesucht, bevor es aufgegeben hat.";
   const s: string[] = [];
-  s.push(`BFS findet den Weg mit den wenigsten Feldern (${zahl(bfs.felder)}).`);
+  s.push(`BFS ignoriert die Kantengewichte und findet den kürzesten Weg nach Anzahl der Kanten (${zahl(bfs.felder)}).`);
   s.push(
     bfs.kosten === dij.kosten
       ? `Er ist hier zugleich der günstigste Weg mit ${zahl(dij.kosten)} Ausdauer.`
@@ -136,7 +136,7 @@ export function fazitText(welt: Welt, E: Ergebnisse): string {
     s.push(`A* besucht mit ${zahl(astar.besucht)} fast so viele Felder wie Dijkstra (${zahl(dij.besucht)}); die Schätzung hilft hier kaum.`);
   else if (astar.besucht < dij.besucht) s.push(`A* besucht dafür nur ${zahl(astar.besucht)} statt ${zahl(dij.besucht)} Felder, weil die Schätzung zum Ziel lenkt.`);
   else s.push(`A* besucht ${zahl(astar.besucht)} Felder, Dijkstra ${zahl(dij.besucht)}.`);
-  s.push(`DFS findet irgendeinen Weg: ${zahl(dfs.felder)} Felder und ${zahl(dfs.kosten)} Ausdauer, nach ${zahl(dfs.besucht)} besuchten Feldern.`);
+  s.push(`DFS findet irgendeinen Weg: ${zahl(dfs.felder)} Kanten und ${zahl(dfs.kosten)} Ausdauer, nach ${zahl(dfs.besucht)} besuchten Feldern.`);
 
   // „Am wenigsten gesucht“ nur für Verfahren mit optimalem Weg; wer schlechter läuft, bekommt den Preis dazugesagt.
   const m = massVon(welt);
@@ -145,7 +145,7 @@ export function fazitText(welt: Welt, E: Ergebnisse): string {
   const wenigste = Math.min(...ALGOS.map((a) => E[a].besucht));
   const sparsam = ALGOS.filter((a) => E[a].besucht === wenigste);
   for (const a of sparsam.filter((x) => !opt.includes(x))) {
-    const preis = m === "felder" ? `läuft aber ${zahl(E[a].felder)} statt ${zahl(optWert)} Felder` : `zahlt aber ${zahl(E[a].kosten)} statt ${zahl(optWert)} Ausdauer`;
+    const preis = m === "felder" ? `läuft aber ${zahl(E[a].felder)} statt ${zahl(optWert)} Kanten` : `zahlt aber ${zahl(E[a].kosten)} statt ${zahl(optWert)} Ausdauer`;
     s.push(`${name(a)} hat zwar nur ${zahl(E[a].besucht)} Felder angesehen, ${preis}.`);
   }
   const gut = sparsam.filter((a) => opt.includes(a));

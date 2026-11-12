@@ -52,3 +52,24 @@ describe("Kostenregel: Die Kante u → v kostet so viel wie das Feld v", () => {
     });
   }
 });
+
+describe("Nullgewichtige Kanten", () => {
+  it("Dijkstra nimmt den Umweg über Felder mit Kosten 0", () => {
+    const grid = [
+      [1, 5, 1],
+      [0, 0, 0],
+    ];
+    const r = SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
+    // Quer: 5 + 1 = 6. Unten herum: 0 + 0 + 0 + 1 = 1.
+    expect(r.kosten).toBe(1); // TODO: von Hand nachrechnen
+    expect(r.felder).toBe(4); // TODO: von Hand nachrechnen
+  });
+  it("A* bleibt genau, wenn das billigste Feld 0 kostet (h = 0)", () => {
+    const grid = [
+      [1, 5, 1],
+      [0, 0, 0],
+    ];
+    // Wie oben: unten herum 0 + 0 + 0 + 1 = 1.
+    expect(SUCHE.astar(grid, { x: 0, y: 0 }, { x: 2, y: 0 }).kosten).toBe(1); // TODO: von Hand nachrechnen
+  });
+});

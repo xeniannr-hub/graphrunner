@@ -10,7 +10,8 @@ function zufall(seed: number): () => number {
   return () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
 }
 
-const KOSTEN = [1, 1, 2, 2, 2, 4, 7, Infinity, Infinity];
+// Mit Kosten 0: Nullgewichtige Kanten müssen Dijkstra und A* korrekt behandeln.
+const KOSTEN = [0, 1, 1, 2, 2, 2, 4, 7, Infinity, Infinity];
 
 function zufallsKarte(r: () => number): { grid: Grid; start: Pos; ziel: Pos } {
   const b = 2 + Math.floor(r() * 14);

@@ -69,7 +69,7 @@ app.append(kopf, rumpf);
 
 const aktiveWiedergabe = () => (Z.ansicht === "vergleich" ? vergleich.wiedergabe : einzel.wiedergabe);
 
-// Tastatur (QA-05): ← / → ein Schritt, Leertaste Abspielen. Eingabefelder und Knöpfe behalten ihre eigene Bedienung.
+// Tastatur (QA-05): ← / → ein Schritt, Leertaste Abspielen, Pos1 / Ende springen. Eingabefelder und Knöpfe behalten ihre eigene Bedienung.
 document.addEventListener("keydown", (ev) => {
   const ziel = ev.target as HTMLElement;
   const tag = ziel.tagName;
@@ -77,6 +77,9 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
     ev.preventDefault();
     aktiveWiedergabe().taste(ev.key === "ArrowRight" ? 1 : -1);
+  } else if (ev.key === "Home" || ev.key === "End") {
+    ev.preventDefault();
+    aktiveWiedergabe().springe(ev.key === "End");
   } else if (ev.key === " " && tag !== "BUTTON") {
     ev.preventDefault();
     aktiveWiedergabe().umschalten();

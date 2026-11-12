@@ -23,8 +23,30 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 ## Bedienung
 
 - **Alle vergleichen:** vier Karten nebeneinander. Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Darunter stehen die beste Wahl der Welt mit Begründung, ein Fazit und eine Tabelle mit besuchten Feldern, Rechenschritten, Weglänge und Ausdauer. Einen ★ für wenig Suchaufwand bekommt nur, wer den optimalen Weg gefunden hat. Am Ende zeigt „Loslaufen“, wer den günstigsten Weg gefunden hat.
-- **Einzelansicht:** ein Verfahren Zeile für Zeile, mit Pseudocode, Erklärsatz und Besuchsreihenfolge.
-- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten.
+- **Einzelansicht – ein Debugger für Algorithmen:** ein Verfahren Zeile für Zeile. Abspielen/Pause, Schritt vor und zurück, zum Anfang und zum Ende, Tempo einstellbar. Dazu:
+  - **Erklärsatz** zur aktuellen Codezeile und **Pseudocode** mit hervorgehobener Zeile,
+  - **Datenstruktur** live: Warteschlange (FIFO), Stapel (LIFO) oder Prioritätswarteschlange (bei A* mit g, h und f einzeln, veraltete Einträge durchgestrichen),
+  - **Ereignisprotokoll** aller relevanten Aktionen (einfügen, entnehmen, verbessern, abschließen, zurückspringen); ein Klick springt zu diesem Schritt,
+  - **„Woran erkenne ich …?“** mit Belegen aus dem laufenden Algorithmus,
+  - bei A* die **offengelegte Heuristik**, bei BFS und DFS auf gewichteten Karten eine **Warnung**, dass Kantengewichte ignoriert werden.
+- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten, `Pos1` / `Ende` zum Anfang bzw. Ende.
+
+### Zustände auf der Karte
+
+| Zustand | Bedeutung | Darstellung |
+| --- | --- | --- |
+| entdeckt | d ist gesetzt, das Feld ist aber noch nicht eingereiht (eine Codezeile lang) | gestrichelter weißer Rahmen |
+| wartet | liegt in Warteschlange, Stapel oder Prioritätswarteschlange | heller Schleier mit weißem Punkt |
+| expandiert | entnommen und Nachbarn untersucht (Dijkstra/A*: abgeschlossen) | Farbe des Verfahrens, Gelände bleibt sichtbar |
+| finaler Weg | Teil des gefundenen Weges | weiße Linie |
+
+### Woran erkenne ich, dass Dijkstra läuft und nicht eine Breitensuche?
+
+1. **Entnahmereihenfolge:** BFS nimmt immer den ältesten Eintrag (FIFO). Dijkstra nimmt den mit dem kleinsten d. Die Tabelle der Prioritätswarteschlange zeigt d und die Einfügenummer, und das Panel zählt, wie oft ein jüngerer Eintrag einen älteren überholt hat, mit konkretem Beispiel. Bei BFS passiert das nie.
+2. **Monotone Kosten:** Die entnommenen d-Werte steigen nie. d zählt Kosten, nicht Kanten. Die Front breitet sich in teurem Gelände (Sumpf, Wald) langsamer aus als auf dem Weg, bei BFS dagegen in gleichmäßigen Schichten.
+3. **Gegenprobe:** Auf Karten, auf denen jedes Feld gleich viel kostet (Ruinenhof, Stollen), expandiert Dijkstra in derselben Reihenfolge wie BFS. Der Unterschied ist also genau dort sichtbar, wo er fachlich entsteht: im Flussmoor rund 120, in der Handelsstraße rund 370 Überholungen.
+
+Weil eine Kante so viel kostet wie das Feld, das man betritt, haben alle Kanten in ein Feld dasselbe Gewicht. Dijkstra findet ein Feld deshalb gleich beim ersten Mal zum günstigsten Preis und muss d nie nachträglich verbessern. A* kann das, weil es nach f expandiert; das Protokoll zeigt solche Verbesserungen mit altem und neuem g und Vorgänger.
 - **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu. „Karte leeren“ macht alles wieder zu Wiese.
 - **Tooltip:** Über jedem Feld stehen Koordinate, Gelände, Ausdauer, die ausgehenden Kanten mit Gewicht (z. B. `Kanten: ↑ 2 · → 4 · ↓ – · ← 2`) und die Besuchsnummer. So sieht man die Karte als Graph.
 
@@ -34,7 +56,8 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 - Jedes begehbare Feld ist ein Knoten. Nachbarn sind nur die vier direkten Nachbarfelder, keine Diagonalen.
 - **Kostenregel:** Die Kante u → v kostet so viel wie das Feld v. Das Startfeld zählt nicht. Hin- und Rückweg können deshalb verschieden teuer sein: Bei `[[7, 1, 1]]` kostet links → rechts 2, rechts → links 8.
 - **Nachbarreihenfolge:** fest **oben, rechts, unten, links** (`RICHTUNGEN` in `src/algorithms/raster.ts`). Sie bestimmt den Verlauf der DFS und entscheidet bei den anderen Verfahren über Gleichstände. Im Heap gewinnt bei gleicher Priorität der ältere Eintrag, deshalb ist jeder Lauf reproduzierbar.
-- **Heuristik von A\*:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld der Karte`. Sie ist zulässig, weil jeder Weg mindestens so viele Schritte braucht und jeder Schritt mindestens das billigste Feld kostet. Sie ist konsistent, weil ein Schritt den Abstand um genau 1 ändert. Der Faktor „billigstes Feld“ hält sie zulässig, wenn es keinen Weg (Kosten 1) gibt.
+- **Heuristik von A\*:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld der Karte`. Sie ist zulässig, weil jeder Weg mindestens so viele Schritte braucht und jeder Schritt mindestens das billigste Feld kostet. Sie ist konsistent, weil ein Schritt den Abstand um genau 1 ändert. Der Faktor „billigstes Feld“ hält sie zulässig, wenn es keinen Weg (Kosten 1) gibt. Beides prüfen Tests auf Zufallskarten mit Kosten 0 bis 7 (`astar.test.ts`).
+- **Kantengewichte ≥ 0:** Negative Kosten werden mit einer Fehlermeldung abgelehnt, weil Dijkstra und A* sie nicht erlauben. Kosten 0 sind erlaubt und werden korrekt behandelt (Vergleich mit Bellman-Ford auf 300 Zufallskarten).
 
 | Gelände | Ausdauer | Zeichen in Karten |
 | --- | --- | --- |
@@ -48,7 +71,7 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 
 | Verfahren | Datenstruktur | Findet | Besuch zählt beim |
 | --- | --- | --- | --- |
-| BFS | Warteschlange | Weg mit den wenigsten Feldern | Entnehmen |
+| BFS | Warteschlange (FIFO) | kürzesten Weg nach Anzahl der Kanten (Gewichte ignoriert) | Entnehmen |
 | DFS | Stapel (iterativ) | irgendeinen Weg | Auflegen |
 | Dijkstra | Min-Heap mit lazy deletion | günstigsten Weg | Abschließen |
 | A* | wie Dijkstra mit f = g + h | günstigsten Weg | Abschließen |

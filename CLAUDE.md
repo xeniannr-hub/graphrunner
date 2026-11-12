@@ -137,13 +137,23 @@ SCHRITTE.bfs(grid, start, ziel)   // Generator, liefert Step für Step
 SUCHE.bfs(grid, start, ziel)      // = aufzeichnen("bfs", SCHRITTE.bfs(...)) → SearchResult
 ```
 
-`aufzeichnen()` sammelt alle Steps in `SearchResult.schritte`. Die Oberfläche arbeitet mit dieser Aufzeichnung, weil sie auch **zurückspulen** können muss, was ein Generator allein nicht kann. `Replay` spielt die Aufzeichnung vor und zurück.
+`aufzeichnen()` sammelt alle Steps in `SearchResult.schritte`. Die Oberfläche arbeitet mit dieser Aufzeichnung, weil sie auch **zurückspulen** können muss, was ein Generator allein nicht kann. `Replay` spielt die Aufzeichnung vor und zurück. Es führt dabei auch den **Inhalt der Datenstruktur** (Warteschlange, Stapel, Heap-Einträge mit g und Priorität; `inhalt()`, `veraltet()`), den **Zustand jedes Feldes** (`zustand()`) und Kennzahlen für die Erkennungsmerkmale (`ueberholt`, `verbesserungen`, `ruecksprunge`, `entnommenePrio`).
+
+### Zustände eines Feldes (FA-04)
+
+| Zustand | Bedeutung | Darstellung |
+| --- | --- | --- |
+| unbekannt | d = ∞ | nur Gelände |
+| entdeckt | d gesetzt, noch nicht in der Datenstruktur (eine Codezeile lang, nur in der Einzelansicht) | gestrichelter weißer Rahmen |
+| wartet | liegt in Warteschlange, Stapel oder Heap | heller Schleier mit weißem Punkt |
+| expandiert | BFS: entnommen; DFS: vom Stapel genommen (alle Nachbarn geprüft); Dijkstra/A*: abgeschlossen | durchscheinende Farbe des Verfahrens |
+| Weg | Teil des gefundenen Weges | weiße Linie mit dunklem Rand |
 
 ### Die vier Verfahren
 
 | Verfahren | Datenstruktur | Findet | Besuch zählt beim |
 | --- | --- | --- | --- |
-| BFS | Warteschlange (FIFO) | Weg mit den wenigsten Feldern | Entnehmen |
+| BFS | Warteschlange (FIFO) | kürzesten Weg nach Anzahl der Kanten (Gewichte ignoriert) | Entnehmen |
 | DFS | Stapel, iterativ: oben ansehen → nächster Nachbar → vorstoßen oder zurückspringen | irgendeinen Weg | Auflegen |
 | Dijkstra | binärer Min-Heap, *lazy deletion* | günstigsten Weg | Abschließen |
 | A* | wie Dijkstra mit f = g + h | günstigsten Weg | Abschließen |
@@ -155,7 +165,9 @@ SUCHE.bfs(grid, start, ziel)      // = aufzeichnen("bfs", SCHRITTE.bfs(...)) →
   - **Konsistent:** Ein Schritt ändert den Abstand um genau 1 und kostet mindestens das Minimum.
   - Warum nicht Euklid: Auch Euklid wäre zulässig, liegt bei 4er-Nachbarschaft aber immer unter Manhattan und lenkt A* deshalb schwächer.
   - Warum mal Minimum: Reiner Manhattan-Abstand wäre nur zulässig, solange das billigste Feld 1 kostet. In der Eigenen Welt ohne Weg kostet das billigste Feld 2.
-- Ungültige Eingaben (leere Karte, Kosten ≤ 0, Start außerhalb oder auf Hindernis) werfen `RangeError` mit deutscher Meldung.
+- **Kantengewichte ≥ 0.** Negative Kosten werfen `RangeError` („Negative Kantengewichte sind nicht erlaubt …“), Kosten 0 sind erlaubt und werden korrekt behandelt (Tests in `dijkstra.test.ts`, Zufallskarten mit 0 in `vergleich.test.ts`). Weitere ungültige Eingaben (leere Karte, Start außerhalb oder auf Hindernis) werfen ebenfalls `RangeError` mit deutscher Meldung.
+- **Folge der Kostenregel:** Alle Kanten in ein Feld kosten gleich viel. Weil Dijkstra mit aufsteigendem d expandiert, ist der erste Fund eines Feldes schon der günstigste; Dijkstra verbessert ein gesetztes d hier nie (Test in `replay.test.ts`). A* kann es, weil es nach f expandiert. Dijkstra unterscheidet sich von BFS deshalb an der **Entnahmereihenfolge** (Priorität d statt FIFO), sichtbar nur auf Karten mit verschiedenen Kosten.
+- Heuristik-Tests (`astar.test.ts`): zulässig (h ≤ tatsächliche Restkosten) und konsistent auf Zufallskarten mit Kosten 0 bis 7.
 - `pseudocode.ts` enthält den Pseudocode je Verfahren. `Step.zeile` zeigt auf die passende Zeile, ein Test prüft das.
 
 ---
@@ -180,22 +192,27 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
 
 - **Kopf:** Banner mit Pixel-Landschaft, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
 - **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
-- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo · Fortschrittsregler „Schritt k von n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen.
-- **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Zähler „besucht“, Status. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
+- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Schritt k von n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht).
+- **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Marke „ignoriert Gewichte“ (BFS und DFS auf gewichteter Karte), Zähler „besucht“, Datenstruktur (Größe und nächster Eintrag), Status. BFS-Ergebnis heißt „kürzester Weg nach Kantenzahl“. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
   - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten ohne Schätzung (Dijkstra), der Satz nennt zusätzlich, um wie viel Prozent A* weniger Felder besucht; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). In der Eigenen Welt gibt es keine solche Zeile.
   - Fazit-Absatz in ganzen Sätzen. „Am wenigsten gesucht hat *X*“ steht nur, wenn *X* einen optimalen Weg gefunden hat; sonst z. B. „DFS hat zwar nur 70 Felder angesehen, zahlt aber 176 statt 64 Ausdauer.“
-  - Tabelle: besuchte Felder, Rechenschritte (ausgeführte Pseudocode-Zeilen, keine Millisekunden), Weglänge, Ausdauer des Weges, Platz beim Loslaufen.
+  - Tabelle: besuchte Felder, Rechenschritte (ausgeführte Pseudocode-Zeilen, keine Millisekunden), Weglänge in Kanten, Ausdauer des Weges, Platz beim Loslaufen.
   - ★ bei Weglänge und Ausdauer: kleinster Wert unter den Verfahren mit Weg. ★ bei besuchten Feldern und Rechenschritten: kleinster Wert nur unter den Verfahren mit optimalem Weg (Ruinenhof: minimale Feldzahl, sonst minimale Ausdauer). Ohne Weg steht kein ★ in der Tabelle.
-- **Einzelansicht:** Tabs für die vier Verfahren, Auswahl „Zahlen auf der Karte“. Ein Schritt bedeutet: eine Codezeile. Links die Karte, rechts daneben:
-  - Steckbrief, bei allen vier gleich: Verfahren · Wählt als Nächstes · Findet
-  - aktueller Erklärsatz mit „Zeile n“
+- **Einzelansicht = Debugger für Algorithmen:** Tabs für die vier Verfahren, Auswahl „Zahlen auf der Karte“ (Besuchsnummer, d bzw. g; bei A* zusätzlich h und f). Ein Schritt bedeutet: eine Codezeile. Hinweis über der Karte: bei BFS/DFS auf gewichteter Karte eine Warnung, dass Kantengewichte ignoriert werden (mit Kostenvergleich zu Dijkstra), sonst ein Info-Hinweis. Links die Karte, darunter:
+  - **Datenstruktur** (FA-12): Warteschlange (vorne → hinten) bzw. Stapel (oben → unten) als Slots mit d; Prioritätswarteschlange als Tabelle in Entnahmereihenfolge, Dijkstra mit d und Einfügenummer, A* mit g, h und f einzeln; nächster Eintrag, gerade eingefügter und veraltete Einträge markiert; „Gerade entnommen“.
+  - **„Woran erkenne ich …?“**: beobachtbare Merkmale mit Zahlen aus dem laufenden Replay, bei Dijkstra die Antwort auf „Woran erkenne ich, dass hier Dijkstra und nicht eine Breitensuche läuft?“ (Überholungen mit konkretem Beispiel, monoton steigende d).
+
+  Rechts daneben:
+  - Steckbrief, bei allen vier gleich: Verfahren · Prinzip · Wählt als Nächstes · Findet · Ergebnis; bei A* zusätzlich die offengelegte Heuristik mit Formel, Begründung (Manhattan, Faktor billigstes Feld, zulässig, konsistent) und Prüfung am Start
+  - aktueller Erklärsatz mit „Zeile n“ (bei A* mit f = g + h ausgerechnet, bei Verbesserungen alter und neuer Wert)
   - Pseudocode mit hervorgehobener Zeile
+  - **Ereignisprotokoll**: alle relevanten Aktionen (einfügen, entnehmen, verbessern mit altem/neuem d und Vorgänger, abschließen, veraltete Einträge, Rücksprünge, Ziel); Klick springt zu diesem Schritt
   - Besuchsreihenfolge
 
   Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
-- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Besuch-Nr. bzw. Status. So wird die Karte als Graph aus Knoten und Kanten sichtbar.
+- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Zustand mit Besuch-Nr., dazu d (BFS/DFS: Kanten ab Start) bzw. bei A* g, h und f einzeln, und der Vorgänger. So wird die Karte als Graph aus Knoten und Kanten sichtbar.
 - **Bauen:** Start, Ziel und die sieben Geländearten; klicken oder ziehen, auf jeder Karte. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
-- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
+- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Oberfläche im Blockstil (an Minecraft angelehnt, aber eigener Entwurf): keine runden Ecken, Flächen und Knöpfe mit Pixel-Abschrägung (hell oben links, dunkel unten rechts), gedrückte Knöpfe eingedrückt, Datenstruktur als Inventar-Slots, harte Pixel-Schatten. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
 
 ---
 
@@ -210,13 +227,18 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-01 | Ablauf der BFS Schritt für Schritt animiert darstellen | Must | `algorithms/bfs.ts`, `ui/einzel.ts` |
 | FA-02 | Ablauf der DFS Schritt für Schritt animiert darstellen | Must | `algorithms/dfs.ts`, `ui/einzel.ts` |
 | FA-03 | Eigene Graphen erstellen: als Karte bauen, also Gelände malen sowie Start und Ziel setzen (die Karte ist ein gewichteter Graph, Abschnitt 5) | Must | Eigene Welt, `ui/seitenleiste.ts`, `ui/karten-interaktion.ts` |
-| FA-04 | Besuchte Felder kennzeichnen und von entdeckten, wartenden unterscheiden | Must | `render/karte.ts`, Legende |
+| FA-04 | Zustände unterscheiden: entdeckt, wartet in der Datenstruktur, expandiert, Teil des finalen Weges | Must | `replay/` (`zustand`), `render/karte.ts`, Legende |
 | FA-05 | Entdeckungskanten (Vorgänger) und gefundenen Weg hervorheben | Must | `render/karte.ts` |
 | FA-06 | Suchreihenfolge anzeigen: Besuchsnummer auf der Karte und als Liste | Must | Einzelansicht, Tooltip |
 | FA-07 | Dijkstra auf der gewichteten Karte darstellen | Should | `algorithms/dijkstra.ts` |
 | FA-08 | A* mit zulässiger Heuristik darstellen | Should | `algorithms/astar.ts`, Abschnitt 6 |
-| FA-09 | Vor- und zurückschalten (Einzelansicht je Codezeile, Vergleich je besuchtem Feld), Abspielen mit Tempo | Should | `replay/`, `ui/wiedergabe.ts` |
+| FA-09 | Vor- und zurückschalten (Einzelansicht je Codezeile, Vergleich je besuchtem Feld), zum Anfang und Ende springen, Abspielen mit einstellbarem Tempo | Should | `replay/`, `ui/wiedergabe.ts` |
 | FA-11 | Pseudocode mit aktueller Zeile und Erklärsatz | Should | `algorithms/pseudocode.ts`, `ui/erklaerung.ts` |
+| FA-12 | Datenstruktur anzeigen: Warteschlange, Stapel bzw. Prioritätswarteschlange (bei A* mit g, h, f) | Should | `replay/` (`inhalt`), `ui/einzel.ts` |
+| FA-25 | Ereignisprotokoll mit allen relevanten Aktionen, Klick springt zum Schritt | Should | `ui/erklaerung.ts` (`protokoll`), `ui/einzel.ts` |
+| FA-26 | Erkennungsmerkmale je Verfahren mit Belegen aus dem Lauf („Woran erkenne ich Dijkstra statt BFS?“) | Should | `ui/erklaerung.ts` (`merkmal`) |
+| FA-27 | BFS/DFS: Hinweis, dass Kantengewichte ignoriert werden; BFS-Ergebnis als kürzester Weg nach Kantenzahl | Should | `ui/einzel.ts`, `ui/vergleich.ts`, `ui/bewertung.ts` |
+| FA-28 | A*: Heuristik offenlegen, g, h und f einzeln darstellen | Should | `ui/einzel.ts`, `ui/erklaerung.ts`, Zahlen auf der Karte |
 | FA-13 | Alle vier Verfahren gleichzeitig auf derselben Karte, je Schritt ein besuchtes Feld pro Verfahren | Should | `ui/vergleich.ts` |
 | FA-14 | Statistik je Verfahren gegenüberstellen: besuchte Felder (Suchaufwand), Rechenschritte, Weglänge, Wegkosten; Fazit in Sätzen, beste Wahl je Welt | Should | Ergebnis-Tabelle, `ui/bewertung.ts` |
 | FA-16 | Karte mit Geländekosten als gewichteter Graph; Start, Ziel und Gelände veränderbar | Must | `world/`, `algorithms/raster.ts` |
@@ -233,7 +255,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | QA-02 | Gleiche Eingabe ergibt stets denselben Ablauf | Must | Replay-Test: hin und zurück ergibt identischen Zustand |
 | QA-03 | Neuberechnung aller vier Verfahren ohne spürbare Wartezeit | Should | < 100 ms je Welt (`leistung.test.ts`) |
 | QA-04 | Ohne Einweisung bedienbar | Should | kein Tutorial nötig; SUS ≥ 71,4 in der Nutzerstudie |
-| QA-05 | Farbe immer mit Legende oder Text ergänzt; Steuerung per Tastatur | Should | Legende in jeder Ansicht; Pfeiltasten, Leertaste |
+| QA-05 | Farbe immer mit Legende oder Text ergänzt; Steuerung per Tastatur | Should | Legende in jeder Ansicht; jeder Zustand hat eine eigene Form; Pfeiltasten, Leertaste, Pos1, Ende |
 | QA-06 | Läuft ohne Installation im Browser, ohne Server-Backend | Must | Live-Version auf GitHub Pages |
 | QA-07 | Nutzbar ab 400 px Breite ohne horizontales Scrollen | Should | Browser-Test bei 400 und 1440 px |
 | QA-08 | Algorithmen von UI getrennt und automatisch testbar | Should | Importregeln (Abschnitt 4); `npm test` |
@@ -252,7 +274,6 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | ID | Was | Grund |
 | --- | --- | --- |
 | FA-10 | JSON-Export/-Import, Speichern und Laden | nach Prototyp-Feedback gestrichen |
-| FA-12 | eigene Ansicht der Datenstruktur (Stapel/Warteschlange) | wartende Felder sieht man auf der Karte |
 | FA-15 | freie Graphen (gerichtet/ungerichtet), Graph-Welt, Graph-Labor | doppelt zur Karte, passt nicht zur Gamification; Ausblick im Bericht |
 | FA-17 | Suche ohne Ziel | jede Welt hat ein Ziel |
 | FA-18 | DFS-Kantentypen | gehörte zum Graph-Modus |
@@ -260,7 +281,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-20 | Mitraten | gestrichen |
 | QA-09 | helles Farbschema | nur dunkel |
 | AB-01 | diagonale Schritte | eigene Kostenregeln nötig |
-| AB-02 | negative Kosten | Dijkstra und A* setzen nichtnegative Kosten voraus |
+| AB-02 | negative Kosten (werden mit `RangeError` abgelehnt; Kosten 0 sind erlaubt) | Dijkstra und A* setzen nichtnegative Kosten voraus |
 | AB-03 | Benutzerkonten, Server | nicht nötig |
 | AB-04 | Rechenzeit in Millisekunden als Statistik | auf 640 Feldern unter einer Millisekunde und je nach Rechner verschieden; verglichen wird der Suchaufwand als Zahl besuchter Felder |
 | AB-05 | Aufgaben/Quests, XP, Erfolge, Einstellungen-Panel, „Wie funktioniert das?“, Auswahl „Ein Schritt ist …“, „Zum Ende“ im Vergleich, Gelände wie Lava, Sand oder Gebäude | nach Prototyp-Feedback gestrichen |
@@ -290,7 +311,10 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
   - Erklärsatz nennt dieselben Felder, die `fokus()` markiert
   - Leistung (QA-03)
   - `besteWahl()` liefert in jeder der vier Welten genau deren Algorithmus; ohne Weg enthält die Tabelle kein „★“
-  - `feldInfo()` nennt die ausgehenden Kanten mit Gewicht (mit Rechenweg)
+  - `feldInfo()` nennt die ausgehenden Kanten mit Gewicht (mit Rechenweg), bei A* g, h und f
+  - A*-Heuristik zulässig und konsistent; Kosten 0 korrekt; negative Kosten abgelehnt
+  - Replay: Datenstruktur passt zu `inListe`, FIFO überholt nie, Dijkstra-Prioritäten steigen nie, Dijkstra verbessert nie ein d
+  - Ereignisprotokoll und Erkennungsmerkmal (Dijkstra überholt im Flussmoor, BFS nie)
 
 ### Code
 
