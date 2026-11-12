@@ -1,31 +1,41 @@
-/* GraphRunner: nur dunkles Schema in Nachtblau (QA-09 ist Won't), Oberfläche im Klötzchenstil (eigene Entwürfe).
-   Jedes Bedienelement ist ein Block: eckig, schwarze Außenkante, oben/links Lichtkante, unten/rechts Schattenkante.
-   Gedrückt kehrt sich das Relief um. Pixelschrift nur in Überschriften. */
+/* GraphRunner: helles Farbschema im Blockstil (an Minecraft angelehnt, eigener Entwurf, keine fremden Grafiken).
+   Flächen wie Blöcke mit Grasnarbe: grüner Streifen oben, Licht oben links, Schatten unten rechts, keine runden Ecken.
+   Pixelschrift nur in Überschriften. */
 :root {
-  color-scheme: dark;
-  --grund: #0b111d;
-  --flaeche: #151e2f;
-  --flaeche-2: #1d2940;
-  --linie: #2b3b57;
-  --kante: #04070d;
-  --text: #e9eef6;
-  --gedaempft: #a3b1c6;
-  --orange: #f5a623;
-  --rund: 0;
+  color-scheme: light;
+  /* Grundfarben: warmes Papierweiß auf hellem Himmelblau, Ränder in dunklem Erdbraun */
+  --grund: #e8f2fa;
+  --flaeche: #fbf8f1;
+  --flaeche-2: #efe8d9;
+  --flaeche-hell: #fffdf8;
+  --slot: #e6dece;
+  --linie: #c7bca6;
+  --rand: #3b352d;
+  --text: #2a2620;
+  --gedaempft: #625b50;
+  /* Akzente: Grün wie ein Grasblock für Hauptaktionen, Gelb für Auswahl, Blau für Fokus */
+  --gras: #5aac34;
+  --gras-hell: #8ad457;
+  --gras-dunkel: #2f6b1a;
+  --orange: #e8890c;
   --akzent: #ffd400;
-  --gruen: #4caf3a;
+  --auswahl: #fff1b0;
+  --akzent-dunkel: #8a6d00;
+  --fokus: #0b57d0;
+  /* Feste Farben der Verfahren (CLAUDE.md, Abschnitt 8) */
   --bfs: #ff4d73;
   --dfs: #a56bff;
   --dijkstra: #ff8a2b;
   --astar: #ffd400;
+  /* Blockstil: Licht oben links, Schatten unten rechts */
+  --rund: 0;
+  --hoch: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #d9cfbb;
+  --tief: inset 2px 2px 0 #cdc2ac, inset -2px -2px 0 #ffffff;
+  --schatten: 3px 3px 0 rgba(59, 53, 45, 0.18);
+  /* Schriften */
   --pixel: "Pixelify Sans", system-ui, sans-serif;
   --ui: "Rubik", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
-  /* Relief eines Blocks: Lichtkante oben/links, Schattenkante unten/rechts. */
-  --relief: inset 3px 3px 0 rgba(255, 255, 255, 0.16), inset -3px -3px 0 rgba(0, 0, 0, 0.42);
-  --relief-gedrueckt: inset 3px 3px 0 rgba(0, 0, 0, 0.42), inset -3px -3px 0 rgba(255, 255, 255, 0.08);
-  /* Harter Pixelschatten statt weichem Schatten. */
-  --wurf: 4px 4px 0 rgba(0, 0, 0, 0.45);
 }
 
 * {
@@ -35,21 +45,19 @@
 html,
 body {
   margin: 0;
-  background: var(--grund);
   color: var(--text);
   font-family: var(--ui);
   font-size: 15px;
   line-height: 1.45;
 }
 
-/* Feines Blockraster im Hintergrund, kaum sichtbar. */
 body {
   min-width: 0;
   overflow-x: hidden;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.018) 2px, transparent 2px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 2px, transparent 2px);
-  background-size: 32px 32px;
+  /* Heller Untergrund mit feinem Pixelraster. */
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.35) 0 4px, transparent 4px 8px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.025) 0 4px, transparent 4px 8px), var(--grund);
 }
 
 h1,
@@ -63,7 +71,6 @@ h3 {
 
 h2 {
   font-size: 1.15rem;
-  text-shadow: 2px 2px 0 var(--kante);
 }
 
 h3 {
@@ -79,7 +86,7 @@ input {
 }
 
 :focus-visible {
-  outline: 3px solid var(--akzent);
+  outline: 3px solid var(--fokus);
   outline-offset: 2px;
 }
 
@@ -91,53 +98,128 @@ canvas {
   image-rendering: pixelated;
 }
 
-kbd {
-  display: inline-block;
-  min-width: 1.6em;
-  padding: 0 0.35em;
-  margin-right: 0.15em;
-  font-family: var(--mono);
-  font-size: 0.8em;
-  text-align: center;
-  background: var(--flaeche-2);
-  border: 2px solid var(--kante);
-  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.45), inset 2px 2px 0 rgba(255, 255, 255, 0.14);
-  color: var(--text);
+/* Nur für Screenreader sichtbar. */
+.nur-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-/* ---------- Blöcke: gemeinsame Gestalt aller Knöpfe ---------- */
+/* ---------- Blöcke: gemeinsame Optik für Flächen ---------- */
+.panel,
+.wiedergabe,
+.karte-box,
+.ergebnis,
+.begruendung,
+.box,
+.karte-einzel,
+.hinweis-box {
+  background: var(--flaeche);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch), var(--schatten);
+}
+
+/* Grasnarbe: Allgemeine Flächen tragen oben einen grünen Streifen wie ein Grasblock.
+   Flächen, die zu einem Verfahren gehören, tragen stattdessen dessen Farbe (Karten, Datenstruktur). */
+.panel,
+.wiedergabe,
+.ergebnis,
+.box:not(.struktur-box):not(.merkmal-box):not(.erklaerung) {
+  border-top: 6px solid var(--gras);
+  box-shadow:
+    inset 0 2px 0 var(--gras-hell),
+    var(--hoch),
+    var(--schatten);
+}
+
+h2,
+h3 {
+  color: #2b3a22;
+}
+
+/* Knöpfe wie Steinblöcke: Hover = heller Rand, gedrückt oder gewählt = eingedrückt. */
 .knopf,
+.tab,
 .welt,
 .werkzeug,
-.tab,
 .umschalter button,
 .auswahl select {
-  border: 2px solid var(--kante);
-  border-radius: 0;
-  background: var(--flaeche-2);
-  box-shadow: var(--relief);
+  background: linear-gradient(#fffdf8, #e8e0cf);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch);
+  color: var(--text);
   cursor: pointer;
-  transition: filter 0.08s;
 }
 
 .knopf:hover:not(:disabled),
+.tab:hover,
 .welt:hover,
 .werkzeug:hover,
-.tab:hover,
 .umschalter button:hover {
-  filter: brightness(1.18);
+  background: linear-gradient(#ffffff, #f0e9da);
+  border-color: var(--gras-dunkel);
 }
 
 .knopf:active:not(:disabled),
-.welt:active,
-.werkzeug:active,
-.tab:active,
-.umschalter button:active {
-  box-shadow: var(--relief-gedrueckt);
-  transform: translateY(1px);
+.tab[aria-selected="true"],
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"],
+.umschalter button[aria-pressed="true"] {
+  box-shadow: var(--tief);
 }
 
-/* ---------- Kopf: Banner mit Pixel-Landschaft und Bodenleiste, Logo-Insel, zweifarbiger Titel ---------- */
+.knopf {
+  min-width: 2.4rem;
+  padding: 0.35rem 0.55rem;
+  font-family: var(--mono);
+}
+
+/* Hauptaktion (Abspielen) grün wie ein Grasblock. */
+.knopf.haupt {
+  min-width: 6.5rem;
+  background: linear-gradient(var(--gras-hell), var(--gras));
+  color: #fff;
+  font-family: var(--ui);
+  font-weight: 700;
+  text-shadow: 1px 1px 0 var(--gras-dunkel);
+  box-shadow:
+    inset 2px 2px 0 #b9ef93,
+    inset -2px -2px 0 var(--gras-dunkel);
+}
+
+.knopf.haupt:hover:not(:disabled) {
+  background: linear-gradient(#9de36a, #66bb3e);
+}
+
+/* Gewählte Ansicht: gelb, eingedrückt. */
+.umschalter button[aria-pressed="true"] {
+  background: linear-gradient(#ffe25a, #f0b800);
+  color: #1a1408;
+  font-weight: 700;
+  box-shadow:
+    inset 2px 2px 0 #9c7400,
+    inset -2px -2px 0 #fff3a6;
+}
+
+.knopf.los {
+  font-family: var(--ui);
+  font-weight: 700;
+}
+
+.knopf:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leeren {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+/* ---------- Kopf: Pixel-Landschaft bei Tag, Logo-Insel, zweifarbiger Titel ---------- */
 .kopf {
   position: relative;
   isolation: isolate;
@@ -145,12 +227,11 @@ kbd {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  /* Unten Platz für die Bodenleiste aus Gras- und Erdblöcken (6 grobe Pixel × 3 px). */
-  padding: 0.6rem 1.2rem calc(18px + 0.6rem);
-  min-height: 134px;
+  padding: 0.6rem 1.2rem;
+  min-height: 116px;
   border-bottom: 4px solid var(--orange);
-  box-shadow: 0 4px 0 var(--kante);
-  background: #0f2242;
+  box-shadow: 0 2px 0 var(--rand);
+  background: #76b8ef;
   overflow: hidden;
 }
 
@@ -162,41 +243,27 @@ kbd {
   z-index: -2;
 }
 
-/* Links dunkler, damit der Titel gut lesbar bleibt; die Bodenleiste bleibt frei. */
+/* Links heller, damit der Titel auf dem Himmel gut lesbar bleibt. */
 .kopf::before {
   content: "";
   position: absolute;
-  inset: 0 0 18px;
+  inset: 0;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(8, 14, 26, 0.9) 0%, rgba(8, 14, 26, 0.7) 35%, rgba(8, 14, 26, 0.05) 70%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.55) 35%, rgba(255, 255, 255, 0) 70%);
 }
 
 .logo {
   width: 96px;
   height: 96px;
   flex: none;
-  filter: drop-shadow(0 0 10px rgba(255, 196, 40, 0.25));
-  animation: schweben 4s steps(4) infinite;
-}
-
-@keyframes schweben {
-  50% {
-    transform: translateY(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .logo {
-    animation: none;
-  }
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.25));
 }
 
 .trenner {
   align-self: stretch;
-  width: 4px;
+  width: 3px;
   margin: 0.6rem 0.2rem;
-  background: #9aa3ad;
-  box-shadow: 2px 0 0 #4b525c;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .titel {
@@ -210,54 +277,42 @@ kbd {
   letter-spacing: 0.01em;
 }
 
+/* „Graph“ steingrau, „Runner“ orange (CLAUDE.md, Abschnitt 1). */
 .titel h1 .graph {
-  color: #dfe3e8;
-  text-shadow: 0 3px 0 #7d8590, 0 5px 0 #262b33, 3px 6px 0 rgba(0, 0, 0, 0.6);
+  color: #8d949d;
+  text-shadow:
+    0 3px 0 #5a6069,
+    0 5px 0 #2f3338,
+    3px 6px 0 rgba(0, 0, 0, 0.25);
 }
 
 .titel h1 .runner {
   color: #ffa51f;
-  text-shadow: 0 3px 0 #b75a08, 0 5px 0 #4a2304, 3px 6px 0 rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 3px 0 #b75a08,
+    0 5px 0 #4a2304,
+    3px 6px 0 rgba(0, 0, 0, 0.25);
 }
 
 .titel p {
   margin: 0.55rem 0 0;
-  color: #d6deea;
+  color: #1f2a36;
   font-weight: 500;
-  text-shadow: 2px 2px 0 var(--kante);
+  letter-spacing: 0.02em;
 }
 
-/* Umschalter: zwei Blöcke nebeneinander auf einer Steinplatte. */
 .umschalter {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: #2a2f38;
-  border: 2px solid var(--kante);
-  box-shadow: var(--relief), var(--wurf);
+  gap: 0.25rem;
+  padding: 0.3rem;
+  background: var(--flaeche-2);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
 .umschalter button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.95rem;
-  background: #4a515c;
-  font-weight: 600;
-}
-
-.umschalter svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-  shape-rendering: crispEdges;
-}
-
-.umschalter button[aria-pressed="true"] {
-  background: var(--akzent);
-  color: #1a1408;
-  font-weight: 700;
-  box-shadow: inset 3px 3px 0 #fff3a0, inset -3px -3px 0 #b98f00;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
 }
 
 @media (max-width: 720px) {
@@ -273,135 +328,131 @@ kbd {
     display: none;
   }
   .kopf::before {
-    background: rgba(8, 14, 26, 0.72);
+    background: rgba(255, 255, 255, 0.7);
   }
   .titel h1 {
     font-size: 2rem;
   }
-  .umschalter {
-    width: 100%;
-  }
-  .umschalter button {
-    flex: 1;
-    justify-content: center;
-    padding: 0.5rem 0.5rem;
-  }
 }
 
-/* ---------- Grundlayout ---------- */
+/* ---------- Grundlayout ----------
+   Desktop: links Welten und darunter Begründung, rechts die Ansicht.
+   Handy (≤ 960 px): Welten, dann Steuerung und Karten, dann Begründung, damit „Abspielen“ früh kommt. */
 .rumpf {
   display: grid;
   grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "welten haupt"
+    "info haupt";
   gap: 1rem;
-  padding: 1.1rem 1rem 1rem;
+  padding: 1rem;
   max-width: 1600px;
   margin: 0 auto;
+}
+
+.seitenleiste {
+  grid-area: welten;
+}
+
+.seiten-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  align-self: start;
+}
+
+.haupt {
+  grid-area: haupt;
+  min-width: 0;
 }
 
 @media (max-width: 960px) {
   .rumpf {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "welten"
+      "haupt"
+      "info";
   }
 }
 
 @media (max-width: 520px) {
   .rumpf {
-    padding: 0.8rem 0.6rem 0.6rem;
+    padding: 0.6rem;
     gap: 0.6rem;
   }
   .kopf {
-    padding: 0.6rem 0.6rem calc(18px + 0.6rem);
+    padding: 0.6rem;
   }
-}
-
-.haupt {
-  min-width: 0;
-}
-
-/* ---------- Platten: Panels, Leisten und Kartenrahmen ---------- */
-.panel,
-.wiedergabe,
-.karte-box,
-.karte-einzel,
-.ergebnis,
-.begruendung,
-.einzel-seite > * {
-  background: var(--flaeche);
-  border: 2px solid var(--kante);
-  border-radius: 0;
-  box-shadow: inset 0 0 0 2px var(--linie), var(--wurf);
 }
 
 /* ---------- Seitenleiste ---------- */
 .seitenleiste {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 0.75rem;
   min-width: 0;
 }
 
 .weltliste {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 @media (max-width: 960px) {
   .weltliste {
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
   }
 }
 
 .welt {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  padding: 0.5rem 0.6rem;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
   text-align: left;
 }
 
-.welt .symbol {
-  width: 22px;
-  height: 22px;
+.welt[aria-pressed="true"],
+.werkzeug[aria-pressed="true"] {
+  background: var(--auswahl);
+  border-color: var(--rand);
+  box-shadow:
+    var(--tief),
+    inset 6px 0 0 var(--akzent);
 }
 
-.welt[aria-pressed="true"] {
-  background: #2c3a56;
-  border-color: var(--akzent);
-  box-shadow: var(--relief-gedrueckt), 0 0 0 2px var(--kante);
-}
-
-.welt[aria-pressed="true"] .welt-titel::before {
-  content: "▸ ";
-  color: var(--akzent);
+/* Farbfeld im Kopf der Karten: dasselbe Symbol wie ein besuchtes Feld auf der Karte. */
+.name .symbol-legende {
+  align-self: center;
 }
 
 .welt-titel {
-  flex: 1;
-  min-width: 0;
   font-weight: 500;
 }
 
 .kuerzel {
-  flex: none;
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 600;
   padding: 0.05rem 0.4rem;
   background: var(--farbe);
   color: #1a1408;
-  border: 2px solid var(--kante);
-  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--rand);
 }
 
 .bauen-kuerzel {
-  background: var(--gruen);
-  color: #0d1a08;
+  background: var(--flaeche-hell);
 }
 
 .begruendung {
-  border-color: var(--kante);
-  box-shadow: inset 0 0 0 2px var(--akzent), var(--wurf);
-  padding: 0.7rem 0.8rem;
+  border-left: 6px solid var(--akzent);
+  padding: 0.6rem 0.75rem;
 }
 
 .begruendung p {
@@ -410,12 +461,19 @@ kbd {
 
 .begruendung .wann {
   font-weight: 700;
-  color: var(--akzent);
   margin-bottom: 0.35rem;
 }
 
+.lernpunkt {
+  margin-top: 0.6rem !important;
+  padding: 0.45rem 0.55rem;
+  background: #eaf3ff;
+  border: 2px solid var(--fokus);
+  font-size: 0.9rem;
+}
+
 .panel {
-  padding: 0.7rem 0.8rem;
+  padding: 0.65rem 0.75rem;
 }
 
 .panel h2 {
@@ -432,7 +490,7 @@ kbd {
   width: 20px;
   height: 20px;
   flex: none;
-  border: 2px solid var(--kante);
+  border: 1px solid var(--rand);
 }
 
 .kosten {
@@ -456,28 +514,14 @@ kbd {
   font-family: var(--mono);
 }
 
-.leeren {
-  margin-top: 0.6rem;
-  width: 100%;
-  font-family: var(--ui);
-  font-weight: 600;
-  background: #7a2b26;
-}
-
 .werkzeuge {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(7rem, 1fr));
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .werkzeug {
   padding: 0.35rem 0.45rem;
-}
-
-/* Gewähltes Werkzeug wie ein ausgewählter Platz im Inventar: gelber Rahmen, eingedrückt. */
-.werkzeug[aria-pressed="true"] {
-  background: #2c3a56;
-  box-shadow: var(--relief-gedrueckt), 0 0 0 3px var(--akzent);
 }
 
 /* ---------- Wiedergabeleiste ---------- */
@@ -485,49 +529,14 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem 1rem;
-  padding: 0.65rem 0.8rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem 1rem;
+  padding: 0.55rem 0.7rem;
+  margin-bottom: 0.8rem;
 }
 
 .knoepfe {
   display: flex;
   gap: 0.3rem;
-}
-
-.knopf {
-  min-width: 2.6rem;
-  min-height: 2.4rem;
-  padding: 0.35rem 0.6rem;
-  font-family: var(--mono);
-}
-
-.knopf.haupt {
-  min-width: 7rem;
-  background: var(--akzent);
-  color: #1a1408;
-  font-family: var(--ui);
-  font-weight: 700;
-  box-shadow: inset 3px 3px 0 #fff3a0, inset -3px -3px 0 #b98f00;
-}
-
-.knopf.haupt[aria-pressed="true"] {
-  box-shadow: inset 3px 3px 0 #b98f00, inset -3px -3px 0 #fff3a0;
-}
-
-/* Loslaufen: grüner Block, sobald alle fertig sind – die Einladung zum Rennen. */
-.knopf.los {
-  font-family: var(--ui);
-  font-weight: 700;
-  background: var(--gruen);
-  color: #0d1a08;
-  box-shadow: inset 3px 3px 0 #8fe07a, inset -3px -3px 0 #2a6b20;
-}
-
-.knopf:disabled {
-  opacity: 0.4;
-  filter: grayscale(0.8);
-  cursor: not-allowed;
 }
 
 .tempo {
@@ -541,10 +550,17 @@ kbd {
   width: 6rem;
 }
 
+.tempo-wert {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  min-width: 6.5rem;
+  color: var(--text);
+}
+
 .fortschritt {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   flex: 1 1 14rem;
   min-width: 0;
 }
@@ -560,60 +576,40 @@ kbd {
   white-space: nowrap;
 }
 
-/* Regler: eingelassene Rinne mit gelbem Block als Griff. */
+/* Regler blockig: eingedrückte Bahn, eckiger gelber Griff. */
 input[type="range"] {
   appearance: none;
-  -webkit-appearance: none;
-  height: 22px;
-  background: transparent;
-  cursor: pointer;
-}
-
-input[type="range"]::-webkit-slider-runnable-track {
-  height: 10px;
-  background: #0a0f19;
-  border: 2px solid var(--kante);
-  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.6);
-}
-
-input[type="range"]::-moz-range-track {
-  height: 6px;
-  background: #0a0f19;
-  border: 2px solid var(--kante);
-}
-
-input[type="range"]::-moz-range-progress {
-  height: 6px;
-  background: var(--orange);
+  height: 12px;
+  background: var(--slot);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 20px;
-  margin-top: -7px;
-  background: var(--akzent);
-  border: 2px solid var(--kante);
-  border-radius: 0;
-  box-shadow: inset 2px 2px 0 #fff3a0, inset -2px -2px 0 #b98f00;
+  appearance: none;
+  width: 14px;
+  height: 22px;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  box-shadow: inset -2px -2px 0 #9c7400;
+  cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb {
   width: 12px;
-  height: 16px;
-  background: var(--akzent);
-  border: 2px solid var(--kante);
+  height: 20px;
   border-radius: 0;
-  box-shadow: inset 2px 2px 0 #fff3a0, inset -2px -2px 0 #b98f00;
+  background: linear-gradient(#ffe25a, #f0b800);
+  border: 2px solid var(--rand);
+  cursor: pointer;
 }
 
+/* ---------- Legende: Symbole sind dieselben Zeichnungen wie auf der Karte ---------- */
 .legende {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 0.9rem;
+  gap: 0.3rem 0.9rem;
   width: 100%;
-  padding-top: 0.5rem;
-  border-top: 2px dashed var(--linie);
   font-size: 0.85rem;
   color: var(--gedaempft);
 }
@@ -624,6 +620,21 @@ input[type="range"]::-moz-range-thumb {
   gap: 0.35rem;
 }
 
+.legende-zustaende {
+  display: contents !important;
+}
+
+.symbol-legende {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border: 1px solid var(--rand);
+}
+
+.symbol-legende + .symbol-legende {
+  margin-left: -0.25rem;
+}
+
 .legende i {
   display: inline-block;
   width: 14px;
@@ -631,47 +642,10 @@ input[type="range"]::-moz-range-thumb {
   flex: none;
 }
 
-.legende .farben {
-  display: inline-flex;
-  width: auto;
-  gap: 1px;
-}
-
-.legende .farben b,
-.legende .besucht {
-  display: inline-block;
-  width: 9px;
-  height: 14px;
-}
-
-.legende .besucht {
-  width: 14px;
-}
-
-/* Wie auf der Karte: durchscheinende Farbe über Wiese. */
-.legende .farben b,
-.legende .besucht {
-  background: color-mix(in srgb, currentColor 50%, #3f9e2f);
-}
-
-.legende .wartet {
-  background: radial-gradient(#fff 0 2px, #000 2.5px 3.5px, #8cc581 4px);
-}
-
-.legende .kante {
-  height: 2px;
-  background: var(--gedaempft);
-}
-
-.legende .weg {
-  height: 5px;
-  background: #fff;
-  outline: 1px solid #000;
-}
-
 .legende .rahmen {
   border: 3px solid;
-  outline: 1px solid #000;
+  outline: 1px solid var(--rand);
+  background: #3f9e2f;
 }
 
 .legende .weiss {
@@ -686,23 +660,15 @@ input[type="range"]::-moz-range-thumb {
   border-color: #ff4b4b;
 }
 
-.tasten {
-  width: 100%;
-  margin: -0.2rem 0 0;
-  font-size: 0.82rem;
-  color: var(--gedaempft);
-}
-
-.tasten kbd {
-  font-size: 0.85rem;
-  line-height: 1.3;
+.feldinfo-hinweis {
+  font-style: italic;
 }
 
 /* ---------- Karten ---------- */
 .raster {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.8rem;
 }
 
 @media (max-width: 720px) {
@@ -712,10 +678,9 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .karte-box {
-  padding: 0.55rem;
+  border-top: 5px solid var(--farbe);
+  padding: 0.5rem;
   min-width: 0;
-  box-shadow: inset 0 5px 0 var(--farbe), inset 0 0 0 2px var(--linie), var(--wurf);
-  padding-top: calc(0.55rem + 4px);
 }
 
 .karte-box header {
@@ -723,7 +688,7 @@ input[type="range"]::-moz-range-thumb {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.2rem 0.8rem;
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.4rem;
 }
 
 .name {
@@ -741,10 +706,10 @@ input[type="range"]::-moz-range-thumb {
 
 .punkt {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: var(--farbe);
-  border: 2px solid var(--kante);
+  border: 1px solid var(--rand);
   margin-right: 0.35rem;
 }
 
@@ -767,57 +732,85 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text);
 }
 
-.karte-box canvas,
-.karte-einzel canvas {
+.struktur-zeile {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--gedaempft);
+}
+
+.gewicht-marke {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.05rem 0.35rem;
+  background: #ffe1d2;
+  color: #8a2b0b;
+  border: 1px solid #c2410c;
+}
+
+.karte-box > canvas,
+.karte-einzel > canvas {
   display: block;
   width: 100%;
   height: auto;
   aspect-ratio: 32 / 20;
-  border: 2px solid var(--kante);
+  border: 2px solid var(--rand);
   cursor: crosshair;
+  /* Wischen scrollt die Seite; nur in der Eigenen Welt wird auf den Karten gemalt. */
+  touch-action: manipulation;
+}
+
+.bauen-aktiv .karte-box > canvas,
+.bauen-aktiv .karte-einzel > canvas {
   touch-action: none;
 }
 
 /* ---------- Ergebnis ---------- */
 .ergebnis {
   margin-top: 1rem;
-  padding: 0.8rem;
+  padding: 0.75rem;
 }
 
 .beste-wahl {
-  margin: 0.5rem 0 0;
-  padding: 0.5rem 0.7rem;
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.6rem;
   max-width: 75ch;
-  background: rgba(255, 212, 0, 0.1);
-  border: 2px solid var(--kante);
-  box-shadow: inset 4px 0 0 var(--akzent);
+  border: 2px solid var(--rand);
+  border-left: 8px solid var(--akzent);
+  background: var(--auswahl);
 }
 
-.beste-wahl:empty {
-  display: none;
+.beste-wahl small {
+  color: var(--gedaempft);
 }
 
 .fazit {
-  margin: 0.5rem 0 0.7rem;
+  margin: 0.4rem 0 0.7rem;
   max-width: 75ch;
+}
+
+.modell {
+  max-width: 75ch;
+  margin-top: 0.6rem;
 }
 
 .tabelle-rahmen {
   overflow-x: auto;
-  border: 2px solid var(--kante);
 }
 
 table {
   border-collapse: collapse;
   width: 100%;
   font-size: 0.9rem;
+  background: var(--flaeche-hell);
+  border: 2px solid var(--rand);
 }
 
 th,
 td {
   text-align: left;
-  padding: 0.4rem 0.55rem;
-  border-bottom: 2px solid var(--linie);
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--linie);
 }
 
 thead th {
@@ -825,10 +818,6 @@ thead th {
   font-weight: 500;
   font-family: var(--ui);
   background: var(--flaeche-2);
-}
-
-tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.025);
 }
 
 td {
@@ -840,8 +829,12 @@ tbody th {
   white-space: nowrap;
 }
 
+tbody tr:nth-child(even) {
+  background: var(--flaeche-2);
+}
+
 .stern {
-  color: var(--akzent);
+  color: var(--akzent-dunkel);
   margin-left: 0.3rem;
 }
 
@@ -855,38 +848,33 @@ tbody th {
   }
 }
 
-/* ---------- Einzelansicht ---------- */
+/* ---------- Einzelansicht (Debugger) ---------- */
 .einzel-kopf {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.7rem;
+  margin-bottom: 0.6rem;
 }
 
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 .tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.45rem 0.85rem;
+  padding: 0.4rem 0.8rem;
   font-weight: 500;
 }
 
 .tab[aria-selected="true"] {
-  background: #2c3a56;
-  font-weight: 700;
-  box-shadow: var(--relief-gedrueckt), inset 0 -5px 0 var(--farbe);
-}
-
-.tab .punkt {
-  margin-right: 0;
+  background: var(--flaeche-hell);
+  border-color: var(--rand);
+  box-shadow:
+    var(--tief),
+    inset 0 -5px 0 var(--farbe);
 }
 
 .auswahl {
@@ -897,14 +885,40 @@ tbody th {
 }
 
 .auswahl select {
-  padding: 0.35rem 0.5rem;
-  color: var(--text);
+  padding: 0.25rem 0.4rem;
+}
+
+.hinweis-box {
+  margin: 0 0 0.8rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.hinweis-box.warnung {
+  border-left: 8px solid #c2410c;
+  background: #ffe8dc;
+}
+
+.hinweis-box.warnung::before {
+  content: "⚠ ";
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.hinweis-box.info {
+  border-left: 8px solid #2e8b3a;
+  background: #e5f5e2;
+}
+
+.hinweis-box.klein {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+  box-shadow: none;
 }
 
 .einzel-inhalt {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(16rem, 1fr);
-  gap: 1rem;
+  gap: 0.8rem;
   align-items: start;
 }
 
@@ -914,19 +928,26 @@ tbody th {
   }
 }
 
-.karte-einzel {
-  padding: 0.55rem;
-  min-width: 0;
-}
-
+.einzel-links,
 .einzel-seite {
   display: grid;
-  gap: 0.7rem;
+  gap: 0.6rem;
+  min-width: 0;
+  align-content: start;
+}
+
+.karte-einzel {
+  padding: 0.5rem;
   min-width: 0;
 }
 
-.einzel-seite > * {
-  padding: 0.65rem 0.75rem;
+.box {
+  padding: 0.6rem 0.7rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.steckbrief {
   margin: 0;
 }
 
@@ -953,8 +974,41 @@ tbody th {
   }
 }
 
-.einzel-seite > .erklaerung {
-  box-shadow: inset 0 0 0 2px var(--akzent), var(--wurf);
+.heuristik {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 2px dashed var(--linie);
+}
+
+.formel {
+  margin: 0.2rem 0;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--mono);
+  font-weight: 600;
+  background: #fffbe6;
+  color: #5c4700;
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.merkmal-box ul,
+.heuristik ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.9rem;
+}
+
+.merkmal-box li,
+.heuristik li {
+  margin-bottom: 0.3rem;
+}
+
+.merkmal-box {
+  border-left: 8px solid var(--farbe, var(--akzent));
+}
+
+.erklaerung {
+  border-left: 8px solid var(--akzent);
 }
 
 .zeile-nr {
@@ -963,7 +1017,7 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   padding: 0.05rem 0.4rem;
-  border: 2px solid var(--kante);
+  border: 1px solid var(--rand);
 }
 
 .satz {
@@ -973,11 +1027,14 @@ tbody th {
 
 .code {
   margin: 0;
-  padding-left: 2.2rem;
+  padding: 0.3rem 0.3rem 0.3rem 2.4rem;
   font-family: var(--mono);
   font-size: 0.8rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  background: var(--flaeche-hell);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
 .code li {
@@ -992,7 +1049,181 @@ tbody th {
   background: var(--akzent);
   color: #1a1408;
   font-weight: 600;
-  box-shadow: 0 0 0 2px var(--kante);
+  box-shadow: inset 4px 0 0 #1a1408;
+}
+
+/* Datenstruktur: Einträge als Inventar-Slots. */
+.struktur-box {
+  border-top: 5px solid var(--farbe, var(--akzent));
+}
+
+.struktur-regel,
+.entnommen {
+  margin: 0 0 0.45rem;
+  font-size: 0.88rem;
+  color: var(--gedaempft);
+}
+
+.entnommen b {
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.slots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+.slots.dfs {
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.slot {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.6rem;
+  padding: 0.2rem 0.3rem;
+  background: var(--slot);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+  color: #111;
+}
+
+.slots.dfs .slot {
+  flex-direction: row;
+  gap: 0.6rem;
+  min-width: 9rem;
+  justify-content: space-between;
+}
+
+.slot small {
+  color: #2b2b2b;
+}
+
+.slot.naechster,
+.pq tr.naechster td {
+  background: color-mix(in srgb, var(--farbe, var(--akzent)) 45%, #ffffff);
+}
+
+.slot.naechster {
+  border-color: var(--rand);
+  outline: 2px solid var(--farbe, var(--akzent));
+}
+
+.slot.neu,
+.pq tr.neu td {
+  outline: 2px solid var(--fokus);
+  outline-offset: -2px;
+}
+
+.pq {
+  font-size: 0.8rem;
+}
+
+.pq td,
+.pq th {
+  padding: 0.2rem 0.4rem;
+}
+
+.pq tr.veraltet td {
+  color: var(--gedaempft);
+  text-decoration: line-through;
+}
+
+.rand,
+.mehr {
+  align-self: center;
+  color: var(--gedaempft);
+  font-size: 0.78rem;
+  padding: 0 0.2rem;
+}
+
+.rand {
+  font-family: var(--ui);
+}
+
+.struktur-box .tabelle-rahmen {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+/* Ereignisprotokoll: Farbleiste je Art des Ereignisses, Klick springt zum Schritt. */
+.protokoll {
+  margin: 0.3rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  background: var(--flaeche-hell);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+}
+
+.protokoll button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 5px solid transparent;
+  padding: 0.12rem 0.4rem;
+  cursor: pointer;
+}
+
+.protokoll button:hover {
+  background: #fff;
+}
+
+.protokoll .nr {
+  color: var(--gedaempft);
+}
+
+.protokoll .ein button {
+  border-left-color: #2f7fd8;
+}
+
+.protokoll .aus button,
+.protokoll .fertig button {
+  border-left-color: var(--farbe, var(--akzent));
+}
+
+.protokoll .besser button {
+  border-left-color: #2e8b3a;
+}
+
+.protokoll .veraltet button {
+  border-left-color: #8b8b8b;
+  color: var(--gedaempft);
+}
+
+.protokoll .zurueck button {
+  border-left-color: #c2410c;
+}
+
+.protokoll .ziel button,
+.protokoll .keinWeg button {
+  border-left-color: var(--akzent-dunkel);
+  font-weight: 600;
+}
+
+.protokoll li.aktuell button {
+  background: var(--auswahl);
+}
+
+.protokoll-box small {
+  font-family: var(--mono);
+  color: var(--gedaempft);
+  font-weight: 400;
 }
 
 .besuchsliste {
@@ -1011,8 +1242,8 @@ tbody th {
 
 .besuchsliste li {
   counter-increment: besuch;
-  background: var(--flaeche-2);
-  border: 1px solid var(--kante);
+  background: var(--flaeche-hell);
+  border: 1px solid var(--linie);
   padding: 0.05rem 0.3rem;
 }
 
@@ -1026,26 +1257,90 @@ tbody th {
   color: var(--gedaempft);
 }
 
-/* ---------- Tooltip: dunkle Tafel mit Pixelrahmen ---------- */
+/* ---------- Tooltip: dunkle Pixel-Infotafel mit violettem Innenrahmen, gut lesbar über der hellen Seite ---------- */
 .tooltip {
   position: fixed;
   z-index: 10;
   pointer-events: none;
-  background: rgba(16, 8, 28, 0.96);
-  border: 2px solid var(--kante);
-  box-shadow: inset 0 0 0 2px #3b2a6b, var(--wurf);
-  padding: 0.4rem 0.6rem;
+  padding: 0.45rem 0.65rem;
+  max-width: 21rem;
   font-size: 0.85rem;
-  max-width: 16rem;
+  color: #f4f4f4;
+  background: rgba(16, 4, 22, 0.96);
+  border: 2px solid #05000a;
+  box-shadow:
+    inset 0 0 0 2px #3b1a7a,
+    3px 3px 0 rgba(0, 0, 0, 0.35);
 }
 
 .tt-kopf {
   font-family: var(--mono);
   font-weight: 600;
-  color: var(--akzent);
+  color: #ffe25a;
 }
 
-/* ---------- Bildlaufleisten im Klötzchenstil ---------- */
-* {
-  scrollbar-color: #4a515c var(--grund);
+.karte-box > canvas:focus-visible,
+.karte-einzel > canvas:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 2px;
+}
+
+/* ---------- Ergänzungen aus PR #14 im hellen Schema: Tasten, Symbole im Umschalter, Block je Welt ---------- */
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+  margin-right: 0.15em;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  background: linear-gradient(#fffdf8, #e8e0cf);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch);
+}
+
+.tasten {
+  width: 100%;
+  margin: -0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--gedaempft);
+}
+
+.umschalter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.umschalter svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+
+.welt {
+  justify-content: flex-start;
+}
+
+.welt .kuerzel {
+  margin-left: auto;
+}
+
+.welt .symbol {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 720px) {
+  .umschalter {
+    width: 100%;
+  }
+  .umschalter button {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem;
+  }
 }

@@ -1,11 +1,12 @@
 // Ansicht „Alle vergleichen“ (FA-13, FA-14, FA-21): vier Karten im 2 × 2-Raster, ein Schritt = jedes
 // Verfahren besucht ein weiteres Feld. Darunter beste Wahl, Fazit und Ergebnistabelle (Regeln in bewertung.ts).
 import { ALGOS } from "../algorithms";
-import { zeichneLeinwand } from "../render/karte";
+import { symbol, zeichneLeinwand } from "../render/karte";
 import type { Algo } from "../types";
 import { WELTEN } from "../world/worlds";
 import { angekommen, besteWahl, fazitText, platz, tabellenZeilen } from "./bewertung";
-import { ALGO_INFO } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
+import { kartenBeschreibung } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { Wiedergabe } from "./wiedergabe";
 import { Z, geheVergleich, vergleichMax } from "./zustand";
@@ -14,11 +15,13 @@ const fertig = (a: Algo): boolean => Z.k >= Z.ergebnisse[a].besucht;
 const alleFertig = (): boolean => ALGOS.every(fertig);
 const zahl = (x: number): string => x.toLocaleString("de-DE");
 
-
 export class Vergleich {
   readonly element: HTMLElement;
   readonly wiedergabe: Wiedergabe;
-  private readonly karten = new Map<Algo, { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement }>();
+  private readonly karten = new Map<
+    Algo,
+    { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement; struktur: HTMLElement; gewicht: HTMLElement }
+  >();
   private readonly wahl: HTMLParagraphElement;
   private readonly fazit: HTMLParagraphElement;
   private readonly tabelle: HTMLTableSectionElement;
@@ -28,16 +31,34 @@ export class Vergleich {
     el.className = "ansicht vergleich";
     el.setAttribute("aria-label", "Alle vergleichen");
 
+    // Symbole wie auf der Karte gezeichnet, damit die Farben übereinstimmen.
     const legende = document.createElement("div");
-    legende.innerHTML = `
-      <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>besucht</span>
-      <span><i class="wartet"></i>entdeckt, wartet</span>
-      <span><i class="kante"></i>Entdeckungskante</span>
-      <span><i class="weg"></i>gefundener Weg</span>`;
+    const eintrag = (symbole: HTMLCanvasElement[], text: string) => {
+      const span = document.createElement("span");
+      span.append(...symbole, text);
+      return span;
+    };
+    const hinweis = document.createElement("span");
+    hinweis.className = "feldinfo-hinweis";
+    hinweis.textContent = "Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten";
+    legende.append(
+      eintrag(
+        ALGOS.map((a) => symbol("besucht", ALGO_INFO[a].farbe)),
+        "besucht (wie der Zähler „besucht“; DFS zählt beim Auflegen, die anderen beim Expandieren)",
+      ),
+      eintrag([symbol("wartet", "#fff")], "wartet in Warteschlange oder Prioritätswarteschlange"),
+      eintrag([symbol("besuchtWartet", ALGO_INFO.dfs.farbe)], "DFS: besucht, liegt noch auf dem Stapel"),
+      eintrag([symbol("weg", "#fff")], "finaler Weg"),
+      eintrag([symbol("kante", "#1e1e1e")], "Entdeckungskante (Vorgänger, in der Farbe des Verfahrens)"),
+      hinweis,
+    );
     this.wiedergabe = new Wiedergabe(
       { position: () => Z.k, laenge: vergleichMax, gehe: geheVergleich },
       {
         zumEnde: false,
+        einheit: "Felder",
+        einheitEinzahl: "Feld",
+        einheitErklaerung: "Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld.",
         legende,
         geaendert,
         loslaufen: {
@@ -59,13 +80,17 @@ export class Vergleich {
       karte.style.setProperty("--farbe", info.farbe);
       karte.innerHTML = `
         <header>
-          <div class="name"><span class="punkt" aria-hidden="true"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span></div>
+          <div class="name"><span class="farbfeld"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
+            <span class="gewicht-marke" title="Bei dieser Karte kosten Felder verschieden viel; ${info.name} beachtet das nicht.">ignoriert Gewichte</span></div>
           <div class="zaehler" aria-live="off"></div>
+          <div class="struktur-zeile"></div>
           <div class="status"></div>
         </header>`;
+      // Farbfeld im Kopf: dasselbe Symbol wie ein besuchtes Feld auf der Karte, damit die Farben sicher übereinstimmen.
+      karte.querySelector(".farbfeld")?.replaceWith(symbol("besucht", info.farbe));
       const canvas = document.createElement("canvas");
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", `Karte ${info.name}`);
+      canvas.setAttribute("role", "application");
+      canvas.setAttribute("aria-roledescription", "Karte");
       karte.append(canvas);
       raster.append(karte);
       verbindeKarte(canvas, () => Z.vergleich[a], geaendert);
@@ -73,6 +98,8 @@ export class Vergleich {
         canvas,
         zaehler: karte.querySelector(".zaehler") as HTMLElement,
         status: karte.querySelector(".status") as HTMLElement,
+        struktur: karte.querySelector(".struktur-zeile") as HTMLElement,
+        gewicht: karte.querySelector(".gewicht-marke") as HTMLElement,
       });
     }
 
@@ -84,10 +111,11 @@ export class Vergleich {
       <p class="fazit" aria-live="polite"></p>
       <div class="tabelle-rahmen">
         <table>
-          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes">Rechenschritte</th><th scope="col">Weglänge (Felder)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
+          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes (Modellannahme, siehe unten)">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
           <tbody></tbody>
         </table>
-      </div>`;
+      </div>
+      <p class="hinweis modell"><b>Modellannahme Rechenschritte:</b> gezählt werden ausgeführte Zeilen des Pseudocodes. Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)) und das Berechnen der Schätzung h(v) bei A*. Das Maß hängt also davon ab, wie der Pseudocode geschrieben ist; es ist kein Zeitmaß.</p>`;
     this.wahl = ergebnis.querySelector(".beste-wahl") as HTMLParagraphElement;
     this.fazit = ergebnis.querySelector(".fazit") as HTMLParagraphElement;
     this.tabelle = ergebnis.querySelector("tbody") as HTMLTableSectionElement;
@@ -124,6 +152,7 @@ export class Vergleich {
         hover,
         hoverOk: hoverOk(hover),
         zeit,
+        h: Z.h,
       });
     }
   }
@@ -134,13 +163,38 @@ export class Vergleich {
       const k = this.karten.get(a);
       if (!k) continue;
       const e = Z.ergebnisse[a];
+      const r = Z.vergleich[a];
+      k.canvas.setAttribute("aria-label", kartenBeschreibung(r));
       k.zaehler.innerHTML = `<b>${zahl(Math.min(Z.k, e.besucht))}</b> besucht`;
+      k.gewicht.hidden = ALGO_INFO[a].gewichte || !Z.gewichtet;
+      // Inhalt der Datenstruktur kurz: Größe und das Feld, das als Nächstes drankommt.
+      const inhalt = r.inhalt().filter((x) => !r.veraltet(x));
+      const b = e.breite;
+      const fertigA = r.fertig;
+      const naechster =
+        inhalt[0] && !fertigA
+          ? ` · als Nächstes (${inhalt[0].v % b}|${Math.floor(inhalt[0].v / b)})`
+          : fertigA && inhalt.length
+            ? " übrig (Suche beendet)"
+            : "";
+      const wert =
+        inhalt[0] && !fertigA && a === "dijkstra"
+          ? `, d = ${zahl(inhalt[0].prio)}`
+          : inhalt[0] && !fertigA && a === "astar"
+            ? `, f = ${zahl(inhalt[0].prio)}`
+            : "";
+      k.struktur.textContent = `${ALGO_INFO[a].liste}: ${inhalt.length}${naechster}${wert}`;
       let status: string;
       if (Z.k === 0) status = "bereit";
       else if (!fertig(a)) status = "sucht …";
       else if (!e.gefunden) status = "kein Weg gefunden";
-      else if (Z.laufzeit === null) status = `Ziel gefunden: ${zahl(e.felder)} Felder, ${zahl(e.kosten)} Ausdauer`;
-      else if (angekommen(Z.ergebnisse, a, Z.laufzeit)) status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
+      else if (Z.laufzeit === null)
+        status =
+          a === "bfs"
+            ? `Ziel gefunden: kürzester Weg nach Kantenzahl, ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`
+            : `Ziel gefunden: ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`;
+      else if (angekommen(Z.ergebnisse, a, Z.laufzeit))
+        status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
       else status = `läuft … ${zahl(Math.floor(Z.laufzeit))} von ${zahl(e.kosten)} Ausdauer`;
       k.status.innerHTML = status;
     }
@@ -154,7 +208,9 @@ export class Vergleich {
     this.tabelle.innerHTML = tabellenZeilen(welt, Z.ergebnisse, { k: Z.k, position, laufzeit: Z.laufzeit });
     const wahl = alle ? besteWahl(welt, Z.ergebnisse) : null;
     this.wahl.hidden = wahl === null;
-    this.wahl.innerHTML = wahl ? `<b>Beste Wahl in dieser Welt:</b> ${wahl.satz}` : "";
+    this.wahl.innerHTML = wahl
+      ? `<b>Beste Wahl in dieser Welt:</b> ${wahl.satz}<br><small>Kriterium dieser Welt: ${wahl.kriterium}.</small>`
+      : "";
     this.fazit.textContent = alle
       ? fazitText(welt, Z.ergebnisse)
       : "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld.";

@@ -1,0 +1,39 @@
+name: Prüfen
+
+# Sichert „main ist immer lauffähig“: Jeder Pull Request wird vor dem Merge geprüft, ohne zu veröffentlichen.
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pruefen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      # QA-03: zeitabhängig, deshalb nur zur Information.
+      - run: npm run test:leistung
+        continue-on-error: true
+      - name: Commit-Nachrichten (deutsch, Imperativ; keine Standardtexte der GitHub-Weboberfläche)
+        if: github.event_name == 'pull_request'
+        run: |
+          schlecht=$(git log --no-merges --format=%s "origin/${{ github.base_ref }}..HEAD" \
+            | grep -E '^(Add files via upload|Add |Update |Create |Delete |Fix |Initial commit)' || true)
+          if [ -n "$schlecht" ]; then
+            echo "Diese Commit-Nachrichten verstoßen gegen CLAUDE.md, Abschnitt 11 (kurz, deutsch, Imperativ):"
+            echo "$schlecht"
+            exit 1
+          fi

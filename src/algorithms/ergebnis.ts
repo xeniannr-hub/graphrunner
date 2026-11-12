@@ -20,7 +20,7 @@ export function aufzeichnen(algo: Algo, lauf: SuchLauf): SearchResult {
   const besuchsIndizes: number[] = [];
   let r = lauf.next();
   while (!r.done) {
-    if (r.value.besuch !== undefined) besuchsIndizes.push(schritte.length);
+    if ("besuch" in r.value && r.value.besuch !== undefined) besuchsIndizes.push(schritte.length);
     schritte.push(r.value);
     r = lauf.next();
   }

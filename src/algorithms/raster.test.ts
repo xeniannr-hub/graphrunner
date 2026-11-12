@@ -42,7 +42,6 @@ describe("Raster", () => {
 describe("Ungültige Eingaben werfen RangeError", () => {
   const fall: [string, number[][], { x: number; y: number }, { x: number; y: number }][] = [
     ["leere Karte", [], { x: 0, y: 0 }, { x: 0, y: 0 }],
-    ["Kosten 0", [[1, 0]], { x: 0, y: 0 }, { x: 1, y: 0 }],
     ["negative Kosten", [[1, -2]], { x: 0, y: 0 }, { x: 1, y: 0 }],
     ["Start außerhalb", [[1, 1]], { x: 5, y: 0 }, { x: 1, y: 0 }],
     ["Start auf Hindernis", [[I, 1]], { x: 0, y: 0 }, { x: 1, y: 0 }],
@@ -55,6 +54,9 @@ describe("Ungültige Eingaben werfen RangeError", () => {
       });
     }
   }
+  it("negative Kosten: Meldung nennt den Grund", () => {
+    expect(() => SUCHE.dijkstra([[1, -2]], { x: 0, y: 0 }, { x: 1, y: 0 })).toThrow("Negative Kantengewichte sind nicht erlaubt");
+  });
   it("Meldung ist deutsch", () => {
     expect(() => SUCHE.bfs([[I, 1]], { x: 0, y: 0 }, { x: 1, y: 0 })).toThrow("Der Start liegt auf einem Hindernis.");
   });

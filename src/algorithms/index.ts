@@ -25,4 +25,4 @@ export const SUCHE: Readonly<Record<Algo, (grid: Grid, start: Pos, ziel: Pos) =>
 };
 
 export { PSEUDOCODE } from "./pseudocode";
-export { nachbarn } from "./raster";
+export { billigstesFeld, nachbarn, schaetzung } from "./raster";

@@ -11,9 +11,10 @@ export const TERRAIN: readonly Terrain[] = [
   { key: "fels", name: "Fels", kosten: Infinity },
 ];
 
-export const TERRAIN_NACH_KEY: Readonly<Record<TerrainKey, Terrain>> = Object.fromEntries(
-  TERRAIN.map((t) => [t.key, t]),
-) as Record<TerrainKey, Terrain>;
+export const TERRAIN_NACH_KEY: Readonly<Record<TerrainKey, Terrain>> = Object.fromEntries(TERRAIN.map((t) => [t.key, t])) as Record<
+  TerrainKey,
+  Terrain
+>;
 
 const ZEICHEN: Readonly<Record<TerrainKey, string>> = {
   weg: "=",

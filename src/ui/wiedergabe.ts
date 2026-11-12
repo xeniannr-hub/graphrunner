@@ -1,5 +1,6 @@
 // Wiedergabeleiste für beide Ansichten (FA-09):
-// |◀ · ◀ · Abspielen/Pause/Nochmal · ▶ · [▶| nur Einzelansicht] · Tempo · „Schritt k von n“ · [Loslaufen nur Vergleich] · Legende.
+// |◀ · ◀ · Abspielen/Pause/Nochmal · ▶ · [▶| nur Einzelansicht] · Tempo (mit Schritten pro Sekunde) ·
+// „Zeile k von n“ bzw. „Feld k von n“ · [Loslaufen nur Vergleich] · Legende. Tastatur: ← → Schritt, Leertaste, Pos1, Ende.
 import { Z } from "./zustand";
 
 export interface Steuerung {
@@ -11,6 +12,12 @@ export interface Steuerung {
 export interface WiedergabeOptionen {
   /** Nur Einzelansicht: Knopf „Zum Ende“. */
   readonly zumEnde: boolean;
+  /** Was ein Schritt ist, für die Anzeige: „Zeilen“ (Einzelansicht) oder „Felder“ (Vergleich). */
+  readonly einheit: string;
+  /** Einzahl für die Fortschrittsanzeige, z. B. „Zeile“ → „Zeile 12 von 536“. */
+  readonly einheitEinzahl: string;
+  /** Erklärung der Einheit (title der Fortschrittsanzeige). */
+  readonly einheitErklaerung: string;
   /** Nur Vergleich: Knopf „Loslaufen“. */
   readonly loslaufen?: { bereit(): boolean; laeuft(): boolean; starte(): void };
   readonly legende: HTMLElement;
@@ -37,6 +44,7 @@ export class Wiedergabe {
   private readonly regler: HTMLInputElement;
   private readonly tempoRegler: HTMLInputElement;
   private readonly anzeige: HTMLOutputElement;
+  private readonly tempoAnzeige: HTMLOutputElement;
   private readonly los: HTMLButtonElement | null = null;
   private rest = 0;
 
@@ -51,7 +59,7 @@ export class Wiedergabe {
 
     const knoepfe = document.createElement("div");
     knoepfe.className = "knoepfe";
-    const anfang = knopf("|◀", "Zum Anfang");
+    const anfang = knopf("|◀", "Zum Anfang (Pos1)");
     const zurueck = knopf("◀", "Schritt zurück (Pfeil links)");
     this.spielen = knopf("Abspielen", "Abspielen oder anhalten (Leertaste)", "knopf haupt");
     const vor = knopf("▶", "Schritt vor (Pfeil rechts)");
@@ -61,7 +69,7 @@ export class Wiedergabe {
     this.spielen.onclick = () => this.umschalten();
     knoepfe.append(anfang, zurueck, this.spielen, vor);
     if (opt.zumEnde) {
-      const ende = knopf("▶|", "Zum Ende");
+      const ende = knopf("▶|", "Zum Ende (Ende)");
       ende.onclick = () => this.bediene(() => this.s.gehe(this.s.laenge()));
       knoepfe.append(ende);
     }
@@ -76,8 +84,12 @@ export class Wiedergabe {
     this.tempoRegler.value = String(Z.tempo);
     this.tempoRegler.oninput = () => {
       Z.tempo = Number(this.tempoRegler.value);
+      this.opt.geaendert();
     };
-    tempo.append(this.tempoRegler);
+    this.tempoAnzeige = document.createElement("output");
+    this.tempoAnzeige.className = "tempo-wert";
+    tempo.append(this.tempoRegler, this.tempoAnzeige);
+    this.tempoRegler.setAttribute("aria-label", "Tempo");
 
     const fortschritt = document.createElement("div");
     fortschritt.className = "fortschritt";
@@ -104,7 +116,9 @@ export class Wiedergabe {
     // Tastenhinweis direkt an der Leiste, damit die Bedienung ohne Anleitung auffällt (QA-04, QA-05).
     const tasten = document.createElement("p");
     tasten.className = "tasten";
-    tasten.innerHTML = `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause`;
+    tasten.innerHTML = opt.zumEnde
+      ? `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd><kbd>Ende</kbd> Anfang/Ende`
+      : `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd> Anfang`;
     leiste.append(opt.legende, tasten);
     this.element = leiste;
   }
@@ -118,6 +132,12 @@ export class Wiedergabe {
   /** Ein Schritt vor (+1) oder zurück (−1). */
   schritt(richtung: number): void {
     this.s.gehe(this.s.position() + richtung);
+  }
+
+  /** Pos1 und Ende: zum Anfang bzw. (nur Einzelansicht) zum Ende springen. */
+  springe(ende: boolean): void {
+    if (ende && !this.opt.zumEnde) return;
+    this.bediene(() => this.s.gehe(ende ? this.s.laenge() : 0));
   }
 
   /** Pfeiltasten: Schritt vor oder zurück. */
@@ -155,9 +175,13 @@ export class Wiedergabe {
     this.spielen.setAttribute("aria-pressed", String(Z.spielt));
     this.regler.max = String(n);
     this.regler.value = String(k);
-    this.regler.setAttribute("aria-valuetext", `Schritt ${k} von ${n}`);
-    this.anzeige.textContent = `Schritt ${k} von ${n}`;
+    const text = `${this.opt.einheitEinzahl} ${k} von ${n}`;
+    this.regler.setAttribute("aria-valuetext", text);
+    this.anzeige.textContent = text;
+    this.anzeige.title = this.opt.einheitErklaerung;
     this.tempoRegler.value = String(Z.tempo);
+    const sps = schritteProSekunde(Z.tempo);
+    this.tempoAnzeige.textContent = `${sps < 10 ? sps.toLocaleString("de-DE", { maximumFractionDigits: 1 }) : Math.round(sps)} ${this.opt.einheit}/s`;
     if (this.los && this.opt.loslaufen) {
       this.los.disabled = !this.opt.loslaufen.bereit();
       this.los.setAttribute("aria-pressed", String(this.opt.loslaufen.laeuft()));

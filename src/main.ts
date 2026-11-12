@@ -10,7 +10,7 @@ import { zeichneBanner, zeichneLogo } from "./render/kopf";
 import { Einzel } from "./ui/einzel";
 import { Seitenleiste } from "./ui/seitenleiste";
 import { Vergleich } from "./ui/vergleich";
-import { Z, beiAenderung, type Ansicht } from "./ui/zustand";
+import { Z, beiAenderung, istEigeneWelt, type Ansicht } from "./ui/zustand";
 
 const app = document.querySelector("#app") as HTMLElement;
 let schmutzig = true;
@@ -33,7 +33,7 @@ trenner.className = "trenner";
 trenner.setAttribute("aria-hidden", "true");
 const titel = document.createElement("div");
 titel.className = "titel";
-titel.innerHTML = `<h1><span class="graph">Graph</span><span class="runner">Runner</span></h1><p>Wann ist welcher Suchalgorithmus der beste?</p>`;
+titel.innerHTML = `<h1><span class="graph">Graph</span><span class="runner">Runner</span></h1><p lang="en">Explore the World of Pathfinding</p>`;
 const umschalter = document.createElement("div");
 umschalter.className = "umschalter";
 umschalter.setAttribute("role", "group");
@@ -68,12 +68,12 @@ haupt.className = "haupt";
 haupt.append(vergleich.element, einzel.element);
 const rumpf = document.createElement("div");
 rumpf.className = "rumpf";
-rumpf.append(seitenleiste.element, haupt);
+rumpf.append(seitenleiste.element, haupt, seitenleiste.info);
 app.append(kopf, rumpf);
 
 const aktiveWiedergabe = () => (Z.ansicht === "vergleich" ? vergleich.wiedergabe : einzel.wiedergabe);
 
-// Tastatur (QA-05): ← / → ein Schritt, Leertaste Abspielen. Eingabefelder und Knöpfe behalten ihre eigene Bedienung.
+// Tastatur (QA-05): ← / → ein Schritt, Leertaste Abspielen, Pos1 / Ende springen. Eingabefelder und Knöpfe behalten ihre eigene Bedienung.
 document.addEventListener("keydown", (ev) => {
   const ziel = ev.target as HTMLElement;
   const tag = ziel.tagName;
@@ -81,6 +81,9 @@ document.addEventListener("keydown", (ev) => {
   if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
     ev.preventDefault();
     aktiveWiedergabe().taste(ev.key === "ArrowRight" ? 1 : -1);
+  } else if (ev.key === "Home" || ev.key === "End") {
+    ev.preventDefault();
+    aktiveWiedergabe().springe(ev.key === "End");
   } else if (ev.key === " " && tag !== "BUTTON") {
     ev.preventDefault();
     aktiveWiedergabe().umschalten();
@@ -107,6 +110,8 @@ function bild(jetzt: number): void {
     vergleich.element.hidden = Z.ansicht !== "vergleich";
     einzel.element.hidden = Z.ansicht !== "einzel";
     seitenleiste.aktualisiere();
+    // Nur in der Eigenen Welt fangen die Karten Wischgesten ab (zum Malen); sonst scrollt man über sie hinweg.
+    document.body.classList.toggle("bauen-aktiv", istEigeneWelt());
     if (Z.ansicht === "vergleich") {
       vergleich.aktualisiere();
       vergleich.zeichne(jetzt);

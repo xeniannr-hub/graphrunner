@@ -4,7 +4,7 @@ import { sprites, textur } from "../render/textures";
 import type { TerrainKey } from "../types";
 import { TERRAIN } from "../world/terrain";
 import { WELTEN } from "../world/worlds";
-import { ALGO_INFO } from "./erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
 import { Z, istEigeneWelt, ladeWelt, leereKarte, type Werkzeug } from "./zustand";
 
 function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
@@ -26,10 +26,14 @@ const WELT_BLOCK: readonly TerrainKey[] = ["fels", "wald", "sumpf", "weg", "gras
 const kosten = (k: number): string => (k === Infinity ? "–" : String(k));
 
 export class Seitenleiste {
+  /** Weltliste und (in der Eigenen Welt) Bauen: steht auf dem Handy über der Karte. */
   readonly element: HTMLElement;
+  /** Begründung und Ausdauer pro Feld: steht auf dem Handy unter der Karte, damit die Steuerung früh kommt. */
+  readonly info: HTMLElement;
   private readonly welten: HTMLButtonElement[] = [];
   private readonly wannEl: HTMLElement;
   private readonly warumEl: HTMLElement;
+  private readonly lernEl: HTMLElement;
   private readonly bauen: HTMLElement;
   private readonly ausdauer: HTMLElement;
   private readonly werkzeuge = new Map<Werkzeug, HTMLButtonElement>();
@@ -47,7 +51,9 @@ export class Seitenleiste {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "welt";
-      const kuerzel = w.algo ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>` : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
+      const kuerzel = w.algo
+        ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>`
+        : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
       b.innerHTML = `<span class="welt-titel">${w.titel}</span>${kuerzel}`;
       b.prepend(symbol(textur(WELT_BLOCK[i] ?? "gras", 1)));
       b.onclick = () => {
@@ -63,7 +69,9 @@ export class Seitenleiste {
     this.wannEl = document.createElement("p");
     this.wannEl.className = "wann";
     this.warumEl = document.createElement("p");
-    begruendung.append(this.wannEl, this.warumEl);
+    this.lernEl = document.createElement("p");
+    this.lernEl.className = "lernpunkt";
+    begruendung.append(this.wannEl, this.warumEl, this.lernEl);
 
     // Bauen: Start, Ziel und die sieben Geländearten.
     this.bauen = document.createElement("section");
@@ -132,8 +140,13 @@ export class Seitenleiste {
     fuss.textContent = "„–“ heißt: nicht begehbar. Ein Schritt kostet so viel wie das Feld, das man betritt.";
     this.ausdauer.append(tabelle, fuss);
 
-    el.append(titel, liste, begruendung, this.bauen, this.ausdauer);
+    el.append(titel, liste, this.bauen);
     this.element = el;
+    const info = document.createElement("aside");
+    info.className = "seiten-info";
+    info.setAttribute("aria-label", "Begründung und Ausdauer");
+    info.append(begruendung, this.ausdauer);
+    this.info = info;
   }
 
   aktualisiere(): void {
@@ -145,6 +158,9 @@ export class Seitenleiste {
       this.wannEl.textContent = "Baue deine eigene Welt.";
     }
     this.warumEl.textContent = w.warum;
+    this.lernEl.hidden = w.lernpunkt === "";
+    this.lernEl.innerHTML = w.lernpunkt ? `<b>Lernpunkt:</b> ` : "";
+    this.lernEl.append(w.lernpunkt);
     const eigen = istEigeneWelt();
     this.bauen.hidden = !eigen;
     this.ausdauer.hidden = eigen;

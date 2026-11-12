@@ -1,9 +1,9 @@
 // Zustand der Oberfläche: gewählte Welt, bearbeitbare Karte, Aufzeichnungen und Positionen beider Ansichten.
 // Nichts davon wird gespeichert (RB-03).
-import { ALGOS, SUCHE } from "../algorithms";
+import { ALGOS, SUCHE, billigstesFeld, schaetzung } from "../algorithms";
 import type { Zahlen } from "../render/karte";
 import { Replay } from "../replay/replay";
-import type { Algo, Pos, SearchResult, TerrainKey } from "../types";
+import type { Algo, FeldId, Pos, SearchResult, TerrainKey } from "../types";
 import { begehbar, leseKarte, zuGrid, type Karte } from "../world/terrain";
 import { WELTEN } from "../world/worlds";
 
@@ -33,6 +33,16 @@ export interface Zustand {
   /** Ausdauer seit „Loslaufen“, null = Rennen nicht gestartet. */
   laufzeit: number | null;
   werkzeug: Werkzeug;
+  /** A*-Schätzung der aktuellen Karte: h(v) = Manhattan(v, Ziel) × billigstes Feld. */
+  h: (id: FeldId) => number;
+  /** Kosten des billigsten begehbaren Feldes (Faktor der Schätzung). */
+  billigstes: number;
+  /** Kosten der Felder verschieden? Dann ignorieren BFS und DFS etwas Wesentliches. */
+  gewichtet: boolean;
+  /** Wie viele Felder das billigste Feld stellen; wenige heißt: Sie bestimmen h trotzdem auf der ganzen Karte. */
+  billigsteAnzahl: number;
+  /** Faktor, den die Schätzung ohne diese billigsten Felder hätte (Infinity, wenn es keine anderen gibt). */
+  naechstBilligstes: number;
 }
 
 const beobachter: (() => void)[] = [];
@@ -53,6 +63,21 @@ function rechne(karte: Karte, start: Pos, ziel: Pos): Record<Algo, SearchResult>
 
 function replays(e: Record<Algo, SearchResult>): Record<Algo, Replay> {
   return Object.fromEntries(ALGOS.map((a) => [a, new Replay(e[a])])) as Record<Algo, Replay>;
+}
+
+/** Schätzung, billigstes Feld und ob die Karte verschiedene Kosten hat. */
+function kennzahlen(karte: Karte, ziel: Pos): Pick<Zustand, "h" | "billigstes" | "gewichtet" | "billigsteAnzahl" | "naechstBilligstes"> {
+  const grid = zuGrid(karte);
+  const begehbar = grid.flat().filter((k) => k !== Infinity);
+  const billigstes = billigstesFeld(grid);
+  const teurere = begehbar.filter((k) => k > billigstes);
+  return {
+    h: schaetzung(grid, ziel),
+    billigstes,
+    gewichtet: new Set(begehbar).size > 1,
+    billigsteAnzahl: begehbar.length - teurere.length,
+    naechstBilligstes: teurere.length > 0 ? Math.min(...teurere) : Infinity,
+  };
 }
 
 const erste = WELTEN[0];
@@ -76,6 +101,7 @@ export const Z: Zustand = {
   tempo: 5,
   laufzeit: null,
   werkzeug: "wald",
+  ...kennzahlen(ersteKarte, erste.ziel),
 };
 
 /** Größte Zahl von Besuchen über alle Verfahren: so viele Schritte hat der Vergleich. */
@@ -95,6 +121,7 @@ export function geheVergleich(k: number): void {
 function neuRechnen(ansEnde: boolean): void {
   Z.version++;
   Z.ergebnisse = rechne(Z.karte, Z.start, Z.ziel);
+  Object.assign(Z, kennzahlen(Z.karte, Z.ziel));
   Z.vergleich = replays(Z.ergebnisse);
   Z.einzel = replays(Z.ergebnisse);
   Z.laufzeit = null;

@@ -20,7 +20,7 @@ describe("Generator und Aufzeichnung", () => {
       const e = SUCHE[algo](GRID, start, ziel);
       expect(e.schritte).toEqual(steps);
       expect(e.besucht).toBe(e.besuchsIndizes.length);
-      e.besuchsIndizes.forEach((idx, i) => expect(e.schritte[idx].besuch).toBe(i + 1));
+      e.besuchsIndizes.forEach((idx, i) => expect(e.schritte[idx]).toHaveProperty("besuch", i + 1));
     });
 
     it(`${algo}: jeder next() führt genau eine Zeile aus`, () => {

@@ -9,12 +9,13 @@ export interface PseudoZeile {
 
 const z = (text: string, ...arten: StepArt[]): PseudoZeile => ({ text, arten });
 
-function bestensuche(name: string, startPrio: string, prio: string): PseudoZeile[] {
-  return [
+function bestensuche(name: string, mitSchaetzung: boolean): PseudoZeile[] {
+  const zeilen = [
     z(name),
     z("  für jedes Feld v: d[v] ← ∞, vorg[v] ← –", "init"),
     z("  d[s] ← 0", "setze"),
-    z(`  H.einfügen(s, ${startPrio})`, "einfuegen"),
+    ...(mitSchaetzung ? [z("  hs ← h(s)", "schaetze")] : []),
+    z(`  H.einfügen(s, ${mitSchaetzung ? "hs" : "0"})`, "einfuegen"),
     z("  solange H nicht leer:", "schleife"),
     z("    u ← H.entnimmKleinste()", "entnehmen"),
     z("    wenn u schon abgeschlossen: weiter", "veraltetPruefung"),
@@ -24,9 +25,11 @@ function bestensuche(name: string, startPrio: string, prio: string): PseudoZeile
     z("      neu ← d[u] + kosten(v)", "rechne"),
     z("      wenn neu < d[v]:", "vergleiche"),
     z("        d[v] ← neu; vorg[v] ← u", "setze"),
-    z(`        H.einfügen(v, ${prio})`, "einfuegen"),
+    ...(mitSchaetzung ? [z("        hv ← h(v)", "schaetze")] : []),
+    z(`        H.einfügen(v, ${mitSchaetzung ? "neu + hv" : "neu"})`, "einfuegen"),
     z("  kein Weg", "keinWeg"),
   ];
+  return zeilen;
 }
 
 export const PSEUDOCODE: Readonly<Record<Algo, readonly PseudoZeile[]>> = {
@@ -59,6 +62,6 @@ export const PSEUDOCODE: Readonly<Record<Algo, readonly PseudoZeile[]>> = {
     z("    sonst: S.entnehmen()", "entnehmen"),
     z("  kein Weg", "keinWeg"),
   ],
-  dijkstra: bestensuche("Dijkstra(Karte, s, z):", "0", "neu"),
-  astar: bestensuche("A*(Karte, s, z):   h(v) = Manhattan(v, z) · billigstes Feld", "h(s)", "neu + h(v)"),
+  dijkstra: bestensuche("Dijkstra(Karte, s, z):", false),
+  astar: bestensuche("A*(Karte, s, z):   h(v) = Manhattan(v, z) · billigstes Feld", true),
 };

@@ -2,11 +2,13 @@
 // Entdeckungskanten, gefundener Weg, Besuchsnummern oder Kosten, Fokusrahmen, Figur und Truhe.
 import type { Replay } from "../replay/replay";
 import type { FeldId, Pos, TerrainKey } from "../types";
-import { ALGO_INFO, fokus } from "../ui/erklaerung";
+import { ALGO_INFO } from "../info/algo-info";
+import { fokus } from "../info/fokus";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
 import { sprites, textur } from "./textures";
 
-export type Zahlen = "keine" | "reihenfolge" | "kosten";
+/** Zahlen auf der Karte: Besuchsnummer, d bzw. g, und nur bei A* h und f. */
+export type Zahlen = "keine" | "reihenfolge" | "kosten" | "h" | "f";
 
 export interface KartenBild {
   readonly karte: readonly (readonly TerrainKey[])[];
@@ -25,6 +27,8 @@ export interface KartenBild {
   readonly hoverOk: boolean;
   /** Zeit in ms für kleine Bewegungen der Figur. */
   readonly zeit: number;
+  /** A*-Schätzung für die Zahlen h und f. */
+  readonly h: (id: FeldId) => number;
 }
 
 const hintergrund = new Map<string, HTMLCanvasElement>();
@@ -51,6 +55,82 @@ function gelaende(bild: KartenBild, ts: number): HTMLCanvasElement {
   g.fillStyle = "rgba(12, 10, 8, 0.12)";
   g.fillRect(0, 0, c.width, c.height);
   hintergrund.set(schluessel, c);
+  return c;
+}
+
+/** Darstellungen eines Feldes; dieselbe Funktion zeichnet Karte und Legende, damit beide gleich aussehen. */
+export type FeldArt = "besucht" | "wartet" | "besuchtWartet" | "entdeckt";
+
+/**
+ * Besuchte Felder: Erst wird das Gelände aufgehellt, dann kommt die Farbe des Verfahrens darüber.
+ * Ohne Aufhellen mischt sich die Farbe mit dem Gelände (Gelb auf Wiese wird oliv, Rosa auf Sumpf braun) und
+ * passt nicht mehr zur Farbe des Verfahrens in Kopf, Tabs und Legende. So bleibt der Farbton erhalten,
+ * das Muster des Geländes scheint aber noch durch.
+ */
+const AUFHELLEN = 0.4;
+const DECKKRAFT = 0.72;
+
+function zeichneFeld(ctx: CanvasRenderingContext2D, x: number, y: number, ts: number, art: FeldArt, farbe: string): void {
+  if (art === "besucht" || art === "besuchtWartet") {
+    ctx.fillStyle = `rgba(255, 255, 255, ${AUFHELLEN})`;
+    ctx.fillRect(x, y, ts, ts);
+    ctx.fillStyle = rgba(farbe, DECKKRAFT);
+    ctx.fillRect(x, y, ts, ts);
+  }
+  if (art === "wartet") {
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.fillRect(x, y, ts, ts);
+  }
+  if (art === "wartet" || art === "besuchtWartet") {
+    const p = Math.max(2, Math.round(ts / 5));
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);
+  }
+  if (art === "entdeckt") {
+    const l = Math.max(1.5, ts * 0.1);
+    ctx.setLineDash([Math.max(2, ts * 0.18), Math.max(2, ts * 0.12)]);
+    ctx.lineWidth = l;
+    ctx.strokeStyle = "#fff";
+    ctx.strokeRect(x + l, y + l, ts - 2 * l, ts - 2 * l);
+    ctx.setLineDash([]);
+  }
+}
+
+export type SymbolArt = FeldArt | "weg" | "kante";
+
+/**
+ * Legendensymbol, gezeichnet wie auf der Karte: ein Wiesenfeld mit derselben Überlagerung (QA-05).
+ * So stimmen die Farben in Legende und Karte immer überein.
+ */
+export function symbol(art: SymbolArt, farbe: string): HTMLCanvasElement {
+  const ts = 16;
+  const c = document.createElement("canvas");
+  c.width = ts;
+  c.height = ts;
+  c.className = "symbol-legende";
+  c.setAttribute("aria-hidden", "true");
+  const g = c.getContext("2d") as CanvasRenderingContext2D;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(textur("gras", 0), 0, 0, ts, ts);
+  if (art === "weg" || art === "kante") {
+    g.lineCap = "round";
+    if (art === "weg") {
+      g.strokeStyle = "#111";
+      g.lineWidth = 7;
+      g.beginPath();
+      g.moveTo(2, 8);
+      g.lineTo(14, 8);
+      g.stroke();
+    }
+    g.strokeStyle = art === "weg" ? "#fff" : farbe;
+    g.lineWidth = art === "weg" ? 3.5 : 2;
+    g.beginPath();
+    g.moveTo(2, 8);
+    g.lineTo(14, 8);
+    g.stroke();
+  } else zeichneFeld(g, 0, 0, ts, art, farbe);
   return c;
 }
 
@@ -85,21 +165,18 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(gelaende(bild, ts), 0, 0);
 
-  // Besucht: durchscheinende Farbe des Verfahrens, Muster und Farbe des Geländes bleiben sichtbar.
-  // Entdeckt und wartend: heller Schleier mit weißem Punkt (FA-04).
-  ctx.fillStyle = rgba(farbe, 0.5);
-  for (let v = 0; v < n; v++) if (r.besuchNr[v] > 0) ctx.fillRect((v % b) * ts, Math.floor(v / b) * ts, ts, ts);
-  const p = Math.max(2, Math.round(ts / 5));
+  // Zustände (FA-04), jeweils mit eigener Form, nicht nur Farbe. Die Farbe des Verfahrens markiert genau die Felder,
+  // die als „besucht“ gezählt sind (Zähler und Tabelle zählen dieselben). Dazu kommt der Zustand in der Datenstruktur:
+  // wartend = weißer Punkt (bei DFS auf farbigem Feld, weil DFS schon beim Auflegen besucht), entdeckt = gestrichelt.
   for (let v = 0; v < n; v++) {
-    if (!r.wartet(v)) continue;
+    const z = r.zustand(v);
+    if (z === "unbekannt") continue;
+    const besucht = r.besuchNr[v] > 0;
     const x = (v % b) * ts;
     const y = Math.floor(v / b) * ts;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
-    ctx.fillRect(x, y, ts, ts);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-    ctx.fillRect(x + (ts - p) / 2 - 1, y + (ts - p) / 2 - 1, p + 2, p + 2);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(x + (ts - p) / 2, y + (ts - p) / 2, p, p);
+    if (z === "wartet") zeichneFeld(ctx, x, y, ts, besucht ? "besuchtWartet" : "wartet", farbe);
+    else if (besucht) zeichneFeld(ctx, x, y, ts, "besucht", farbe);
+    else if (z === "entdeckt") zeichneFeld(ctx, x, y, ts, "entdeckt", farbe);
   }
 
   // Entdeckungskanten: von jedem Feld zu seinem Vorgänger (FA-05).
@@ -150,14 +227,20 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
     ctx.setLineDash([]);
   }
 
-  // Zahlen auf der Karte: Besuchsnummer (FA-06) oder bisherige Kosten d.
+  // Zahlen auf der Karte: Besuchsnummer (FA-06), bisherige Kosten d bzw. g, bei A* auch h und f.
   if (bild.zahlen !== "keine" && ts >= 14) {
     ctx.font = `600 ${Math.round(ts * 0.42)}px "JetBrains Mono", monospace`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (let v = 0; v < n; v++) {
-      const wert = bild.zahlen === "reihenfolge" ? r.besuchNr[v] : r.d[v];
-      if (bild.zahlen === "reihenfolge" ? wert === 0 : wert === Infinity) continue;
+      let wert: number;
+      if (bild.zahlen === "reihenfolge") wert = r.besuchNr[v] || Infinity;
+      else if (bild.zahlen === "kosten") wert = r.d[v];
+      // h ist für jedes begehbare Feld bekannt, auch ohne Suche: So sieht man die Schätzung selbst.
+      else if (bild.zahlen === "h")
+        wert = TERRAIN_NACH_KEY[bild.karte[Math.floor(v / b)][v % b]].kosten === Infinity ? Infinity : bild.h(v);
+      else wert = r.d[v] + bild.h(v);
+      if (wert === Infinity) continue;
       const [x, y] = mitte(v);
       ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
       ctx.fillText(String(wert), x + 1, y + 1);
@@ -265,4 +348,3 @@ export function zeichneLeinwand(canvas: HTMLCanvasElement, bild: KartenBild): vo
   }
   zeichneKarte(canvas.getContext("2d") as CanvasRenderingContext2D, ts, bild);
 }
-

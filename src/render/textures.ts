@@ -181,7 +181,20 @@ export function sprites() {
         "....BBB..BBB....",
         "....BBB..BBB....",
       ],
-      { H: "#e8892b", L: "#fff0a0", h: "#a85d18", k: "#e0a878", A: "#1d1611", m: "#9c5a3c", S: "#3f8f5a", s: "#2f6e44", g: "#ffd75e", b: "#2a1d14", p: "#5a4330", B: "#2a2420" },
+      {
+        H: "#e8892b",
+        L: "#fff0a0",
+        h: "#a85d18",
+        k: "#e0a878",
+        A: "#1d1611",
+        m: "#9c5a3c",
+        S: "#3f8f5a",
+        s: "#2f6e44",
+        g: "#ffd75e",
+        b: "#2a1d14",
+        p: "#5a4330",
+        B: "#2a2420",
+      },
     ),
     truhe: sprite(
       [
@@ -199,10 +212,10 @@ export function sprites() {
       ],
       { d: "#3b2512", w: "#a8692f", W: "#d9a441", g: "#f2c84b", G: "#fff4b8" },
     ),
-    fahne: sprite(
-      [".prrrrrr", ".prrrrrr", ".prrrr..", ".prr....", ".p......", ".p......", ".p......", "ppp....."],
-      { p: "#4a2f17", r: "#ff5c5c" },
-    ),
+    fahne: sprite([".prrrrrr", ".prrrrrr", ".prrrr..", ".prr....", ".p......", ".p......", ".p......", "ppp....."], {
+      p: "#4a2f17",
+      r: "#ff5c5c",
+    }),
   };
   return spriteCache;
 }
