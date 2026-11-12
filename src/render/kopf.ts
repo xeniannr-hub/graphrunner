@@ -91,8 +91,11 @@ export function zeichneLogo(): HTMLCanvasElement {
   return c;
 }
 
+/** Höhe der Bodenleiste unten im Banner, in groben Pixeln (je 3 × 3 Bildschirmpixel). */
+const BODEN_HOEHE = 6;
+
 /**
- * Banner hinter dem Kopf: Nachthimmel in Stufen, Wolken, Blockberge und Tannen.
+ * Banner hinter dem Kopf: Taghimmel in Stufen, Wolken, Blockberge, Tannen und unten eine Leiste aus Gras- und Erdblöcken.
  * Gezeichnet in groben Pixeln (je 3 × 3 Bildschirmpixel) und auf die Breite des Kopfes angepasst.
  */
 export function zeichneBanner(canvas: HTMLCanvasElement): void {
@@ -146,11 +149,32 @@ export function zeichneBanner(canvas: HTMLCanvasElement): void {
   // Tannen am unteren Rand.
   for (let x = Math.floor(b * 0.28); x < b; x += 5 + Math.floor(r() * 6)) {
     const t = 8 + Math.floor(r() * 10);
-    const fuss = h - Math.floor(r() * 3);
+    const fuss = h - BODEN_HOEHE - 1;
     for (let i = 0; i < t; i++) {
       const halb = Math.floor((i * 4) / t) + (i % 3 === 2 ? 1 : 0);
       px(g, x - halb, fuss - t + i, i % 3 === 0 ? "#4caf3a" : "#3a8f30", 2 * halb + 1, 1);
     }
     px(g, x, fuss, "#4a2f17", 1, 2);
+  }
+
+  zeichneBoden(g, b, h, r);
+}
+
+/** Bodenleiste: oben eine Grasschicht mit herabhängenden Halmen, darunter Erde mit Steinen, alle 8 Pixel eine Blockfuge. */
+function zeichneBoden(g: CanvasRenderingContext2D, b: number, h: number, r: () => number): void {
+  const oben = h - BODEN_HOEHE;
+  for (let x = 0; x < b; x++) {
+    const halm = r() < 0.45 ? 1 : 0;
+    for (let y = oben; y < h; y++) {
+      const tief = y - oben;
+      let farbe: string;
+      if (tief === 0) farbe = (x + Math.floor(x / 8)) % 3 === 0 ? "#5cc244" : "#4caf3a";
+      else if (tief === 1 || (tief === 2 && halm)) farbe = tief === 1 ? "#3f9a31" : "#367f2b";
+      else if (r() < 0.06) farbe = "#7d7d7d";
+      else farbe = wahl(r, ["#7a4e25", "#6c4421", "#83552a", "#744a23"]);
+      // Blockfugen, damit die Leiste als Reihe einzelner Klötze lesbar ist.
+      if (x % 8 === 7 && tief > 1) farbe = "#4a2f17";
+      px(g, x, y, farbe);
+    }
   }
 }

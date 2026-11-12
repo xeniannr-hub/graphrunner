@@ -1284,3 +1284,63 @@ tbody tr:nth-child(even) {
   outline: 3px solid var(--fokus);
   outline-offset: 2px;
 }
+
+/* ---------- Ergänzungen aus PR #14 im hellen Schema: Tasten, Symbole im Umschalter, Block je Welt ---------- */
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.35em;
+  margin-right: 0.15em;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  background: linear-gradient(#fffdf8, #e8e0cf);
+  border: 2px solid var(--rand);
+  box-shadow: var(--hoch);
+}
+
+.tasten {
+  width: 100%;
+  margin: -0.2rem 0 0;
+  font-size: 0.82rem;
+  color: var(--gedaempft);
+}
+
+.umschalter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.umschalter svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  shape-rendering: crispEdges;
+}
+
+.welt {
+  justify-content: flex-start;
+}
+
+.welt .kuerzel {
+  margin-left: auto;
+}
+
+.welt .symbol {
+  width: 22px;
+  height: 22px;
+}
+
+@media (max-width: 720px) {
+  .umschalter {
+    width: 100%;
+  }
+  .umschalter button {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+}

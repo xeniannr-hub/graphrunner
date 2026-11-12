@@ -113,7 +113,13 @@ export class Wiedergabe {
       leiste.append(this.los);
     }
     opt.legende.classList.add("legende");
-    leiste.append(opt.legende);
+    // Tastenhinweis direkt an der Leiste, damit die Bedienung ohne Anleitung auffällt (QA-04, QA-05).
+    const tasten = document.createElement("p");
+    tasten.className = "tasten";
+    tasten.innerHTML = opt.zumEnde
+      ? `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd><kbd>Ende</kbd> Anfang/Ende`
+      : `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd> Anfang`;
+    leiste.append(opt.legende, tasten);
     this.element = leiste;
   }
 

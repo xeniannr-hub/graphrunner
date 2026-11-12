@@ -39,13 +39,17 @@ umschalter.className = "umschalter";
 umschalter.setAttribute("role", "group");
 umschalter.setAttribute("aria-label", "Ansicht");
 const ansichtKnoepfe = new Map<Ansicht, HTMLButtonElement>();
-for (const [a, text] of [
-  ["vergleich", "Alle vergleichen"],
-  ["einzel", "Einzelansicht"],
-] as [Ansicht, string][]) {
+// Pixel-Symbole (eigene Entwürfe): vier Karten im Raster bzw. eine Karte mit Codezeilen.
+const SYMBOL_VERGLEICH = `<svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 0h3v3H0zM5 0h3v3H5zM0 5h3v3H0zM5 5h3v3H5z"/></svg>`;
+const SYMBOL_EINZEL = `<svg viewBox="0 0 8 8" aria-hidden="true"><path d="M0 0h4v8H0zM5 1h3v1H5zM5 3h3v1H5zM5 5h2v1H5z"/></svg>`;
+for (const [a, text, symbol, hilfe] of [
+  ["vergleich", "Alle vergleichen", SYMBOL_VERGLEICH, "Alle vier Verfahren gleichzeitig auf derselben Karte"],
+  ["einzel", "Einzelansicht", SYMBOL_EINZEL, "Ein Verfahren Zeile für Zeile mit Pseudocode"],
+] as [Ansicht, string, string, string][]) {
   const b = document.createElement("button");
   b.type = "button";
-  b.textContent = text;
+  b.innerHTML = `${symbol}<span>${text}</span>`;
+  b.title = hilfe;
   b.onclick = () => {
     Z.ansicht = a;
     Z.spielt = false;
