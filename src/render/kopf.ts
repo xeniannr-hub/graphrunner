@@ -57,10 +57,13 @@ export function zeichneLogo(): HTMLCanvasElement {
   // Baum hinten links.
   const [bx, by] = iso(0.12, 0.42);
   px(g, bx - 1, by - 6, "#5b3a1f", 2, 7);
-  for (let k = 0; k < 26; k++) px(g, bx - 4 + Math.floor(r() * 8), by - 13 + Math.floor(r() * 8), wahl(r, ["#2f8a36", "#3fa043", "#24702b", "#4fb24a"]));
+  for (let k = 0; k < 26; k++)
+    px(g, bx - 4 + Math.floor(r() * 8), by - 13 + Math.floor(r() * 8), wahl(r, ["#2f8a36", "#3fa043", "#24702b", "#4fb24a"]));
 
   // Weg durch die Knoten, mit Schein.
-  const knoten = [iso(0.78, 0.2), iso(0.62, 0.5), iso(0.32, 0.62), iso(0.55, 0.85)].map(([x, y]) => [Math.round(x), Math.round(y)] as const);
+  const knoten = [iso(0.78, 0.2), iso(0.62, 0.5), iso(0.32, 0.62), iso(0.55, 0.85)].map(
+    ([x, y]) => [Math.round(x), Math.round(y)] as const,
+  );
   for (let i = 1; i < knoten.length; i++) {
     const [x1, y1] = knoten[i - 1];
     const [x2, y2] = knoten[i];
@@ -128,7 +131,14 @@ export function zeichneBanner(canvas: HTMLCanvasElement): void {
     berg = Math.floor(berg / 2) * 2;
     for (let y = h - berg; y < h; y++) {
       const hang = y - (h - berg);
-      const farbe = hang < 2 && berg > h * 0.55 ? "#d7dde6" : (x + y) % 7 === 0 ? "#4f5d70" : (Math.floor(x / 3) + Math.floor(y / 3)) % 2 ? "#5d6c80" : "#677890";
+      const farbe =
+        hang < 2 && berg > h * 0.55
+          ? "#d7dde6"
+          : (x + y) % 7 === 0
+            ? "#4f5d70"
+            : (Math.floor(x / 3) + Math.floor(y / 3)) % 2
+              ? "#5d6c80"
+              : "#677890";
       px(g, x, y, farbe);
     }
   }

@@ -177,7 +177,8 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
       if (bild.zahlen === "reihenfolge") wert = r.besuchNr[v] || Infinity;
       else if (bild.zahlen === "kosten") wert = r.d[v];
       // h ist für jedes begehbare Feld bekannt, auch ohne Suche: So sieht man die Schätzung selbst.
-      else if (bild.zahlen === "h") wert = TERRAIN_NACH_KEY[bild.karte[Math.floor(v / b)][v % b]].kosten === Infinity ? Infinity : bild.h(v);
+      else if (bild.zahlen === "h")
+        wert = TERRAIN_NACH_KEY[bild.karte[Math.floor(v / b)][v % b]].kosten === Infinity ? Infinity : bild.h(v);
       else wert = r.d[v] + bild.h(v);
       if (wert === Infinity) continue;
       const [x, y] = mitte(v);
@@ -287,4 +288,3 @@ export function zeichneLeinwand(canvas: HTMLCanvasElement, bild: KartenBild): vo
   }
   zeichneKarte(canvas.getContext("2d") as CanvasRenderingContext2D, ts, bild);
 }
-

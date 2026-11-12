@@ -5,7 +5,7 @@ import { leseKarte, zuGrid } from "../world/terrain";
 import type { TerrainKey } from "../types";
 import { WELTEN } from "../world/worlds";
 import { schaetzung } from "../algorithms";
-import { erklaerSatz, feldInfo, fokus, merkmal, protokoll } from "./erklaerung";
+import { erklaerSatz, feldInfo, fokus, kartenBeschreibung, merkmal, protokoll } from "./erklaerung";
 
 const KOORD = /\((\d+)\|(\d+)\)/g;
 
@@ -23,7 +23,9 @@ describe("Erklärsatz und fokus()", () => {
         const b = r.ergebnis.breite;
         while (r.vor()) {
           const f = fokus(r.aktuell);
-          const erwartet = new Set([f.bearbeitet, f.geprueft].filter((x) => x !== null).map((id) => `(${(id as number) % b}|${Math.floor((id as number) / b)})`));
+          const erwartet = new Set(
+            [f.bearbeitet, f.geprueft].filter((x) => x !== null).map((id) => `(${(id as number) % b}|${Math.floor((id as number) / b)})`),
+          );
           const satz = erklaerSatz(r);
           const genannt = new Set([...satz.matchAll(KOORD)].map((m) => m[0]));
           expect(genannt, `${r.aktuell?.art}: ${satz}`).toEqual(erwartet);
@@ -100,7 +102,16 @@ describe("Ereignisprotokoll", () => {
     }
   });
   it("DFS: Rücksprung steht im Protokoll", () => {
-    const r = new Replay(SUCHE.dfs([[1, I, 1], [1, 1, 1]], { x: 0, y: 1 }, { x: 2, y: 1 }));
+    const r = new Replay(
+      SUCHE.dfs(
+        [
+          [1, I, 1],
+          [1, 1, 1],
+        ],
+        { x: 0, y: 1 },
+        { x: 2, y: 1 },
+      ),
+    );
     expect(protokoll(r, () => 0).some((e) => e.art === "zurueck")).toBe(true);
   });
 });
@@ -119,5 +130,17 @@ describe("Merkmal: Woran erkenne ich Dijkstra statt BFS?", () => {
     expect(b.verbesserungen).toBe(0);
     expect(merkmal(d).frage).toMatch(/Dijkstra .* nicht eine Breitensuche/);
     expect(merkmal(d).belege[0]).toContain(`${d.ueberholt}-mal`);
+  });
+});
+
+describe("Kartenbeschreibung für Screenreader", () => {
+  it("nennt Verfahren, Start, Ziel, Stand und Ergebnis", () => {
+    const grid = [[1, 1, 1]];
+    const r = new Replay(SUCHE.bfs(grid, { x: 0, y: 0 }, { x: 2, y: 0 }));
+    expect(kartenBeschreibung(r)).toContain("Karte BFS: Start (0|0), Ziel (2|0).");
+    expect(kartenBeschreibung(r)).toContain("Suche noch nicht gestartet.");
+    r.gehe(r.laenge);
+    // Weg (0|0) → (1|0) → (2|0): 2 Kanten, Kosten 1 + 1 = 2.
+    expect(kartenBeschreibung(r)).toContain("Weg gefunden: 2 Kanten, 2 Ausdauer."); // TODO: von Hand nachrechnen
   });
 });

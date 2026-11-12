@@ -65,7 +65,7 @@ describe("QA-01: Vergleich mit Bellman-Ford auf 300 Zufallskarten", () => {
       if (erg.astar.kosten !== kosten) abweichungen++;
       for (const a of ALGOS) {
         const e = erg[a];
-        if (e.gefunden !== (kosten < Infinity)) abweichungen++;
+        if (e.gefunden !== kosten < Infinity) abweichungen++;
         // Jeder gefundene Weg führt über Nachbarn, und seine Kosten stimmen.
         let summe = 0;
         for (let k = 1; k < e.wegIds.length; k++) {

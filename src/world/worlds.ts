@@ -24,7 +24,7 @@ export const WELTEN: readonly Welt[] = [
     algo: "bfs",
     wann: "jeder Schritt gleich viel kostet",
     warum:
-      "Im Ruinenhof gibt es nur Wiese, jeder Schritt kostet 2 Ausdauer. Dann ist der kürzeste Weg nach Anzahl der Kanten zugleich der günstigste, und BFS findet ihn mit einer einfachen Warteschlange. Dijkstra und A* finden denselben Weg, sparen aber kaum Felder, weil die Mauern die Schätzung von A* in die Irre führen; DFS irrt lange über die Wiese.",
+      "Im Ruinenhof gibt es nur Wiese, jeder Schritt kostet 2 Ausdauer. Dann ist der kürzeste Weg nach Anzahl der Kanten zugleich der günstigste, und BFS findet ihn mit einer einfachen Warteschlange. Dijkstra und A* finden denselben Weg, sparen aber kaum Felder, weil die Mauern die Schätzung von A* in die Irre führen; DFS irrt mit der festen Nachbarreihenfolge lange über die Wiese, mit einer anderen könnte es auch Glück haben.",
     karte: [
       "................................",
       "........^^...^..................",
@@ -54,9 +54,9 @@ export const WELTEN: readonly Welt[] = [
     id: "stollen",
     titel: "Stollen",
     algo: "dfs",
-    wann: "es nur einen Weg gibt und das Ziel tief liegt",
+    wann: "es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert",
     warum:
-      "Im Stollen führt genau ein Weg zum Ziel, deshalb finden alle vier Verfahren denselben. DFS folgt einem Gang bis zum Ende, bevor es umkehrt, und kommt so tief hinein. BFS, Dijkstra und A* suchen dagegen alle Abzweigungen gleichzeitig ab und besuchen deutlich mehr Felder.",
+      "Im Stollen führt genau ein Weg zum Ziel, deshalb finden alle vier Verfahren denselben. DFS folgt einem Gang bis zum Ende, bevor es umkehrt, und hat hier Glück: Mit der festen Reihenfolge oben, rechts, unten, links probiert es die passenden Gänge zuerst (mit einer Reihenfolge, die mit „rechts“ beginnt, würde es über 240 statt 61 Felder besuchen). BFS, Dijkstra und A* suchen dagegen alle Abzweigungen gleichzeitig ab und besuchen deutlich mehr Felder.",
     karte: [
       "=^===^=^===^===============^===^",
       "=^^^=^=^=^^^=^^^^^=^^^^^=^=^=^=^",
@@ -88,7 +88,7 @@ export const WELTEN: readonly Welt[] = [
     algo: "dijkstra",
     wann: "Felder verschieden viel kosten und eine Schätzung kaum hilft",
     warum:
-      "Der günstige Weg führt über die Brücke im Osten, weit weg vom Ziel; die Furt durch den Sumpf hat weniger Felder, kostet aber viel mehr. Dijkstra findet den günstigsten Weg, ganz ohne Schätzung. A* findet denselben Weg, spart aber kaum Felder, weil die Schätzung den Umweg nicht kennt; BFS nimmt die Furt, DFS zahlt mehr als das Doppelte.",
+      "Der günstige Weg führt über die Brücke im Osten, weit weg vom Ziel; die Furt durch den Sumpf hat weniger Felder, kostet aber viel mehr. Dijkstra findet den günstigsten Weg mit den wenigsten Rechenschritten. A* findet denselben Weg und besucht kaum weniger Felder, weil die Schätzung den Umweg nicht kennt, muss aber für jedes eingefügte Feld h(v) ausrechnen; BFS nimmt die Furt, DFS zahlt mehr als das Doppelte.",
     karte: [
       "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
       "%%%%%%%%%%%%%%%%%TTTTTTT^^^^^~~~",

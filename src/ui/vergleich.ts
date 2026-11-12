@@ -5,7 +5,7 @@ import { zeichneLeinwand } from "../render/karte";
 import type { Algo } from "../types";
 import { WELTEN } from "../world/worlds";
 import { angekommen, besteWahl, fazitText, platz, tabellenZeilen } from "./bewertung";
-import { ALGO_INFO } from "./erklaerung";
+import { ALGO_INFO, kartenBeschreibung } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { Wiedergabe } from "./wiedergabe";
 import { Z, geheVergleich, vergleichMax } from "./zustand";
@@ -13,7 +13,6 @@ import { Z, geheVergleich, vergleichMax } from "./zustand";
 const fertig = (a: Algo): boolean => Z.k >= Z.ergebnisse[a].besucht;
 const alleFertig = (): boolean => ALGOS.every(fertig);
 const zahl = (x: number): string => x.toLocaleString("de-DE");
-
 
 export class Vergleich {
   readonly element: HTMLElement;
@@ -36,12 +35,15 @@ export class Vergleich {
       <span><i class="farben">${ALGOS.map((a) => `<b style="color:${ALGO_INFO[a].farbe}"></b>`).join("")}</i>expandiert</span>
       <span><i class="wartet"></i>wartet in Warteschlange, Stapel oder Prioritätswarteschlange</span>
       <span><i class="weg"></i>finaler Weg</span>
-      <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>`;
+      <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>
+      <span class="feldinfo-hinweis">Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten</span>`;
     this.wiedergabe = new Wiedergabe(
       { position: () => Z.k, laenge: vergleichMax, gehe: geheVergleich },
       {
         zumEnde: false,
         einheit: "Felder",
+        einheitEinzahl: "Feld",
+        einheitErklaerung: "Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld.",
         legende,
         geaendert,
         loslaufen: {
@@ -70,8 +72,8 @@ export class Vergleich {
           <div class="status"></div>
         </header>`;
       const canvas = document.createElement("canvas");
-      canvas.setAttribute("role", "img");
-      canvas.setAttribute("aria-label", `Karte ${info.name}`);
+      canvas.setAttribute("role", "application");
+      canvas.setAttribute("aria-roledescription", "Karte");
       karte.append(canvas);
       raster.append(karte);
       verbindeKarte(canvas, () => Z.vergleich[a], geaendert);
@@ -92,10 +94,11 @@ export class Vergleich {
       <p class="fazit" aria-live="polite"></p>
       <div class="tabelle-rahmen">
         <table>
-          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
+          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes (Modellannahme, siehe unten)">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
           <tbody></tbody>
         </table>
-      </div>`;
+      </div>
+      <p class="hinweis modell"><b>Modellannahme Rechenschritte:</b> gezählt werden ausgeführte Zeilen des Pseudocodes. Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)) und das Berechnen der Schätzung h(v) bei A*. Das Maß hängt also davon ab, wie der Pseudocode geschrieben ist; es ist kein Zeitmaß.</p>`;
     this.wahl = ergebnis.querySelector(".beste-wahl") as HTMLParagraphElement;
     this.fazit = ergebnis.querySelector(".fazit") as HTMLParagraphElement;
     this.tabelle = ergebnis.querySelector("tbody") as HTMLTableSectionElement;
@@ -144,14 +147,25 @@ export class Vergleich {
       if (!k) continue;
       const e = Z.ergebnisse[a];
       const r = Z.vergleich[a];
+      k.canvas.setAttribute("aria-label", kartenBeschreibung(r));
       k.zaehler.innerHTML = `<b>${zahl(Math.min(Z.k, e.besucht))}</b> besucht`;
       k.gewicht.hidden = ALGO_INFO[a].gewichte || !Z.gewichtet;
       // Inhalt der Datenstruktur kurz: Größe und das Feld, das als Nächstes drankommt.
       const inhalt = r.inhalt().filter((x) => !r.veraltet(x));
       const b = e.breite;
       const fertigA = r.fertig;
-      const naechster = inhalt[0] && !fertigA ? ` · als Nächstes (${inhalt[0].v % b}|${Math.floor(inhalt[0].v / b)})` : fertigA && inhalt.length ? " übrig (Suche beendet)" : "";
-      const wert = inhalt[0] && !fertigA && a === "dijkstra" ? `, d = ${zahl(inhalt[0].prio)}` : inhalt[0] && !fertigA && a === "astar" ? `, f = ${zahl(inhalt[0].prio)}` : "";
+      const naechster =
+        inhalt[0] && !fertigA
+          ? ` · als Nächstes (${inhalt[0].v % b}|${Math.floor(inhalt[0].v / b)})`
+          : fertigA && inhalt.length
+            ? " übrig (Suche beendet)"
+            : "";
+      const wert =
+        inhalt[0] && !fertigA && a === "dijkstra"
+          ? `, d = ${zahl(inhalt[0].prio)}`
+          : inhalt[0] && !fertigA && a === "astar"
+            ? `, f = ${zahl(inhalt[0].prio)}`
+            : "";
       k.struktur.textContent = `${ALGO_INFO[a].liste}: ${inhalt.length}${naechster}${wert}`;
       let status: string;
       if (Z.k === 0) status = "bereit";
@@ -162,7 +176,8 @@ export class Vergleich {
           a === "bfs"
             ? `Ziel gefunden: kürzester Weg nach Kantenzahl, ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`
             : `Ziel gefunden: ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`;
-      else if (angekommen(Z.ergebnisse, a, Z.laufzeit)) status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
+      else if (angekommen(Z.ergebnisse, a, Z.laufzeit))
+        status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
       else status = `läuft … ${zahl(Math.floor(Z.laufzeit))} von ${zahl(e.kosten)} Ausdauer`;
       k.status.innerHTML = status;
     }
@@ -176,7 +191,9 @@ export class Vergleich {
     this.tabelle.innerHTML = tabellenZeilen(welt, Z.ergebnisse, { k: Z.k, position, laufzeit: Z.laufzeit });
     const wahl = alle ? besteWahl(welt, Z.ergebnisse) : null;
     this.wahl.hidden = wahl === null;
-    this.wahl.innerHTML = wahl ? `<b>Beste Wahl in dieser Welt:</b> ${wahl.satz}` : "";
+    this.wahl.innerHTML = wahl
+      ? `<b>Beste Wahl in dieser Welt:</b> ${wahl.satz}<br><small>Kriterium dieser Welt: ${wahl.kriterium}.</small>`
+      : "";
     this.fazit.textContent = alle
       ? fazitText(welt, Z.ergebnisse)
       : "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld.";

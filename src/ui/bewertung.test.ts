@@ -32,10 +32,33 @@ describe("besteWahl()", () => {
     expect(besteWahl(w, ergebnisseVon(w))).toBeNull();
   });
 
-  it("Flussmoor: der Satz nennt, um wie viel Prozent A* weniger Felder besucht", () => {
+  it("Flussmoor: Dijkstra gewinnt nach Rechenschritten; der Satz nennt, dass A* weniger Felder besucht, aber h berechnet", () => {
     const w = welt("flussmoor");
-    expect(besteWahl(w, ergebnisseVon(w))?.satz).toMatch(/A\* spart .* % der Felder/);
+    const E = ergebnisseVon(w);
+    const wahl = besteWahl(w, E);
+    expect(wahl?.kriterium).toMatch(/günstigster Weg .*, dann wenigste Rechenschritte/);
+    expect(E.dijkstra.schritte.length).toBeLessThan(E.astar.schritte.length);
+    expect(wahl?.satz).toMatch(
+      /A\* besucht zwar nur \d+ statt \d+ Felder, braucht dafür aber [\d.]+ Rechenschritte, weil es für jedes eingefügte Feld die Schätzung h\(v\) berechnet/,
+    );
   });
+
+  for (const w of WELTEN.filter((x) => x.algo !== null)) {
+    it(`${w.titel}: Beste Wahl, ★ und Fazit widersprechen sich nicht`, () => {
+      const E = ergebnisseVon(w);
+      const wahl = besteWahl(w, E);
+      if (!wahl) throw new Error("keine beste Wahl");
+      const zeilen = tabellenZeilen(w, E, amEnde(E)).split("<tr>");
+      const zeile = zeilen.find((z) => z.includes(`</span>${ALGO_INFO[wahl.algo].name}</th>`)) ?? "";
+      // Spalten: besucht, Rechenschritte, Weglänge, Ausdauer. Die beste Wahl hat ★ in der Spalte ihres Kriteriums.
+      const zellen = zeile.split("<td>").slice(1);
+      const spalte = wahl.kriterium.includes("Rechenschritte") ? 1 : 0;
+      expect(zellen[spalte]).toContain("★");
+      const fazit = fazitText(w, E);
+      if (wahl.kriterium.includes("Rechenschritte") && !zellen[0].includes("★"))
+        expect(fazit).toContain(`Gerechnet hat aber ${ALGO_INFO[wahl.algo].name} am wenigsten`);
+    });
+  }
 });
 
 describe("Ergebnistabelle", () => {

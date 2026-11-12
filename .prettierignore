@@ -1,0 +1,8 @@
+# Formatiert werden Code, Stile und Konfiguration; Markdown-Tabellen und der alte Prototyp bleiben unangetastet.
+dist/
+node_modules/
+prototype/
+docs/
+public/
+package-lock.json
+*.md

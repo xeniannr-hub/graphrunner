@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Einheitliche Formatierung, unabhängig vom Editor.
+      - run: npm run format:check
       - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3

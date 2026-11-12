@@ -11,7 +11,9 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",
@@ -19,6 +21,7 @@
     "@fontsource/rubik": "^5.3.0"
   },
   "devDependencies": {
+    "prettier": "3.6.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.0"

@@ -143,12 +143,18 @@ canvas {
 
 .titel h1 .graph {
   color: #dfe3e8;
-  text-shadow: 0 3px 0 #7d8590, 0 5px 0 #262b33, 3px 6px 0 rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 3px 0 #7d8590,
+    0 5px 0 #262b33,
+    3px 6px 0 rgba(0, 0, 0, 0.6);
 }
 
 .titel h1 .runner {
   color: #ffa51f;
-  text-shadow: 0 3px 0 #b75a08, 0 5px 0 #4a2304, 3px 6px 0 rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 3px 0 #b75a08,
+    0 5px 0 #4a2304,
+    3px 6px 0 rgba(0, 0, 0, 0.6);
 }
 
 .titel p {
@@ -202,18 +208,47 @@ canvas {
 }
 
 /* ---------- Grundlayout ---------- */
+/* Desktop: links Welten und darunter Begründung, rechts die Ansicht.
+   Handy: Welten, dann Steuerung und Karten, dann Begründung (Kriterium 8: Bedienelemente früh). */
 .rumpf {
   display: grid;
   grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "welten haupt"
+    "info haupt";
   gap: 1rem;
   padding: 1rem;
   max-width: 1600px;
   margin: 0 auto;
 }
 
+.seitenleiste {
+  grid-area: welten;
+}
+
+.seiten-info {
+  grid-area: info;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  align-self: start;
+}
+
+.haupt {
+  grid-area: haupt;
+  min-width: 0;
+}
+
 @media (max-width: 960px) {
   .rumpf {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "welten"
+      "haupt"
+      "info";
   }
 }
 
@@ -225,10 +260,6 @@ canvas {
   .kopf {
     padding: 0.6rem;
   }
-}
-
-.haupt {
-  min-width: 0;
 }
 
 /* ---------- Seitenleiste ---------- */
@@ -616,7 +647,29 @@ input[type="range"] {
   aspect-ratio: 32 / 20;
   border-radius: var(--rund);
   cursor: crosshair;
+  /* Wischen scrollt die Seite; nur in der Eigenen Welt wird auf den Karten gemalt (unten). */
+  touch-action: manipulation;
+}
+
+.bauen-aktiv .karte-box canvas,
+.bauen-aktiv .karte-einzel canvas {
   touch-action: none;
+}
+
+.karte-box canvas:focus-visible,
+.karte-einzel canvas:focus-visible {
+  outline: 3px solid var(--akzent);
+  outline-offset: 2px;
+}
+
+/* Nur für Screenreader sichtbar. */
+.nur-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ---------- Ergebnis ---------- */
@@ -895,8 +948,7 @@ tbody th {
   box-shadow: var(--hoch), var(--schatten);
   background:
     repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 4px, transparent 4px 8px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 4px, transparent 4px 8px),
-    var(--flaeche);
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.05) 0 4px, transparent 4px 8px), var(--flaeche);
 }
 
 .karte-box {
@@ -948,7 +1000,9 @@ tbody th {
 .tab[aria-selected="true"] {
   border-color: var(--farbe);
   background: #1b2232;
-  box-shadow: var(--tief), inset 0 -4px 0 var(--farbe);
+  box-shadow:
+    var(--tief),
+    inset 0 -4px 0 var(--farbe);
 }
 
 .knopf.haupt,
@@ -956,7 +1010,9 @@ tbody th {
   background: linear-gradient(#ffe25a, #f0b800);
   color: #1a1408;
   text-shadow: none;
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, 0.55), inset -2px -2px 0 #9c7400;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 #9c7400;
 }
 
 .knopf.haupt:hover {
@@ -1029,7 +1085,9 @@ input[type="range"]::-moz-range-thumb {
   border-radius: 0;
   background: rgba(16, 4, 22, 0.96);
   border: 2px solid #05000a;
-  box-shadow: inset 0 0 0 2px #3b1a7a, 4px 4px 0 rgba(0, 0, 0, 0.5);
+  box-shadow:
+    inset 0 0 0 2px #3b1a7a,
+    4px 4px 0 rgba(0, 0, 0, 0.5);
   padding: 0.45rem 0.65rem;
   max-width: 21rem;
   text-shadow: 1px 1px 0 #000;
@@ -1322,4 +1380,17 @@ input[type="range"]::-moz-range-thumb {
 
 .einzel-seite {
   align-content: start;
+}
+
+.modell {
+  max-width: 75ch;
+  margin-top: 0.6rem;
+}
+
+.beste-wahl small {
+  color: var(--gedaempft);
+}
+
+.feldinfo-hinweis {
+  font-style: italic;
 }

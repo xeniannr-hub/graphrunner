@@ -1,6 +1,6 @@
 // Wiedergabeleiste für beide Ansichten (FA-09):
 // |◀ · ◀ · Abspielen/Pause/Nochmal · ▶ · [▶| nur Einzelansicht] · Tempo (mit Schritten pro Sekunde) ·
-// „Schritt k von n“ · [Loslaufen nur Vergleich] · Legende. Tastatur: ← → Schritt, Leertaste, Pos1, Ende.
+// „Zeile k von n“ bzw. „Feld k von n“ · [Loslaufen nur Vergleich] · Legende. Tastatur: ← → Schritt, Leertaste, Pos1, Ende.
 import { Z } from "./zustand";
 
 export interface Steuerung {
@@ -14,6 +14,10 @@ export interface WiedergabeOptionen {
   readonly zumEnde: boolean;
   /** Was ein Schritt ist, für die Anzeige: „Zeilen“ (Einzelansicht) oder „Felder“ (Vergleich). */
   readonly einheit: string;
+  /** Einzahl für die Fortschrittsanzeige, z. B. „Zeile“ → „Zeile 12 von 536“. */
+  readonly einheitEinzahl: string;
+  /** Erklärung der Einheit (title der Fortschrittsanzeige). */
+  readonly einheitErklaerung: string;
   /** Nur Vergleich: Knopf „Loslaufen“. */
   readonly loslaufen?: { bereit(): boolean; laeuft(): boolean; starte(): void };
   readonly legende: HTMLElement;
@@ -165,8 +169,10 @@ export class Wiedergabe {
     this.spielen.setAttribute("aria-pressed", String(Z.spielt));
     this.regler.max = String(n);
     this.regler.value = String(k);
-    this.regler.setAttribute("aria-valuetext", `Schritt ${k} von ${n}`);
-    this.anzeige.textContent = `Schritt ${k} von ${n}`;
+    const text = `${this.opt.einheitEinzahl} ${k} von ${n}`;
+    this.regler.setAttribute("aria-valuetext", text);
+    this.anzeige.textContent = text;
+    this.anzeige.title = this.opt.einheitErklaerung;
     this.tempoRegler.value = String(Z.tempo);
     const sps = schritteProSekunde(Z.tempo);
     this.tempoAnzeige.textContent = `${sps < 10 ? sps.toLocaleString("de-DE", { maximumFractionDigits: 1 }) : Math.round(sps)} ${this.opt.einheit}/s`;

@@ -54,6 +54,7 @@ npm run dev        # Entwicklung
 npm test           # Unit Tests im Terminal
 npm run build      # Typprüfung + Build nach dist/
 npm run typecheck  # nur Typprüfung
+npm run format     # Formatieren mit Prettier (format:check prüft nur, läuft in der CI)
 ```
 
 ---
@@ -121,7 +122,7 @@ Nur diese sieben. Jedes Gelände ist auf der Karte durch eigene Farbe **und** ei
 - `Grid = readonly (readonly number[])[]`: `grid[y][x]` = Kosten fürs Betreten, `Infinity` = unpassierbar
 - `TerrainKey`, `Terrain { key, name, kosten }`
 - `Algo = "bfs" | "dfs" | "dijkstra" | "astar"`
-- `Step`: genau eine ausgeführte Pseudocode-Zeile, `{ zeile, art, … }`. Arten: `init`, `setze`, `einfuegen`, `schleife`, `entnehmen`, `oben`, `zielpruefung`, `nachbar`, `keinNachbar`, `markiertPruefung`, `veraltetPruefung`, `abschliessen`, `rechne`, `vergleiche`, `keinWeg`. `setze` speichert die alten Werte (`altD`, `altVorg`), damit das Zurückspulen exakt ist.
+- `Step`: genau eine ausgeführte Pseudocode-Zeile, als **discriminated union** über `art`: Jede Art hat genau ihre Felder (z. B. `setze` immer `v`, `d`, `vorg`, `altD`, `altVorg`; `entnehmen` immer `u`), sodass der Compiler fehlende Felder meldet und keine `as`-Casts nötig sind. Arten: `init`, `setze`, `einfuegen`, `schaetze` (nur A*: h(v) berechnen), `schleife`, `entnehmen`, `oben`, `zielpruefung`, `nachbar`, `keinNachbar`, `markiertPruefung`, `veraltetPruefung`, `abschliessen`, `rechne`, `vergleiche`, `keinWeg`. `setze` speichert die alten Werte (`altD`, `altVorg`), damit das Zurückspulen exakt ist.
 - `SearchResult { algo, breite, hoehe, start, ziel, gefunden, weg, wegIds, kosten, felder, besucht, besuchsIndizes, schritte }`. Ohne Weg gilt: `weg = []`, `kosten = felder = Infinity`.
 
 ---
@@ -158,7 +159,7 @@ SUCHE.bfs(grid, start, ziel)      // = aufzeichnen("bfs", SCHRITTE.bfs(...)) →
 | Dijkstra | binärer Min-Heap, *lazy deletion* | günstigsten Weg | Abschließen |
 | A* | wie Dijkstra mit f = g + h | günstigsten Weg | Abschließen |
 
-- Dijkstra und A* teilen sich den Kern `bestensuche(h, …)`; Dijkstra ist A* mit h = 0.
+- Dijkstra und A* teilen sich den Kern `bestensuche(h, …)`; Dijkstra ist A* mit h = 0 (`h = null`: es wird nichts geschätzt). **Bei A* ist das Berechnen von h(v) ein eigener Rechenschritt** (Step `schaetze`, eigene Pseudocode-Zeilen `hs ← h(s)` und `hv ← h(v)`): Die Schätzung kostet Arbeit, und nur so zeigt „Rechenschritte“, was A* für weniger besuchte Felder bezahlt.
 - Gleichstand im Heap: Der ältere Eintrag gewinnt (`seq`). Jeder Lauf ist damit reproduzierbar (QA-02).
 - **A*-Heuristik:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld der Karte`.
   - **Zulässig:** Jeder Weg braucht mindestens so viele Schritte wie der Manhattan-Abstand, und jeder Schritt kostet mindestens das billigste Feld. Die Schätzung liegt also nie zu hoch, und A* findet immer den günstigsten Weg.
@@ -179,12 +180,17 @@ Genau fünf Welten in `world/worlds.ts`, jede als Textkarte (20 Zeilen × 32 Zei
 | Welt | Algo | „… am besten, wenn …“ | Messbare Bedingung (Test) |
 | --- | --- | --- | --- |
 | Ruinenhof | BFS | jeder Schritt gleich viel kostet | nur Wiese und Felsmauern; BFS-Kosten = Dijkstra-Kosten; A* besucht > 85 % von BFS; DFS besucht > 2 × BFS, Weg > 1,5 × so lang |
-| Stollen | DFS | es nur einen Weg gibt und das Ziel tief liegt | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen |
-| Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; BFS zahlt > 1,5 ×, DFS > 2 × |
-| Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; BFS zahlt > 1,2 × |
+| Stollen | DFS | es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen; Modellannahme: nur 12 von 24 Nachbarreihenfolgen erfüllen das, mit „rechts“ vorne > 240 Felder |
+| Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte als A*; BFS zahlt > 1,5 ×, DFS > 2 × |
+| Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; A* braucht < 25 % der Rechenschritte von Dijkstra; BFS zahlt > 1,2 × |
 | Eigene Welt | – | selbst bauen | startet als leere Wiese |
 
-Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuchen als A*, und Dijkstra nie weniger als A*. „Am besten“ heißt in Ruinenhof und Flussmoor deshalb „genauso gut, aber einfacher bzw. ohne Schätzung“. Kein Text behauptet etwas, das die Messung nicht zeigt.
+Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra nie weniger Felder besuchen als A*. „Am besten“ heißt in Ruinenhof und Flussmoor deshalb: optimaler Weg mit den **wenigsten Rechenschritten** (gemessen, nicht „ohne Schätzung“). Kein Text behauptet etwas, das die Messung nicht zeigt.
+
+### Modellannahmen (offen benennen, auch im Bericht)
+
+1. **Rechenschritte = ausgeführte Pseudocode-Zeilen.** Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)) und das Berechnen von h(v). Dijkstra hat pro Nachbar eine Zeile mehr als BFS (`rechne` und `vergleiche` statt einer Prüfung). Dass BFS im Ruinenhof am wenigsten rechnet (536 statt 748), folgt also teilweise daraus, wie der Pseudocode geschrieben ist. Die Oberfläche nennt das unter der Ergebnistabelle.
+2. **Nachbarreihenfolge oben, rechts, unten, links.** Der DFS-Vorteil im Stollen hängt daran: Nur 12 von 24 Reihenfolgen erfüllen „< 70 % jedes anderen“; beginnt sie mit „rechts“, besucht DFS 241 bis 273 statt 61 Felder. Umgekehrt wäre DFS im Ruinenhof mit „rechts“ vorne so sparsam wie BFS (52 Felder). DFS hat im Stollen also Glück. Tests in `worlds.test.ts` halten das fest; die Texte der Welten sagen es.
 
 ---
 
@@ -192,9 +198,9 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
 
 - **Kopf:** Banner mit Pixel-Landschaft, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Wann ist welcher Suchalgorithmus der beste?“, Umschalter **Alle vergleichen** / **Einzelansicht**.
 - **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus Begründung; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“.
-- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Schritt k von n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht).
+- **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Zeile k von n“ (Einzelansicht: ausgeführte Codezeilen) bzw. „Feld k von n“ (Vergleich: besuchte Felder je Verfahren). Der Erklärsatz nennt die „Pseudocode-Zeile n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht).
 - **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Kopf je Karte: Name, Kurzbeschreibung, Marke „ignoriert Gewichte“ (BFS und DFS auf gewichteter Karte), Zähler „besucht“, Datenstruktur (Größe und nächster Eintrag), Status. BFS-Ergebnis heißt „kürzester Weg nach Kantenzahl“. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
-  - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten ohne Schätzung (Dijkstra), der Satz nennt zusätzlich, um wie viel Prozent A* weniger Felder besucht; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). In der Eigenen Welt gibt es keine solche Zeile.
+  - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten und wenigste Rechenschritte (Dijkstra), der Satz nennt zusätzlich, dass A* weniger Felder besucht, aber für jedes eingefügte Feld h(v) berechnet; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). Darunter steht das Kriterium der Welt in Worten. Ein Test prüft je Welt, dass beste Wahl, ★ und Fazit sich nicht widersprechen. In der Eigenen Welt gibt es keine solche Zeile.
   - Fazit-Absatz in ganzen Sätzen. „Am wenigsten gesucht hat *X*“ steht nur, wenn *X* einen optimalen Weg gefunden hat; sonst z. B. „DFS hat zwar nur 70 Felder angesehen, zahlt aber 176 statt 64 Ausdauer.“
   - Tabelle: besuchte Felder, Rechenschritte (ausgeführte Pseudocode-Zeilen, keine Millisekunden), Weglänge in Kanten, Ausdauer des Weges, Platz beim Loslaufen.
   - ★ bei Weglänge und Ausdauer: kleinster Wert unter den Verfahren mit Weg. ★ bei besuchten Feldern und Rechenschritten: kleinster Wert nur unter den Verfahren mit optimalem Weg (Ruinenhof: minimale Feldzahl, sonst minimale Ausdauer). Ohne Weg steht kein ★ in der Tabelle.
@@ -210,9 +216,9 @@ Wichtig für alle Texte: Bei gleichen Kosten kann BFS nie weniger Felder besuche
   - Besuchsreihenfolge
 
   Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
-- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Zustand mit Besuch-Nr., dazu d (BFS/DFS: Kanten ab Start) bzw. bei A* g, h und f einzeln, und der Vorgänger. So wird die Karte als Graph aus Knoten und Kanten sichtbar.
-- **Bauen:** Start, Ziel und die sieben Geländearten; klicken oder ziehen, auf jeder Karte. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
-- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Oberfläche im Blockstil (an Minecraft angelehnt, aber eigener Entwurf): keine runden Ecken, Flächen und Knöpfe mit Pixel-Abschrägung (hell oben links, dunkel unten rechts), gedrückte Knöpfe eingedrückt, Datenstruktur als Inventar-Slots, harte Pixel-Schatten. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Fokusrahmen und `aria`-Attribute.
+- **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „nicht begehbar“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Zustand mit Besuch-Nr., dazu d (BFS/DFS: Kanten ab Start) bzw. bei A* g, h und f einzeln, und der Vorgänger. So wird die Karte als Graph aus Knoten und Kanten sichtbar. Feldinfo gibt es per Maus, per Antippen (bleibt stehen, bis woanders hingetippt wird) und per Tastatur: Tab auf die Karte, Pfeiltasten bewegen einen Feld-Cursor, Enter/Leertaste baut, Esc verlässt die Karte; eine `aria-live`-Region liest die Feldinfo vor, `aria-label` beschreibt den Stand jeder Karte (`kartenBeschreibung`).
+- **Bauen:** Start, Ziel und die sieben Geländearten; klicken, ziehen, antippen oder per Tastatur, auf jeder Karte. Nur in der Eigenen Welt haben die Karten `touch-action: none` (zum Malen); sonst scrollt eine Wischgeste die Seite. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
+- **Darstellung:** nur dunkles Schema in Nachtblau, orange Linie unter dem Kopf, Pixelwelt im Klötzchenstil. Oberfläche im Blockstil (an Minecraft angelehnt, aber eigener Entwurf): keine runden Ecken, Flächen und Knöpfe mit Pixel-Abschrägung (hell oben links, dunkel unten rechts), gedrückte Knöpfe eingedrückt, Datenstruktur als Inventar-Slots, harte Pixel-Schatten. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift nur in Überschriften. Ab 400 px Breite kein horizontales Scrollen. Auf schmalen Bildschirmen (≤ 960 px) steht die Reihenfolge Weltliste (und Bauen) → Steuerung und Karten → Begründung und Ausdauer, damit „Abspielen“ früh kommt. Fokusrahmen und `aria`-Attribute.
 
 ---
 
@@ -255,10 +261,11 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | QA-02 | Gleiche Eingabe ergibt stets denselben Ablauf | Must | Replay-Test: hin und zurück ergibt identischen Zustand |
 | QA-03 | Neuberechnung aller vier Verfahren ohne spürbare Wartezeit | Should | < 100 ms je Welt (`leistung.test.ts`) |
 | QA-04 | Ohne Einweisung bedienbar | Should | kein Tutorial nötig; SUS ≥ 71,4 in der Nutzerstudie |
-| QA-05 | Farbe immer mit Legende oder Text ergänzt; Steuerung per Tastatur | Should | Legende in jeder Ansicht; jeder Zustand hat eine eigene Form; Pfeiltasten, Leertaste, Pos1, Ende |
+| QA-05 | Farbe immer mit Legende oder Text ergänzt; Bedienung per Tastatur, Touch und Screenreader | Should | Legende in jeder Ansicht; jeder Zustand hat eine eigene Form; Pfeiltasten, Leertaste, Pos1, Ende; Feld-Cursor auf der Karte; Feldinfo per Antippen; `aria-label` und `aria-live` |
 | QA-06 | Läuft ohne Installation im Browser, ohne Server-Backend | Must | Live-Version auf GitHub Pages |
 | QA-07 | Nutzbar ab 400 px Breite ohne horizontales Scrollen | Should | Browser-Test bei 400 und 1440 px |
 | QA-08 | Algorithmen von UI getrennt und automatisch testbar | Should | Importregeln (Abschnitt 4); `npm test` |
+| QA-10 | Einheitliche Formatierung unabhängig vom Editor | Should | `prettier --check` in der CI (`npm run format:check`) |
 
 ### Randbedingungen
 
@@ -339,7 +346,8 @@ Pflichtinhalte:
 - **Branches:** `main` ist immer lauffähig. Pro Thema ein Branch, z. B. `feature/algorithmen`, `feature/welten`, `feature/render`, `feature/ui`, `fix/tooltip-rand`.
 - **Pull Requests:** Jeder PR wird von einer anderen Person reviewt. Die PR-Beschreibung nennt die betroffenen FA/QA-IDs.
 - **Commits:** kurz, deutsch, im Imperativ („Dijkstra-Test mit Sumpf ergänzen“).
-- **Deploy:** `.github/workflows/deploy.yml` läuft bei jedem Push auf `main`: `npm ci` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig: Settings → Pages → Source „GitHub Actions“. `vite.config.ts` nutzt `base: "./"`.
+- **Formatierung:** Prettier (`.prettierrc.json`, Zeilenbreite 140). `npm run format` formatiert, `npm run format:check` prüft; Markdown und `prototype/` sind ausgenommen.
+- **Deploy:** `.github/workflows/deploy.yml` läuft bei jedem Push auf `main`: `npm ci` → `npm run format:check` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig: Settings → Pages → Source „GitHub Actions“. `vite.config.ts` nutzt `base: "./"`.
 
 ---
 

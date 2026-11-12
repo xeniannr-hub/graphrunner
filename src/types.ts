@@ -21,50 +21,53 @@ export interface Terrain {
 
 export type Algo = "bfs" | "dfs" | "dijkstra" | "astar";
 
-export type StepArt =
-  | "init"
-  | "setze"
-  | "einfuegen"
-  | "schleife"
-  | "entnehmen"
-  | "oben"
-  | "zielpruefung"
-  | "nachbar"
-  | "keinNachbar"
-  | "markiertPruefung"
-  | "veraltetPruefung"
-  | "abschliessen"
-  | "rechne"
-  | "vergleiche"
-  | "keinWeg";
-
-/**
- * Genau eine ausgeführte Pseudocode-Zeile.
- * Felder, die für eine Art keine Bedeutung haben, fehlen.
- */
-export interface Step {
+interface StepBasis {
   /** Zeilennummer im Pseudocode, ab 1. */
   readonly zeile: number;
-  readonly art: StepArt;
-  /** Feld, das gerade bearbeitet wird. */
-  readonly u?: FeldId;
-  /** Feld, das gerade geprüft, gesetzt oder eingefügt wird. */
-  readonly v?: FeldId;
-  /** Ergebnis einer Prüfung: true = Bedingung erfüllt. */
-  readonly ok?: boolean;
-  /** setze: neuer Wert und neuer Vorgänger von v. */
-  readonly d?: number;
-  readonly vorg?: FeldId;
-  /** setze: alte Werte, damit das Zurückspulen exakt ist. */
-  readonly altD?: number;
-  readonly altVorg?: FeldId;
-  /** einfuegen/entnehmen im Heap: Priorität des Eintrags. */
-  readonly prio?: number;
-  /** rechne/vergleiche: neu berechneter Wert. */
-  readonly wert?: number;
-  /** Besuchsnummer, wenn dieser Step einen Besuch zählt (ab 1). */
+}
+
+/** Zählt einen Besuch (Besuchsnummer ab 1). */
+interface MitBesuch {
   readonly besuch?: number;
 }
+
+/**
+ * Genau eine ausgeführte Pseudocode-Zeile, als Variante je Art (discriminated union):
+ * Jede Art hat genau die Felder, die sie braucht. u = Feld, das gerade bearbeitet wird;
+ * v = Feld, das gerade geprüft, gesetzt oder eingefügt wird; ok = Ergebnis einer Prüfung.
+ */
+export type Step =
+  | (StepBasis & { readonly art: "init" })
+  /** d[v] ← d, vorg[v] ← vorg; die alten Werte machen das Zurückspulen exakt. Ohne u: der Start. */
+  | (StepBasis & {
+      readonly art: "setze";
+      readonly u?: FeldId;
+      readonly v: FeldId;
+      readonly d: number;
+      readonly vorg: FeldId;
+      readonly altD: number;
+      readonly altVorg: FeldId;
+    })
+  /** Einfügen in Warteschlange, Stapel oder Heap; prio nur beim Heap. Ohne u: der Start. */
+  | (StepBasis & MitBesuch & { readonly art: "einfuegen"; readonly u?: FeldId; readonly v: FeldId; readonly prio?: number })
+  /** A*: Schätzung h(v) berechnen. Ohne u: der Start. */
+  | (StepBasis & { readonly art: "schaetze"; readonly u?: FeldId; readonly v: FeldId; readonly wert: number })
+  | (StepBasis & { readonly art: "schleife"; readonly ok: boolean })
+  | (StepBasis & MitBesuch & { readonly art: "entnehmen"; readonly u: FeldId; readonly prio?: number })
+  | (StepBasis & { readonly art: "oben"; readonly u: FeldId })
+  | (StepBasis & { readonly art: "zielpruefung"; readonly u: FeldId; readonly ok: boolean })
+  | (StepBasis & { readonly art: "nachbar"; readonly u: FeldId; readonly v: FeldId })
+  | (StepBasis & { readonly art: "keinNachbar"; readonly u: FeldId })
+  | (StepBasis & { readonly art: "markiertPruefung"; readonly u: FeldId; readonly v: FeldId; readonly ok: boolean })
+  | (StepBasis & { readonly art: "veraltetPruefung"; readonly u: FeldId; readonly ok: boolean })
+  | (StepBasis & { readonly art: "abschliessen"; readonly u: FeldId; readonly besuch: number })
+  /** neu ← d[u] + kosten(v). */
+  | (StepBasis & { readonly art: "rechne"; readonly u: FeldId; readonly v: FeldId; readonly wert: number })
+  /** neu < d[v]? */
+  | (StepBasis & { readonly art: "vergleiche"; readonly u: FeldId; readonly v: FeldId; readonly wert: number; readonly ok: boolean })
+  | (StepBasis & { readonly art: "keinWeg" });
+
+export type StepArt = Step["art"];
 
 export interface SearchResult {
   readonly algo: Algo;

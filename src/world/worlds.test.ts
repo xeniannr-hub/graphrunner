@@ -12,6 +12,43 @@ function welt(id: string): Welt {
   return w;
 }
 
+/**
+ * DFS mit frei wählbarer Nachbarreihenfolge, nur für die Tests der Modellannahme (die App nutzt fest
+ * oben, rechts, unten, links; FA-19 ist Won't). Zählt Besuche wie dfs.ts beim Auflegen.
+ */
+function dfsBesuche(w: Welt, reihenfolge: readonly string[]): number {
+  const grid = zuGrid(leseKarte(w.karte));
+  const schritt: Record<string, [number, number]> = { o: [0, -1], r: [1, 0], u: [0, 1], l: [-1, 0] };
+  const nb = (id: number): number[] =>
+    reihenfolge
+      .map((k) => [(id % BREITE) + schritt[k][0], Math.floor(id / BREITE) + schritt[k][1]])
+      .filter(([x, y]) => x >= 0 && y >= 0 && x < BREITE && y < HOEHE && grid[y][x] !== Infinity)
+      .map(([x, y]) => y * BREITE + x);
+  const s = w.start.y * BREITE + w.start.x;
+  const z = w.ziel.y * BREITE + w.ziel.x;
+  const entdeckt = new Set([s]);
+  const geprueft = new Map<number, number>();
+  const stapel = [s];
+  while (stapel.length > 0) {
+    const u = stapel[stapel.length - 1];
+    if (u === z) return entdeckt.size;
+    const n = nb(u);
+    const i = geprueft.get(u) ?? 0;
+    if (i < n.length) {
+      geprueft.set(u, i + 1);
+      if (!entdeckt.has(n[i])) {
+        entdeckt.add(n[i]);
+        stapel.push(n[i]);
+      }
+    } else stapel.pop();
+  }
+  return entdeckt.size;
+}
+
+function alleReihenfolgen(a: readonly string[]): string[][] {
+  return a.length <= 1 ? [[...a]] : a.flatMap((x, i) => alleReihenfolgen([...a.slice(0, i), ...a.slice(i + 1)]).map((r) => [x, ...r]));
+}
+
 function laeufe(w: Welt): Record<Algo, SearchResult> {
   const grid = zuGrid(leseKarte(w.karte));
   return Object.fromEntries(ALGOS.map((a) => [a, SUCHE[a](grid, w.start, w.ziel)])) as Record<Algo, SearchResult>;
@@ -60,9 +97,13 @@ describe("Ruinenhof: BFS ist am besten, wenn jeder Schritt gleich viel kostet", 
     expect(r.dfs.besucht).toBeGreaterThan(2 * r.bfs.besucht);
     expect(r.dfs.felder).toBeGreaterThan(1.5 * r.bfs.felder);
   });
+  it("Modellannahme: Mit „rechts“ vorne hätte DFS Glück und wäre so sparsam wie BFS", () => {
+    for (const o of alleReihenfolgen(["r", "o", "u", "l"]).filter((x) => x[0] === "r"))
+      expect(dfsBesuche(w, o)).toBeLessThanOrEqual(r.bfs.besucht);
+  });
 });
 
-describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt und das Ziel tief liegt", () => {
+describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert", () => {
   const w = welt("stollen");
   const r = laeufe(w);
   it("perfektes Labyrinth: zusammenhängend und ohne Kreis", () => {
@@ -97,6 +138,18 @@ describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt und das Ziel ti
   it("DFS besucht < 70 % der Felder jedes anderen Verfahrens", () => {
     for (const a of ["bfs", "dijkstra", "astar"] as const) expect(r.dfs.besucht).toBeLessThan(0.7 * r[a].besucht);
   });
+  it("Modellannahme: Der Vorteil hängt an der Nachbarreihenfolge (DFS hat hier Glück)", () => {
+    // Nachbau gleich der App bei oben, rechts, unten, links.
+    expect(dfsBesuche(w, ["o", "r", "u", "l"])).toBe(r.dfs.besucht);
+    const min = Math.min(r.bfs.besucht, r.dijkstra.besucht, r.astar.besucht);
+    const alle = alleReihenfolgen(["o", "r", "u", "l"]);
+    const erfuellt = alle.filter((o) => dfsBesuche(w, o) < 0.7 * min);
+    // Nur die Hälfte der 24 Reihenfolgen erfüllt die Bedingung (Messung, im Bericht genannt).
+    expect(erfuellt.length).toBe(12); // TODO: von Hand nachrechnen
+    // „mit rechts vorne über 240 statt 61“, wie im Text der Welt.
+    for (const o of alle.filter((x) => x[0] === "r")) expect(dfsBesuche(w, o)).toBeGreaterThan(240);
+    expect(r.dfs.besucht).toBe(61); // TODO: von Hand nachrechnen
+  });
 });
 
 describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten und eine Schätzung kaum hilft", () => {
@@ -111,6 +164,9 @@ describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten
   it("BFS zahlt > 1,5 ×, DFS > 2 ×", () => {
     expect(r.bfs.kosten).toBeGreaterThan(1.5 * r.dijkstra.kosten);
     expect(r.dfs.kosten).toBeGreaterThan(2 * r.dijkstra.kosten);
+  });
+  it("Dijkstra braucht weniger Rechenschritte als A* (A* rechnet für jedes eingefügte Feld h aus)", () => {
+    expect(r.dijkstra.schritte.length).toBeLessThan(r.astar.schritte.length);
   });
   it("BFS nimmt die Furt, Dijkstra die Brücke", () => {
     const furt = 9 * BREITE + 16;
@@ -129,6 +185,9 @@ describe("Handelsstraße: A* ist am besten, wenn das Ziel weit weg liegt und sei
   it("A* besucht < 25 % der Felder von Dijkstra und am wenigsten von allen", () => {
     expect(r.astar.besucht).toBeLessThan(0.25 * r.dijkstra.besucht);
     for (const a of ["bfs", "dfs", "dijkstra"] as const) expect(r.astar.besucht).toBeLessThan(r[a].besucht);
+  });
+  it("A* braucht trotz Schätzung weniger als ein Viertel der Rechenschritte von Dijkstra", () => {
+    expect(r.astar.schritte.length).toBeLessThan(0.25 * r.dijkstra.schritte.length);
   });
   it("BFS zahlt > 1,2 × und geht über Wiese und Wald", () => {
     expect(r.bfs.kosten).toBeGreaterThan(1.2 * r.astar.kosten);

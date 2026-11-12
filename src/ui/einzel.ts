@@ -5,7 +5,7 @@ import { ALGOS, PSEUDOCODE } from "../algorithms";
 import { zeichneLeinwand, type Zahlen } from "../render/karte";
 import type { Eintrag, Replay } from "../replay/replay";
 import type { Algo, FeldId } from "../types";
-import { ALGO_INFO, erklaerSatz, koord, merkmal, protokoll, type ProtokollEintrag } from "./erklaerung";
+import { ALGO_INFO, erklaerSatz, kartenBeschreibung, koord, merkmal, protokoll, type ProtokollEintrag } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
 import { Wiedergabe } from "./wiedergabe";
@@ -126,7 +126,8 @@ export class Einzel {
       <span><i class="kante"></i>Entdeckungskante (Vorgänger)</span>
       <span><i class="rahmen weiss"></i>wird bearbeitet</span>
       <span><i class="rahmen gelb"></i>wird geprüft</span>
-      <span><i class="rahmen rot"></i>Prüfung negativ</span>`,
+      <span><i class="rahmen rot"></i>Prüfung negativ</span>
+      <span class="feldinfo-hinweis">Feldinfo: Maus darüber, antippen oder Tab auf die Karte und Pfeiltasten</span>`,
     );
     this.legendeFarbe = legende.querySelector(".besucht") as HTMLElement;
     this.legendeWartet = legende.querySelector(".wartet-text") as HTMLElement;
@@ -136,7 +137,14 @@ export class Einzel {
         laenge: () => Z.einzel[Z.einzelAlgo].laenge,
         gehe: (k) => Z.einzel[Z.einzelAlgo].gehe(k),
       },
-      { zumEnde: true, einheit: "Zeilen", legende, geaendert },
+      {
+        zumEnde: true,
+        einheit: "Zeilen",
+        einheitEinzahl: "Zeile",
+        einheitErklaerung: "Ein Schritt ist eine ausgeführte Zeile des Pseudocodes.",
+        legende,
+        geaendert,
+      },
     );
 
     this.hinweis = element("p", "hinweis-box");
@@ -145,7 +153,8 @@ export class Einzel {
     // Links: Karte, Datenstruktur, Merkmal.
     const links = element("div", "einzel-links");
     this.canvas = document.createElement("canvas");
-    this.canvas.setAttribute("role", "img");
+    this.canvas.setAttribute("role", "application");
+    this.canvas.setAttribute("aria-roledescription", "Karte");
     const kartenRahmen = element("div", "karte-einzel");
     kartenRahmen.append(this.canvas);
     verbindeKarte(this.canvas, () => Z.einzel[Z.einzelAlgo], geaendert);
@@ -224,9 +233,10 @@ export class Einzel {
     const neu = this.gezeigtAlgo !== a || this.gezeigtVersion !== Z.version;
     this.wiedergabe.aktualisiere();
     for (const [b, t] of this.tabs) t.setAttribute("aria-selected", String(a === b));
-    this.canvas.setAttribute("aria-label", `Karte ${info.name}`);
+    this.canvas.setAttribute("aria-label", kartenBeschreibung(r));
     this.legendeFarbe.style.color = info.farbe;
-    this.legendeWartet.textContent = a === "bfs" ? "in der Warteschlange" : a === "dfs" ? "auf dem Stapel" : "in der Prioritätswarteschlange";
+    this.legendeWartet.textContent =
+      a === "bfs" ? "in der Warteschlange" : a === "dfs" ? "auf dem Stapel" : "in der Prioritätswarteschlange";
     this.element.style.setProperty("--farbe", info.farbe);
 
     if (this.gezeigtAlgo !== a) {
@@ -253,7 +263,7 @@ export class Einzel {
     this.aktualisiereHinweis(r);
 
     const zeile = r.aktuell?.zeile ?? 0;
-    this.zeileNr.textContent = zeile > 0 ? `Zeile ${zeile}` : "Start";
+    this.zeileNr.textContent = zeile > 0 ? `Pseudocode-Zeile ${zeile}` : "Start";
     this.satz.textContent = erklaerSatz(r);
     [...this.code.children].forEach((li, i) => {
       const aktiv = i + 1 === zeile;
@@ -302,9 +312,7 @@ export class Einzel {
     const s = e.start.y * e.breite + e.start.x;
     const hs = Z.h(s);
     const c = Z.billigstes;
-    const pruefung = e.gefunden
-      ? `Am Start: h = ${zahl(hs)} ≤ tatsächliche Kosten ${zahl(e.kosten)} ✓`
-      : `Am Start: h = ${zahl(hs)}`;
+    const pruefung = e.gefunden ? `Am Start: h = ${zahl(hs)} ≤ tatsächliche Kosten ${zahl(e.kosten)} ✓` : `Am Start: h = ${zahl(hs)}`;
     this.heuristik.innerHTML = `
       <h3>Heuristik (offengelegt)</h3>
       <p class="formel">h(v) = ${zahl(c)} · (|x − ${e.ziel.x}| + |y − ${e.ziel.y}|)</p>
@@ -371,9 +379,7 @@ export class Einzel {
     const zeige = inhalt.slice(0, MAX_EINTRAEGE);
     const mehr = rest > 0 ? `<span class="mehr">… und ${rest} weitere</span>` : "";
     const leer = inhalt.length === 0 ? `<p class="hinweis">leer</p>` : "";
-    const raus = entnommen
-      ? `<p class="entnommen">Gerade entnommen: <b>${k(entnommen.v)}</b> ${this.werte(e.algo, entnommen)}</p>`
-      : "";
+    const raus = entnommen ? `<p class="entnommen">Gerade entnommen: <b>${k(entnommen.v)}</b> ${this.werte(e.algo, entnommen)}</p>` : "";
     const klasse = (x: Eintrag, i: number) =>
       [i === 0 ? "naechster" : "", x.seq === neuSeq ? "neu" : "", r.veraltet(x) ? "veraltet" : ""].filter(Boolean).join(" ");
 
@@ -400,7 +406,9 @@ export class Einzel {
       })
       .join("");
     this.strukturInhalt.innerHTML = `${raus}${
-      inhalt.length ? `<div class="tabelle-rahmen"><table class="pq"><thead>${kopf}</thead><tbody>${zeilen}</tbody></table></div>${mehr}` : leer
+      inhalt.length
+        ? `<div class="tabelle-rahmen"><table class="pq"><thead>${kopf}</thead><tbody>${zeilen}</tbody></table></div>${mehr}`
+        : leer
     }`;
   }
 

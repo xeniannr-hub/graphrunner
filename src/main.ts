@@ -10,7 +10,7 @@ import { zeichneBanner, zeichneLogo } from "./render/kopf";
 import { Einzel } from "./ui/einzel";
 import { Seitenleiste } from "./ui/seitenleiste";
 import { Vergleich } from "./ui/vergleich";
-import { Z, beiAenderung, type Ansicht } from "./ui/zustand";
+import { Z, beiAenderung, istEigeneWelt, type Ansicht } from "./ui/zustand";
 
 const app = document.querySelector("#app") as HTMLElement;
 let schmutzig = true;
@@ -64,7 +64,7 @@ haupt.className = "haupt";
 haupt.append(vergleich.element, einzel.element);
 const rumpf = document.createElement("div");
 rumpf.className = "rumpf";
-rumpf.append(seitenleiste.element, haupt);
+rumpf.append(seitenleiste.element, haupt, seitenleiste.info);
 app.append(kopf, rumpf);
 
 const aktiveWiedergabe = () => (Z.ansicht === "vergleich" ? vergleich.wiedergabe : einzel.wiedergabe);
@@ -106,6 +106,8 @@ function bild(jetzt: number): void {
     vergleich.element.hidden = Z.ansicht !== "vergleich";
     einzel.element.hidden = Z.ansicht !== "einzel";
     seitenleiste.aktualisiere();
+    // Nur in der Eigenen Welt fangen die Karten Wischgesten ab (zum Malen); sonst scrollt man über sie hinweg.
+    document.body.classList.toggle("bauen-aktiv", istEigeneWelt());
     if (Z.ansicht === "vergleich") {
       vergleich.aktualisiere();
       vergleich.zeichne(jetzt);

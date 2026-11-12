@@ -89,15 +89,19 @@ export interface Fokus {
   readonly negativ: boolean;
 }
 
+/** Feld, das der Step bearbeitet (u), und Feld, das er prüft, setzt oder einfügt (v). */
+function felderVon(step: Step): { u: FeldId | undefined; v: FeldId | undefined } {
+  return { u: "u" in step ? step.u : undefined, v: "v" in step ? step.v : undefined };
+}
+
 /** Welche Felder der Step markiert. */
 export function fokus(step: Step | undefined): Fokus {
   if (!step) return { bearbeitet: null, geprueft: null, negativ: false };
-  if (step.u === undefined) {
-    // d[s] ← 0 und das erste Einfügen bearbeiten den Start.
-    return { bearbeitet: step.v ?? null, geprueft: null, negativ: false };
-  }
-  const negativ = (step.art === "markiertPruefung" || step.art === "vergleiche") && step.ok === false;
-  return { bearbeitet: step.u, geprueft: step.v ?? null, negativ };
+  const { u, v } = felderVon(step);
+  // Ohne u: d[s] ← 0, h(s) und das erste Einfügen bearbeiten den Start.
+  if (u === undefined) return { bearbeitet: v ?? null, geprueft: null, negativ: false };
+  const negativ = (step.art === "markiertPruefung" || step.art === "vergleiche") && !step.ok;
+  return { bearbeitet: u, geprueft: v ?? null, negativ };
 }
 
 export const koord = (p: Pos): string => `(${p.x}|${p.y})`;
@@ -110,70 +114,82 @@ export function erklaerSatz(replay: Replay): string {
   const s = replay.aktuell;
   const info = ALGO_INFO[e.algo];
   if (!s) return `Drücke „Abspielen“ oder → und sieh zu, wie ${info.name} Zeile für Zeile sucht.`;
-  const k = (id: FeldId | undefined) => koord({ x: (id as number) % e.breite, y: Math.floor((id as number) / e.breite) });
-  const u = k(s.u);
-  const v = k(s.v);
+  const k = (id: FeldId) => koord({ x: id % e.breite, y: Math.floor(id / e.breite) });
   const heap = e.algo === "dijkstra" || e.algo === "astar";
   switch (s.art) {
     case "init":
       return "Am Anfang sind alle Felder unbekannt: d = ∞, kein Vorgänger.";
     case "setze": {
       const g = e.algo === "astar" ? "g" : "d";
+      const v = k(s.v);
       if (s.u === undefined) return `Der Start ${v} wird entdeckt und bekommt ${g} = 0.`;
-      if (!heap) return `${v} wird entdeckt: d = ${zahl(s.d as number)} Kanten ab Start, Vorgänger ${u}. Das Gewicht des Feldes zählt für ${info.name} nicht.`;
-      if ((s.altD as number) < Infinity)
-        return `Verbesserung: ${g}[${v}] sinkt von ${zahl(s.altD as number)} auf ${zahl(s.d as number)}, neuer Vorgänger ist ${u}.`;
-      return `${v} wird entdeckt: ${g} = ${zahl(s.d as number)}, Vorgänger ${u}.`;
+      const u = k(s.u);
+      if (!heap)
+        return `${v} wird entdeckt: d = ${zahl(s.d)} Kanten ab Start, Vorgänger ${u}. Das Gewicht des Feldes zählt für ${info.name} nicht.`;
+      if (s.altD < Infinity) return `Verbesserung: ${g}[${v}] sinkt von ${zahl(s.altD)} auf ${zahl(s.d)}, neuer Vorgänger ist ${u}.`;
+      return `${v} wird entdeckt: ${g} = ${zahl(s.d)}, Vorgänger ${u}.`;
+    }
+    case "schaetze": {
+      const formel = "Manhattan-Abstand zum Ziel mal billigstes Feld";
+      if (s.u === undefined)
+        return `A* schätzt die Restkosten vom Start ${k(s.v)}: h = ${formel} = ${zahl(s.wert)}. Das ist ein eigener Rechenschritt.`;
+      return `Von ${k(s.u)} aus schätzt A* die Restkosten von ${k(s.v)}: h = ${formel} = ${zahl(s.wert)}.`;
     }
     case "einfuegen": {
-      const g = replay.d[s.v as number];
+      const g = replay.d[s.v];
+      const p = s.prio ?? g;
       const wo =
         e.algo === "bfs"
           ? "hinten in die Warteschlange"
           : e.algo === "dfs"
             ? "oben auf den Stapel"
             : e.algo === "astar"
-              ? `mit f = g + h = ${zahl(g)} + ${zahl((s.prio as number) - g)} = ${zahl(s.prio as number)} in die Prioritätswarteschlange`
-              : `mit Priorität d = ${zahl(s.prio as number)} in die Prioritätswarteschlange`;
+              ? `mit f = g + h = ${zahl(g)} + ${zahl(p - g)} = ${zahl(p)} in die Prioritätswarteschlange`
+              : `mit Priorität d = ${zahl(p)} in die Prioritätswarteschlange`;
       const besuch = s.besuch !== undefined ? ` Das ist Besuch Nr. ${s.besuch}.` : "";
-      if (s.u === undefined) return `Der Start ${v} kommt ${wo}.${besuch}`;
-      return `Von ${u} aus kommt ${v} ${wo}.${besuch}`;
+      if (s.u === undefined) return `Der Start ${k(s.v)} kommt ${wo}.${besuch}`;
+      return `Von ${k(s.u)} aus kommt ${k(s.v)} ${wo}.${besuch}`;
     }
     case "schleife":
       return s.ok ? `Die ${info.liste} ist nicht leer, also geht es weiter.` : `Die ${info.liste} ist leer.`;
-    case "entnehmen":
+    case "entnehmen": {
+      const u = k(s.u);
       if (e.algo === "dfs") return `${u} hat keinen ungeprüften Nachbarn mehr. DFS nimmt es vom Stapel und springt zurück.`;
-      if (e.algo === "bfs") return `${u} wartet am längsten und wird vorne aus der Warteschlange genommen und expandiert. Das ist Besuch Nr. ${s.besuch}.`;
+      if (e.algo === "bfs")
+        return `${u} wartet am längsten und wird vorne aus der Warteschlange genommen und expandiert. Das ist Besuch Nr. ${s.besuch}.`;
+      const p = s.prio ?? 0;
       if (e.algo === "astar") {
-        const en = replay.letzteEntnahme();
-        const g = en ? en.g : 0;
-        return `${u} hat das kleinste f = g + h = ${zahl(g)} + ${zahl((s.prio as number) - g)} = ${zahl(s.prio as number)} und wird entnommen.`;
+        const g = replay.letzteEntnahme()?.g ?? 0;
+        return `${u} hat das kleinste f = g + h = ${zahl(g)} + ${zahl(p - g)} = ${zahl(p)} und wird entnommen.`;
       }
-      return `${u} hat das kleinste d = ${zahl(s.prio as number)} aller Einträge und wird entnommen, auch wenn ältere Einträge warten.`;
+      return `${u} hat das kleinste d = ${zahl(p)} aller Einträge und wird entnommen, auch wenn ältere Einträge warten.`;
+    }
     case "oben":
-      return `Oben auf dem Stapel liegt ${u}.`;
+      return `Oben auf dem Stapel liegt ${k(s.u)}.`;
     case "zielpruefung":
-      return s.ok ? `${u} ist das Ziel. Weg gefunden!` : `${u} ist nicht das Ziel.`;
+      return s.ok ? `${k(s.u)} ist das Ziel. Weg gefunden!` : `${k(s.u)} ist nicht das Ziel.`;
     case "nachbar":
-      return `Nächster Nachbar von ${u} ist ${v}.`;
+      return `Nächster Nachbar von ${k(s.u)} ist ${k(s.v)}.`;
     case "keinNachbar":
-      return e.algo === "dfs" ? `${u} hat keinen ungeprüften Nachbarn mehr.` : `Alle Nachbarn von ${u} sind geprüft.`;
+      return e.algo === "dfs" ? `${k(s.u)} hat keinen ungeprüften Nachbarn mehr.` : `Alle Nachbarn von ${k(s.u)} sind geprüft.`;
     case "markiertPruefung":
-      return s.ok ? `${v} ist noch nicht entdeckt, also wird es von ${u} aus entdeckt.` : `${v} ist schon entdeckt und wird von ${u} aus übersprungen.`;
+      return s.ok
+        ? `${k(s.v)} ist noch nicht entdeckt, also wird es von ${k(s.u)} aus entdeckt.`
+        : `${k(s.v)} ist schon entdeckt und wird von ${k(s.u)} aus übersprungen.`;
     case "veraltetPruefung":
       return s.ok
-        ? `${u} ist schon abgeschlossen. Der Eintrag im Heap ist veraltet und wird übersprungen.`
-        : `${u} ist noch nicht abgeschlossen.`;
+        ? `${k(s.u)} ist schon abgeschlossen. Der Eintrag im Heap ist veraltet und wird übersprungen.`
+        : `${k(s.u)} ist noch nicht abgeschlossen.`;
     case "abschliessen":
-      return `${u} wird expandiert und abgeschlossen: Günstiger als ${zahl(replay.d[s.u as number])} geht es nicht hin. Das ist Besuch Nr. ${s.besuch}.`;
+      return `${k(s.u)} wird expandiert und abgeschlossen: Günstiger als ${zahl(replay.d[s.u])} geht es nicht hin. Das ist Besuch Nr. ${s.besuch}.`;
     case "rechne": {
-      const du = replay.d[s.u as number];
-      return `Über ${u} kostet ${v}: ${zahl(du)} + ${zahl((s.wert as number) - du)} = ${zahl(s.wert as number)}.`;
+      const du = replay.d[s.u];
+      return `Über ${k(s.u)} kostet ${k(s.v)}: ${zahl(du)} + ${zahl(s.wert - du)} = ${zahl(s.wert)}.`;
     }
     case "vergleiche":
       return s.ok
-        ? `${zahl(s.wert as number)} ist kleiner als bisher ${zahl(replay.d[s.v as number])}: Über ${u} ist ${v} günstiger.`
-        : `${zahl(s.wert as number)} ist nicht kleiner als bisher ${zahl(replay.d[s.v as number])}: Über ${u} wird ${v} nicht günstiger.`;
+        ? `${zahl(s.wert)} ist kleiner als bisher ${zahl(replay.d[s.v])}: Über ${k(s.u)} ist ${k(s.v)} günstiger.`
+        : `${zahl(s.wert)} ist nicht kleiner als bisher ${zahl(replay.d[s.v])}: Über ${k(s.u)} wird ${k(s.v)} nicht günstiger.`;
     case "keinWeg":
       return `Die ${info.liste} ist leer, ohne dass das Ziel erreicht wurde: Es gibt keinen Weg.`;
   }
@@ -203,7 +219,11 @@ export function zustandText(algo: Algo, z: FeldZustand): string {
     case "entdeckt":
       return "entdeckt, noch nicht eingereiht";
     case "wartet":
-      return algo === "bfs" ? "wartet in der Warteschlange" : algo === "dfs" ? "liegt auf dem Stapel" : "wartet in der Prioritätswarteschlange";
+      return algo === "bfs"
+        ? "wartet in der Warteschlange"
+        : algo === "dfs"
+          ? "liegt auf dem Stapel"
+          : "wartet in der Prioritätswarteschlange";
     case "expandiert":
       return algo === "dfs" ? "expandiert (alle Nachbarn geprüft, vom Stapel genommen)" : "expandiert";
     case "weg":
@@ -265,7 +285,7 @@ export interface ProtokollEintrag {
  */
 export function protokoll(replay: Replay, h: (id: FeldId) => number): ProtokollEintrag[] {
   const e = replay.ergebnis;
-  const k = (id: FeldId | undefined) => koord({ x: (id as number) % e.breite, y: Math.floor((id as number) / e.breite) });
+  const k = (id: FeldId) => koord({ x: id % e.breite, y: Math.floor(id / e.breite) });
   const astar = e.algo === "astar";
   const d = new Map<number, number>();
   const liste: ProtokollEintrag[] = [];
@@ -273,21 +293,22 @@ export function protokoll(replay: Replay, h: (id: FeldId) => number): ProtokollE
   e.schritte.forEach((s, i) => {
     switch (s.art) {
       case "setze": {
-        d.set(s.v as number, s.d as number);
+        d.set(s.v, s.d);
         const g = astar ? "g" : "d";
-        if ((s.altD as number) < Infinity) {
-          const alt = (s.altVorg as number) >= 0 ? k(s.altVorg) : "–";
-          neu(i, "besser", `${k(s.v)}: ${g} ${zahl(s.altD as number)} → ${zahl(s.d as number)}, Vorgänger ${alt} → ${k(s.u)}`);
+        if (s.altD < Infinity) {
+          const alt = s.altVorg >= 0 ? k(s.altVorg) : "–";
+          neu(i, "besser", `${k(s.v)}: ${g} ${zahl(s.altD)} → ${zahl(s.d)}, Vorgänger ${alt} → ${s.u === undefined ? "–" : k(s.u)}`);
         }
         break;
       }
       case "einfuegen": {
-        const g = d.get(s.v as number) ?? 0;
+        const g = d.get(s.v) ?? 0;
+        const p = s.prio ?? g;
         const wert =
           e.algo === "astar"
-            ? `g ${zahl(g)} + h ${zahl(h(s.v as number))} = f ${zahl(s.prio as number)}`
+            ? `g ${zahl(g)} + h ${zahl(h(s.v))} = f ${zahl(p)}`
             : e.algo === "dijkstra"
-              ? `d = ${zahl(s.prio as number)}`
+              ? `d = ${zahl(p)}`
               : `d = ${zahl(g)}`;
         const wo = e.algo === "bfs" ? "hinten in Warteschlange" : e.algo === "dfs" ? "auf Stapel gelegt" : "in Prioritätswarteschlange";
         neu(i, "ein", `${k(s.v)} ${wo} (${wert})`);
@@ -295,10 +316,10 @@ export function protokoll(replay: Replay, h: (id: FeldId) => number): ProtokollE
       }
       case "entnehmen":
         if (e.algo === "dfs") neu(i, "zurueck", `${k(s.u)} vom Stapel genommen: Sackgasse, zurück`);
-        else if (e.algo === "bfs") neu(i, "aus", `${k(s.u)} vorne entnommen und expandiert (d = ${zahl(d.get(s.u as number) ?? 0)})`);
+        else if (e.algo === "bfs") neu(i, "aus", `${k(s.u)} vorne entnommen und expandiert (d = ${zahl(d.get(s.u) ?? 0)})`);
         else {
-          const p = s.prio as number;
-          const wert = astar ? `f = ${zahl(p)}, h = ${zahl(h(s.u as number))}` : `d = ${zahl(p)}`;
+          const p = s.prio ?? 0;
+          const wert = astar ? `f = ${zahl(p)}, h = ${zahl(h(s.u))}` : `d = ${zahl(p)}`;
           neu(i, "aus", `${k(s.u)} entnommen: kleinste Priorität (${wert})`);
         }
         break;
@@ -306,7 +327,7 @@ export function protokoll(replay: Replay, h: (id: FeldId) => number): ProtokollE
         if (s.ok) neu(i, "veraltet", `${k(s.u)}: veralteter Eintrag übersprungen (schon abgeschlossen)`);
         break;
       case "abschliessen":
-        neu(i, "fertig", `${k(s.u)} expandiert und abgeschlossen (${astar ? "g" : "d"} = ${zahl(d.get(s.u as number) ?? 0)} endgültig)`);
+        neu(i, "fertig", `${k(s.u)} expandiert und abgeschlossen (${astar ? "g" : "d"} = ${zahl(d.get(s.u) ?? 0)} endgültig)`);
         break;
       case "zielpruefung":
         if (s.ok) neu(i, "ziel", `Ziel ${k(s.u)} erreicht: Weg gefunden`);
@@ -392,4 +413,27 @@ export function merkmal(replay: Replay): Merkmal {
         ],
       };
   }
+}
+
+/**
+ * Kurzbeschreibung einer Karte für Screenreader (aria-label): Verfahren, Start, Ziel, Stand der Suche,
+ * Inhalt der Datenstruktur, Ergebnis und wie man Feldinfos per Tastatur bekommt.
+ */
+export function kartenBeschreibung(replay: Replay): string {
+  const e = replay.ergebnis;
+  const info = ALGO_INFO[e.algo];
+  let expandiert = 0;
+  for (const x of replay.expandiert) expandiert += x;
+  const wartend = replay.inhalt().filter((x) => !replay.veraltet(x)).length;
+  const stand = replay.gefunden
+    ? `Weg gefunden: ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer.`
+    : replay.fertig
+      ? "Kein Weg gefunden."
+      : replay.position === 0
+        ? "Suche noch nicht gestartet."
+        : "Suche läuft.";
+  return (
+    `Karte ${info.name}: Start ${koord(e.start)}, Ziel ${koord(e.ziel)}. ${expandiert} Felder expandiert, ` +
+    `${wartend} in der ${info.liste}. ${stand} Pfeiltasten bewegen den Feld-Cursor, Esc verlässt die Karte.`
+  );
 }

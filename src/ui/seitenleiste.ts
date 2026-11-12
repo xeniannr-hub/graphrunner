@@ -22,7 +22,10 @@ function symbol(bild: HTMLCanvasElement): HTMLCanvasElement {
 const kosten = (k: number): string => (k === Infinity ? "–" : String(k));
 
 export class Seitenleiste {
+  /** Weltliste und (in der Eigenen Welt) Bauen: steht auf dem Handy über der Karte. */
   readonly element: HTMLElement;
+  /** Begründung und Ausdauer pro Feld: steht auf dem Handy unter der Karte, damit die Steuerung früh kommt. */
+  readonly info: HTMLElement;
   private readonly welten: HTMLButtonElement[] = [];
   private readonly wannEl: HTMLElement;
   private readonly warumEl: HTMLElement;
@@ -43,7 +46,9 @@ export class Seitenleiste {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "welt";
-      const kuerzel = w.algo ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>` : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
+      const kuerzel = w.algo
+        ? `<span class="kuerzel" style="--farbe:${ALGO_INFO[w.algo].farbe}">${ALGO_INFO[w.algo].name}</span>`
+        : `<span class="kuerzel bauen-kuerzel">bauen</span>`;
       b.innerHTML = `<span class="welt-titel">${w.titel}</span>${kuerzel}`;
       b.onclick = () => {
         ladeWelt(i);
@@ -127,8 +132,13 @@ export class Seitenleiste {
     fuss.textContent = "„–“ heißt: nicht begehbar. Ein Schritt kostet so viel wie das Feld, das man betritt.";
     this.ausdauer.append(tabelle, fuss);
 
-    el.append(titel, liste, begruendung, this.bauen, this.ausdauer);
+    el.append(titel, liste, this.bauen);
     this.element = el;
+    const info = document.createElement("aside");
+    info.className = "seiten-info";
+    info.setAttribute("aria-label", "Begründung und Ausdauer");
+    info.append(begruendung, this.ausdauer);
+    this.info = info;
   }
 
   aktualisiere(): void {

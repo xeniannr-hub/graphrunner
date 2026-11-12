@@ -221,25 +221,25 @@ export class Replay {
   private anwenden(s: Step): void {
     switch (s.art) {
       case "setze":
-        if ((s.altD as number) < Infinity) this.verbesserungen++;
-        this.d[s.v as FeldId] = s.d as number;
-        this.vorg[s.v as FeldId] = s.vorg as FeldId;
+        if (s.altD < Infinity) this.verbesserungen++;
+        this.d[s.v] = s.d;
+        this.vorg[s.v] = s.vorg;
         break;
       case "einfuegen": {
-        const v = s.v as FeldId;
+        const v = s.v;
         this.inListe[v]++;
         this.liste.push({ v, g: this.d[v], prio: s.prio ?? this.d[v], seq: this.seq++ });
         if (s.besuch !== undefined) this.besuchen(v, s.besuch);
         break;
       }
       case "entnehmen":
-        this.inListe[s.u as FeldId]--;
+        this.inListe[s.u]--;
         this.entnimm();
-        if (s.besuch !== undefined) this.besuchen(s.u as FeldId, s.besuch);
+        if (s.besuch !== undefined) this.besuchen(s.u, s.besuch);
         break;
       case "abschliessen":
-        this.expandiert[s.u as FeldId] = 1;
-        this.besuchen(s.u as FeldId, s.besuch as number);
+        this.expandiert[s.u] = 1;
+        this.besuchen(s.u, s.besuch);
         break;
       case "zielpruefung":
         if (s.ok) this.zielErreicht = true;
@@ -252,27 +252,27 @@ export class Replay {
   private rueckgaengig(s: Step): void {
     switch (s.art) {
       case "setze":
-        if ((s.altD as number) < Infinity) this.verbesserungen--;
-        this.d[s.v as FeldId] = s.altD as number;
-        this.vorg[s.v as FeldId] = s.altVorg as FeldId;
+        if (s.altD < Infinity) this.verbesserungen--;
+        this.d[s.v] = s.altD;
+        this.vorg[s.v] = s.altVorg;
         break;
       case "einfuegen":
-        this.inListe[s.v as FeldId]--;
+        this.inListe[s.v]--;
         // Beim Heap kann ein zurückgelegter Eintrag hinter diesem liegen; deshalb über seq suchen.
         this.seq--;
         let i = this.liste.length - 1;
         while (this.liste[i].seq !== this.seq) i--;
         this.liste.splice(i, 1);
-        if (s.besuch !== undefined) this.besuchZuruecknehmen(s.v as FeldId);
+        if (s.besuch !== undefined) this.besuchZuruecknehmen(s.v);
         break;
       case "entnehmen":
-        this.inListe[s.u as FeldId]++;
+        this.inListe[s.u]++;
         this.entnahmeZuruecknehmen();
-        if (s.besuch !== undefined) this.besuchZuruecknehmen(s.u as FeldId);
+        if (s.besuch !== undefined) this.besuchZuruecknehmen(s.u);
         break;
       case "abschliessen":
-        this.expandiert[s.u as FeldId] = 0;
-        this.besuchZuruecknehmen(s.u as FeldId);
+        this.expandiert[s.u] = 0;
+        this.besuchZuruecknehmen(s.u);
         break;
       case "zielpruefung":
         if (s.ok) this.zielErreicht = false;

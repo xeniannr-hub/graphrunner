@@ -15,9 +15,9 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 | Welt | Verfahren | … ist am besten, wenn … | Messbare Bedingung |
 | --- | --- | --- | --- |
 | Ruinenhof | BFS | jeder Schritt gleich viel kostet | nur Wiese und Felsmauern; BFS-Kosten = Dijkstra-Kosten; A* besucht > 85 % von BFS; DFS besucht > 2 × BFS, Weg > 1,5 × so lang |
-| Stollen | DFS | es nur einen Weg gibt und das Ziel tief liegt | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen |
-| Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; BFS zahlt > 1,5 ×, DFS > 2 × |
-| Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; BFS zahlt > 1,2 × |
+| Stollen | DFS | es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen (hängt an der Nachbarreihenfolge, siehe Modellannahmen) |
+| Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte (4.167 zu 4.356); BFS zahlt > 1,5 ×, DFS > 2 × |
+| Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten, auch < 25 % der Rechenschritte (1.098 zu 8.326); BFS zahlt > 1,2 × |
 | Eigene Welt | – | selbst bauen | startet als leere Wiese |
 
 ## Bedienung
@@ -29,7 +29,9 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
   - **Ereignisprotokoll** aller relevanten Aktionen (einfügen, entnehmen, verbessern, abschließen, zurückspringen); ein Klick springt zu diesem Schritt,
   - **„Woran erkenne ich …?“** mit Belegen aus dem laufenden Algorithmus,
   - bei A* die **offengelegte Heuristik**, bei BFS und DFS auf gewichteten Karten eine **Warnung**, dass Kantengewichte ignoriert werden.
-- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten, `Pos1` / `Ende` zum Anfang bzw. Ende.
+- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten, `Pos1` / `Ende` zum Anfang bzw. Ende. Mit `Tab` auf eine Karte: Pfeiltasten bewegen einen Feld-Cursor mit Feldinfo, `Enter` baut (Eigene Welt), `Esc` verlässt die Karte.
+- **Touch:** Antippen eines Feldes zeigt die Feldinfo. Wischen scrollt die Seite; nur in der Eigenen Welt malt man durch Ziehen.
+- **Fortschritt:** In der Einzelansicht zählt „Zeile k von n“ die ausgeführten Codezeilen, im Vergleich zählt „Feld k von n“ die besuchten Felder je Verfahren.
 
 ### Zustände auf der Karte
 
@@ -76,6 +78,14 @@ Weil eine Kante so viel kostet wie das Feld, das man betritt, haben alle Kanten 
 | Dijkstra | Min-Heap mit lazy deletion | günstigsten Weg | Abschließen |
 | A* | wie Dijkstra mit f = g + h | günstigsten Weg | Abschließen |
 
+## Modellannahmen
+
+Diese Annahmen bestimmen die Messwerte. Sie sind hier und im Bericht offen benannt.
+
+1. **Rechenschritte = ausgeführte Pseudocode-Zeilen.** Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)). Dijkstra hat pro Nachbar eine Zeile mehr als BFS (`rechne` und `vergleiche` statt einer Prüfung). Dass BFS im Ruinenhof am wenigsten rechnet (536 statt 748), folgt deshalb teilweise aus der Schreibweise des Pseudocodes.
+2. **Die Schätzung h(v) ist bei A* ein eigener Rechenschritt.** Bei zulässiger, konsistenter Schätzung kann Dijkstra A* bei den besuchten Feldern nie schlagen. Was A* dafür bezahlt, zeigt sich nur, wenn das Berechnen von h(v) mitgezählt wird. Dann liegt Dijkstra im Flussmoor vorne (4.167 zu 4.356 Rechenschritte), in der Handelsstraße gewinnt A* deutlich (1.098 zu 8.326). Beste Wahl, ★ und Fazit folgen demselben festen Kriterium je Welt, das unter der Zeile „Beste Wahl“ steht.
+3. **Die Nachbarreihenfolge ist fest: oben, rechts, unten, links.** Der DFS-Vorteil im Stollen hängt daran. Nur 12 von 24 Reihenfolgen erfüllen „DFS besucht < 70 % jedes anderen“. Beginnt die Reihenfolge mit „rechts“, besucht DFS 241 bis 273 statt 61 Felder. Umgekehrt wäre DFS im Ruinenhof mit „rechts“ vorne so sparsam wie BFS (52 Felder). DFS hat im Stollen also Glück; `worlds.test.ts` hält das mit allen 24 Reihenfolgen fest.
+
 ## Starten
 
 Voraussetzung: Node 22 oder neuer.
@@ -85,6 +95,7 @@ npm install        # einmalig
 npm run dev        # Entwicklungsserver, danach die angezeigte Adresse öffnen
 npm test           # Unit Tests im Terminal
 npm run build      # Typprüfung und Build nach dist/
+npm run format     # Formatieren mit Prettier (die CI prüft mit format:check)
 ```
 
 ## Ordnerstruktur
@@ -117,7 +128,7 @@ Die Algorithmen kennen weder DOM noch Canvas. Sie liefern Schritt für Schritt `
 
 ## Deployment
 
-Jeder Push auf `main` startet `.github/workflows/deploy.yml`: `npm ci` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig nötig: *Settings → Pages → Source: GitHub Actions*.
+Jeder Push auf `main` startet `.github/workflows/deploy.yml`: `npm ci` → `npm run format:check` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig nötig: *Settings → Pages → Source: GitHub Actions*.
 
 ## Quellen
 
