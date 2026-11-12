@@ -1,38 +1,38 @@
-/* GraphRunner: helles Farbschema im Blockstil (an Minecraft angelehnt, eigener Entwurf, keine fremden Grafiken).
-   Flächen wie Blöcke mit Grasnarbe: grüner Streifen oben, Licht oben links, Schatten unten rechts, keine runden Ecken.
-   Pixelschrift nur in Überschriften. */
+/* GraphRunner: helles, schlichtes Schema im Stil eines Spiele-Inventars (an Minecraft angelehnt, eigener Entwurf,
+   keine fremden Grafiken oder Schriften).
+   Grundidee: eine einzige Flächenart (hellgrau, Licht oben links, Schatten unten rechts, schwarzer Rand),
+   graue Steinknöpfe mit Pixelschrift, dunkle Slots für Einträge, helle eingelassene Felder für längere Texte.
+   Farbe nur dort, wo sie etwas bedeutet: die vier Verfahren, Grün für „Abspielen“, Gelb für die Auswahl. */
 :root {
   color-scheme: light;
-  /* Grundfarben: warmes Papierweiß auf hellem Himmelblau, Ränder in dunklem Erdbraun */
-  --grund: #e8f2fa;
-  --flaeche: #fbf8f1;
-  --flaeche-2: #efe8d9;
-  --flaeche-hell: #fffdf8;
-  --slot: #e6dece;
-  --linie: #c7bca6;
-  --rand: #3b352d;
-  --text: #2a2620;
-  --gedaempft: #625b50;
-  /* Akzente: Grün wie ein Grasblock für Hauptaktionen, Gelb für Auswahl, Blau für Fokus */
-  --gras: #5aac34;
-  --gras-hell: #8ad457;
-  --gras-dunkel: #2f6b1a;
-  --orange: #e8890c;
-  --akzent: #ffd400;
-  --auswahl: #fff1b0;
-  --akzent-dunkel: #8a6d00;
+  --grund: #e4edf3;
+  --flaeche: #c6c6c6;
+  --licht: #ffffff;
+  --schatten: #555555;
+  --rand: #1b1b1b;
+  --eingelassen: #ebebeb;
+  --slot: #8b8b8b;
+  --slot-dunkel: #373737;
+  --text: #262626;
+  --gedaempft: #4f4f4f;
+  --knopf: #7d7d7d;
+  --knopf-licht: #a8a8a8;
+  --knopf-schatten: #474747;
+  --knopf-hover: #7f8bc4;
+  --gruen: #4c9a2a;
+  --gruen-licht: #7cc95a;
+  --gruen-schatten: #2c5e17;
+  --gelb: #ffff55;
+  --gold: #d9a400;
   --fokus: #0b57d0;
+  --orange: #e8890c;
   /* Feste Farben der Verfahren (CLAUDE.md, Abschnitt 8) */
   --bfs: #ff4d73;
   --dfs: #a56bff;
   --dijkstra: #ff8a2b;
   --astar: #ffd400;
-  /* Blockstil: Licht oben links, Schatten unten rechts */
-  --rund: 0;
-  --hoch: inset 2px 2px 0 #ffffff, inset -2px -2px 0 #d9cfbb;
-  --tief: inset 2px 2px 0 #cdc2ac, inset -2px -2px 0 #ffffff;
-  --schatten: 3px 3px 0 rgba(59, 53, 45, 0.18);
-  /* Schriften */
+  --hoch: inset 2px 2px 0 var(--licht), inset -2px -2px 0 var(--schatten);
+  --tief: inset 2px 2px 0 var(--slot-dunkel), inset -2px -2px 0 var(--licht);
   --pixel: "Pixelify Sans", system-ui, sans-serif;
   --ui: "Rubik", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, monospace;
@@ -54,10 +54,7 @@ body {
 body {
   min-width: 0;
   overflow-x: hidden;
-  /* Heller Untergrund mit feinem Pixelraster. */
-  background:
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.35) 0 4px, transparent 4px 8px),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.025) 0 4px, transparent 4px 8px), var(--grund);
+  background: linear-gradient(#d6e8f5, var(--grund) 320px) var(--grund);
 }
 
 h1,
@@ -67,10 +64,11 @@ h3 {
   font-weight: 600;
   letter-spacing: 0.02em;
   margin: 0;
+  color: #3f3f3f;
 }
 
 h2 {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
 }
 
 h3 {
@@ -98,7 +96,6 @@ canvas {
   image-rendering: pixelated;
 }
 
-/* Nur für Screenreader sichtbar. */
 .nur-vorlesen {
   position: absolute;
   width: 1px;
@@ -108,7 +105,7 @@ canvas {
   white-space: nowrap;
 }
 
-/* ---------- Blöcke: gemeinsame Optik für Flächen ---------- */
+/* ---------- Die eine Flächenart ---------- */
 .panel,
 .wiedergabe,
 .karte-box,
@@ -119,38 +116,38 @@ canvas {
 .hinweis-box {
   background: var(--flaeche);
   border: 2px solid var(--rand);
-  box-shadow: var(--hoch), var(--schatten);
+  box-shadow: var(--hoch);
 }
 
-/* Grasnarbe: Allgemeine Flächen tragen oben einen grünen Streifen wie ein Grasblock.
-   Flächen, die zu einem Verfahren gehören, tragen stattdessen dessen Farbe (Karten, Datenstruktur). */
-.panel,
-.wiedergabe,
-.ergebnis,
-.box:not(.struktur-box):not(.merkmal-box):not(.erklaerung) {
-  border-top: 6px solid var(--gras);
-  box-shadow:
-    inset 0 2px 0 var(--gras-hell),
-    var(--hoch),
-    var(--schatten);
+/* Eingelassene helle Felder für längeren Text und Listen. */
+.code,
+.protokoll,
+.beste-wahl,
+.formel,
+table,
+.lernpunkt p {
+  background: var(--eingelassen);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
 }
 
-h2,
-h3 {
-  color: #2b3a22;
-}
-
-/* Knöpfe wie Steinblöcke: Hover = heller Rand, gedrückt oder gewählt = eingedrückt. */
+/* ---------- Knöpfe wie Steinknöpfe ---------- */
 .knopf,
 .tab,
 .welt,
 .werkzeug,
 .umschalter button,
 .auswahl select {
-  background: linear-gradient(#fffdf8, #e8e0cf);
+  background: var(--knopf);
+  color: #fff;
   border: 2px solid var(--rand);
-  box-shadow: var(--hoch);
-  color: var(--text);
+  box-shadow:
+    inset 2px 2px 0 var(--knopf-licht),
+    inset -2px -2px 0 var(--knopf-schatten);
+  text-shadow: 2px 2px 0 #3a3a3a;
+  font-family: var(--pixel);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
 }
 
@@ -159,59 +156,56 @@ h3 {
 .welt:hover,
 .werkzeug:hover,
 .umschalter button:hover {
-  background: linear-gradient(#ffffff, #f0e9da);
-  border-color: var(--gras-dunkel);
+  background: var(--knopf-hover);
+  border-color: #fff;
 }
 
+/* Gewählt oder gedrückt: eingedrückt, Schrift gelb. */
 .knopf:active:not(:disabled),
 .tab[aria-selected="true"],
 .welt[aria-pressed="true"],
 .werkzeug[aria-pressed="true"],
 .umschalter button[aria-pressed="true"] {
-  box-shadow: var(--tief);
+  background: #5b5b5b;
+  color: var(--gelb);
+  border-color: var(--rand);
+  box-shadow:
+    inset 2px 2px 0 #2e2e2e,
+    inset -2px -2px 0 #7a7a7a;
 }
 
 .knopf {
   min-width: 2.4rem;
-  padding: 0.35rem 0.55rem;
-  font-family: var(--mono);
+  padding: 0.3rem 0.55rem;
 }
 
-/* Hauptaktion (Abspielen) grün wie ein Grasblock. */
+/* Hauptaktion grün. */
 .knopf.haupt {
   min-width: 6.5rem;
-  background: linear-gradient(var(--gras-hell), var(--gras));
-  color: #fff;
-  font-family: var(--ui);
-  font-weight: 700;
-  text-shadow: 1px 1px 0 var(--gras-dunkel);
+  background: var(--gruen);
   box-shadow:
-    inset 2px 2px 0 #b9ef93,
-    inset -2px -2px 0 var(--gras-dunkel);
+    inset 2px 2px 0 var(--gruen-licht),
+    inset -2px -2px 0 var(--gruen-schatten);
+  text-shadow: 2px 2px 0 var(--gruen-schatten);
 }
 
 .knopf.haupt:hover:not(:disabled) {
-  background: linear-gradient(#9de36a, #66bb3e);
-}
-
-/* Gewählte Ansicht: gelb, eingedrückt. */
-.umschalter button[aria-pressed="true"] {
-  background: linear-gradient(#ffe25a, #f0b800);
-  color: #1a1408;
-  font-weight: 700;
-  box-shadow:
-    inset 2px 2px 0 #9c7400,
-    inset -2px -2px 0 #fff3a6;
-}
-
-.knopf.los {
-  font-family: var(--ui);
-  font-weight: 700;
+  background: #5cb236;
 }
 
 .knopf:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+.auswahl select {
+  padding: 0.25rem 0.4rem;
+}
+
+.auswahl select option {
+  color: var(--text);
+  background: #fff;
+  text-shadow: none;
 }
 
 .leeren {
@@ -219,7 +213,24 @@ h3 {
   width: 100%;
 }
 
-/* ---------- Kopf: Pixel-Landschaft bei Tag, Logo-Insel, zweifarbiger Titel ---------- */
+kbd {
+  display: inline-block;
+  min-width: 1.5em;
+  padding: 0 0.3em;
+  margin-right: 0.15em;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  text-align: center;
+  color: #fff;
+  background: var(--knopf);
+  border: 1px solid var(--rand);
+  box-shadow:
+    inset 1px 1px 0 var(--knopf-licht),
+    inset -1px -1px 0 var(--knopf-schatten);
+}
+
+/* ---------- Kopf: Pixel-Landschaft bei Tag ---------- */
 .kopf {
   position: relative;
   isolation: isolate;
@@ -227,11 +238,9 @@ h3 {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 0.6rem 1.2rem;
-  min-height: 116px;
-  border-bottom: 4px solid var(--orange);
-  box-shadow: 0 2px 0 var(--rand);
-  background: #76b8ef;
+  padding: 0.6rem 1.2rem 1.6rem;
+  min-height: 124px;
+  border-bottom: 3px solid var(--rand);
   overflow: hidden;
 }
 
@@ -243,27 +252,25 @@ h3 {
   z-index: -2;
 }
 
-/* Links heller, damit der Titel auf dem Himmel gut lesbar bleibt. */
 .kopf::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.55) 35%, rgba(255, 255, 255, 0) 70%);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 45%);
 }
 
 .logo {
   width: 96px;
   height: 96px;
   flex: none;
-  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.25));
 }
 
 .trenner {
   align-self: stretch;
   width: 3px;
   margin: 0.6rem 0.2rem;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .titel {
@@ -274,45 +281,45 @@ h3 {
 .titel h1 {
   font-size: 2.9rem;
   line-height: 1;
-  letter-spacing: 0.01em;
 }
 
-/* „Graph“ steingrau, „Runner“ orange (CLAUDE.md, Abschnitt 1). */
 .titel h1 .graph {
-  color: #8d949d;
+  color: #9aa1aa;
   text-shadow:
     0 3px 0 #5a6069,
-    0 5px 0 #2f3338,
-    3px 6px 0 rgba(0, 0, 0, 0.25);
+    0 5px 0 #2f3338;
 }
 
 .titel h1 .runner {
   color: #ffa51f;
   text-shadow:
     0 3px 0 #b75a08,
-    0 5px 0 #4a2304,
-    3px 6px 0 rgba(0, 0, 0, 0.25);
+    0 5px 0 #4a2304;
 }
 
 .titel p {
   margin: 0.55rem 0 0;
   color: #1f2a36;
   font-weight: 500;
-  letter-spacing: 0.02em;
 }
 
 .umschalter {
   display: flex;
-  gap: 0.25rem;
-  padding: 0.3rem;
-  background: var(--flaeche-2);
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
+  gap: 0.3rem;
 }
 
 .umschalter button {
-  padding: 0.5rem 1rem;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.umschalter svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  shape-rendering: crispEdges;
 }
 
 @media (max-width: 720px) {
@@ -328,19 +335,27 @@ h3 {
     display: none;
   }
   .kopf::before {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.55);
   }
   .titel h1 {
     font-size: 2rem;
   }
+  .umschalter {
+    width: 100%;
+  }
+  .umschalter button {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem;
+  }
 }
 
 /* ---------- Grundlayout ----------
-   Desktop: links Welten und darunter Begründung, rechts die Ansicht.
+   Desktop: links Welten und Begründung, rechts die Ansicht.
    Handy (≤ 960 px): Welten, dann Steuerung und Karten, dann Begründung, damit „Abspielen“ früh kommt. */
 .rumpf {
   display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-columns: 16rem minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   grid-template-areas:
     "welten haupt"
@@ -353,6 +368,10 @@ h3 {
 
 .seitenleiste {
   grid-area: welten;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-width: 0;
 }
 
 .seiten-info {
@@ -386,73 +405,56 @@ h3 {
     gap: 0.6rem;
   }
   .kopf {
-    padding: 0.6rem;
+    padding: 0.6rem 0.6rem 1.4rem;
   }
 }
 
 /* ---------- Seitenleiste ---------- */
-.seitenleiste {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
 .weltliste {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
 @media (max-width: 960px) {
   .weltliste {
-    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
   }
 }
 
 .welt {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.5rem 0.65rem;
+  padding: 0.4rem 0.55rem;
   text-align: left;
 }
 
-.welt[aria-pressed="true"],
-.werkzeug[aria-pressed="true"] {
-  background: var(--auswahl);
-  border-color: var(--rand);
-  box-shadow:
-    var(--tief),
-    inset 6px 0 0 var(--akzent);
+.welt .symbol {
+  width: 22px;
+  height: 22px;
 }
 
-/* Farbfeld im Kopf der Karten: dasselbe Symbol wie ein besuchtes Feld auf der Karte. */
-.name .symbol-legende {
-  align-self: center;
-}
-
-.welt-titel {
-  font-weight: 500;
+.welt .kuerzel {
+  margin-left: auto;
 }
 
 .kuerzel {
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.05rem 0.4rem;
+  padding: 0 0.35rem;
   background: var(--farbe);
   color: #1a1408;
+  text-shadow: none;
   border: 1px solid var(--rand);
 }
 
 .bauen-kuerzel {
-  background: var(--flaeche-hell);
+  background: var(--eingelassen);
 }
 
 .begruendung {
-  border-left: 6px solid var(--akzent);
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.75rem;
 }
 
 .begruendung p {
@@ -465,15 +467,60 @@ h3 {
 }
 
 .lernpunkt {
-  margin-top: 0.6rem !important;
+  margin-top: 0.55rem;
+}
+
+.lernpunkt summary,
+details.box > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.lernpunkt summary {
+  display: inline-block;
+  font-family: var(--pixel);
+  font-weight: 600;
+  color: #fff;
+  background: var(--knopf);
+  border: 2px solid var(--rand);
+  box-shadow:
+    inset 2px 2px 0 var(--knopf-licht),
+    inset -2px -2px 0 var(--knopf-schatten);
+  text-shadow: 2px 2px 0 #3a3a3a;
+  padding: 0.1rem 0.5rem;
+}
+
+.lernpunkt summary::before,
+details.box > summary h3::before {
+  content: "▸ ";
+}
+
+.lernpunkt[open] summary::before,
+details.box[open] > summary h3::before {
+  content: "▾ ";
+}
+
+.lernpunkt summary::-webkit-details-marker,
+details.box > summary::-webkit-details-marker {
+  display: none;
+}
+
+.lernpunkt p {
+  margin-top: 0.45rem !important;
   padding: 0.45rem 0.55rem;
-  background: #eaf3ff;
-  border: 2px solid var(--fokus);
   font-size: 0.9rem;
 }
 
+details.box > summary h3 {
+  display: inline-block;
+}
+
+details.box:not([open]) > summary h3 {
+  margin-bottom: 0;
+}
+
 .panel {
-  padding: 0.65rem 0.75rem;
+  padding: 0.6rem 0.75rem;
 }
 
 .panel h2 {
@@ -482,7 +529,7 @@ h3 {
 
 .hinweis {
   color: var(--gedaempft);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   margin: 0.3rem 0;
 }
 
@@ -498,14 +545,15 @@ h3 {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.25rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.8rem;
 }
 
 .kosten li,
 .werkzeug {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .kosten b,
@@ -521,7 +569,8 @@ h3 {
 }
 
 .werkzeug {
-  padding: 0.35rem 0.45rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.9rem;
 }
 
 /* ---------- Wiedergabeleiste ---------- */
@@ -576,39 +625,37 @@ h3 {
   white-space: nowrap;
 }
 
-/* Regler blockig: eingedrückte Bahn, eckiger gelber Griff. */
 input[type="range"] {
   appearance: none;
-  height: 12px;
+  height: 10px;
   background: var(--slot);
   border: 2px solid var(--rand);
-  box-shadow: var(--tief);
+  box-shadow: inset 2px 2px 0 var(--slot-dunkel);
 }
 
 input[type="range"]::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
+  width: 12px;
   height: 22px;
-  background: linear-gradient(#ffe25a, #f0b800);
+  background: var(--flaeche);
   border: 2px solid var(--rand);
-  box-shadow: inset -2px -2px 0 #9c7400;
+  box-shadow: var(--hoch);
   cursor: pointer;
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 12px;
+  width: 10px;
   height: 20px;
   border-radius: 0;
-  background: linear-gradient(#ffe25a, #f0b800);
+  background: var(--flaeche);
   border: 2px solid var(--rand);
   cursor: pointer;
 }
 
-/* ---------- Legende: Symbole sind dieselben Zeichnungen wie auf der Karte ---------- */
 .legende {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem 0.9rem;
+  gap: 0.3rem 1rem;
   width: 100%;
   font-size: 0.85rem;
   color: var(--gedaempft);
@@ -660,8 +707,11 @@ input[type="range"]::-moz-range-thumb {
   border-color: #ff4b4b;
 }
 
-.feldinfo-hinweis {
-  font-style: italic;
+.tasten {
+  width: 100%;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--gedaempft);
 }
 
 /* ---------- Karten ---------- */
@@ -678,22 +728,21 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .karte-box {
-  border-top: 5px solid var(--farbe);
-  padding: 0.5rem;
+  padding: 0.5rem 0.55rem 0.55rem;
   min-width: 0;
 }
 
 .karte-box header {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.2rem 0.8rem;
+  align-items: center;
+  gap: 0.1rem 0.8rem;
   margin-bottom: 0.4rem;
 }
 
 .name {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.45rem;
   flex: 1 1 auto;
   min-width: 0;
@@ -713,10 +762,6 @@ input[type="range"]::-moz-range-thumb {
   margin-right: 0.35rem;
 }
 
-.name .punkt {
-  margin-right: 0;
-}
-
 .zaehler {
   font-family: var(--mono);
   font-size: 0.85rem;
@@ -724,8 +769,8 @@ input[type="range"]::-moz-range-thumb {
 
 .status {
   width: 100%;
-  font-size: 0.88rem;
-  color: var(--gedaempft);
+  font-size: 0.86rem;
+  color: var(--text);
 }
 
 .status b {
@@ -735,19 +780,20 @@ input[type="range"]::-moz-range-thumb {
 .struktur-zeile {
   width: 100%;
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--gedaempft);
 }
 
 .gewicht-marke {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 0.05rem 0.35rem;
+  padding: 0 0.3rem;
   background: #ffe1d2;
   color: #8a2b0b;
-  border: 1px solid #c2410c;
+  border: 1px solid #8a2b0b;
 }
 
+/* Karte sitzt eingelassen wie in einem Slot. */
 .karte-box > canvas,
 .karte-einzel > canvas {
   display: block;
@@ -755,14 +801,20 @@ input[type="range"]::-moz-range-thumb {
   height: auto;
   aspect-ratio: 32 / 20;
   border: 2px solid var(--rand);
+  box-shadow: 0 0 0 2px var(--slot-dunkel);
   cursor: crosshair;
-  /* Wischen scrollt die Seite; nur in der Eigenen Welt wird auf den Karten gemalt. */
   touch-action: manipulation;
 }
 
 .bauen-aktiv .karte-box > canvas,
 .bauen-aktiv .karte-einzel > canvas {
   touch-action: none;
+}
+
+.karte-box > canvas:focus-visible,
+.karte-einzel > canvas:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 3px;
 }
 
 /* ---------- Ergebnis ---------- */
@@ -772,12 +824,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .beste-wahl {
-  margin: 0.4rem 0 0;
+  margin: 0.45rem 0 0;
   padding: 0.45rem 0.6rem;
   max-width: 75ch;
-  border: 2px solid var(--rand);
-  border-left: 8px solid var(--akzent);
-  background: var(--auswahl);
+  border-left: 6px solid var(--gold);
 }
 
 .beste-wahl small {
@@ -785,7 +835,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .fazit {
-  margin: 0.4rem 0 0.7rem;
+  margin: 0.5rem 0 0.7rem;
   max-width: 75ch;
 }
 
@@ -802,22 +852,18 @@ table {
   border-collapse: collapse;
   width: 100%;
   font-size: 0.9rem;
-  background: var(--flaeche-hell);
-  border: 2px solid var(--rand);
 }
 
 th,
 td {
   text-align: left;
   padding: 0.35rem 0.5rem;
-  border-bottom: 1px solid var(--linie);
+  border-bottom: 1px solid #c9c9c9;
 }
 
 thead th {
   color: var(--gedaempft);
   font-weight: 500;
-  font-family: var(--ui);
-  background: var(--flaeche-2);
 }
 
 td {
@@ -829,13 +875,10 @@ tbody th {
   white-space: nowrap;
 }
 
-tbody tr:nth-child(even) {
-  background: var(--flaeche-2);
-}
-
 .stern {
-  color: var(--akzent-dunkel);
+  color: var(--gold);
   margin-left: 0.3rem;
+  text-shadow: 1px 1px 0 #6b5100;
 }
 
 @media (max-width: 520px) {
@@ -865,16 +908,7 @@ tbody tr:nth-child(even) {
 }
 
 .tab {
-  padding: 0.4rem 0.8rem;
-  font-weight: 500;
-}
-
-.tab[aria-selected="true"] {
-  background: var(--flaeche-hell);
-  border-color: var(--rand);
-  box-shadow:
-    var(--tief),
-    inset 0 -5px 0 var(--farbe);
+  padding: 0.35rem 0.8rem;
 }
 
 .auswahl {
@@ -884,18 +918,14 @@ tbody tr:nth-child(even) {
   color: var(--gedaempft);
 }
 
-.auswahl select {
-  padding: 0.25rem 0.4rem;
-}
-
 .hinweis-box {
   margin: 0 0 0.8rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.92rem;
 }
 
 .hinweis-box.warnung {
-  border-left: 8px solid #c2410c;
-  background: #ffe8dc;
+  border-left: 6px solid #c2410c;
 }
 
 .hinweis-box.warnung::before {
@@ -905,14 +935,12 @@ tbody tr:nth-child(even) {
 }
 
 .hinweis-box.info {
-  border-left: 8px solid #2e8b3a;
-  background: #e5f5e2;
+  border-left: 6px solid var(--gruen);
 }
 
 .hinweis-box.klein {
   margin: 0.5rem 0 0;
-  font-size: 0.88rem;
-  box-shadow: none;
+  font-size: 0.86rem;
 }
 
 .einzel-inhalt {
@@ -953,7 +981,7 @@ tbody tr:nth-child(even) {
 
 .steckbrief div {
   display: grid;
-  grid-template-columns: 9.5rem minmax(0, 1fr);
+  grid-template-columns: 9rem minmax(0, 1fr);
   gap: 0.5rem;
   padding: 0.15rem 0;
 }
@@ -964,7 +992,6 @@ tbody tr:nth-child(even) {
 
 .steckbrief dd {
   margin: 0;
-  font-weight: 500;
 }
 
 @media (max-width: 520px) {
@@ -977,7 +1004,7 @@ tbody tr:nth-child(even) {
 .heuristik {
   margin-top: 0.6rem;
   padding-top: 0.6rem;
-  border-top: 2px dashed var(--linie);
+  border-top: 2px solid #a9a9a9;
 }
 
 .formel {
@@ -985,10 +1012,6 @@ tbody tr:nth-child(even) {
   padding: 0.3rem 0.5rem;
   font-family: var(--mono);
   font-weight: 600;
-  background: #fffbe6;
-  color: #5c4700;
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
 }
 
 .merkmal-box ul,
@@ -1003,21 +1026,16 @@ tbody tr:nth-child(even) {
   margin-bottom: 0.3rem;
 }
 
-.merkmal-box {
-  border-left: 8px solid var(--farbe, var(--akzent));
-}
-
 .erklaerung {
-  border-left: 8px solid var(--akzent);
+  border-left: 6px solid var(--gold);
 }
 
 .zeile-nr {
   font-family: var(--mono);
-  font-size: 0.8rem;
-  background: var(--akzent);
-  color: #1a1408;
-  padding: 0.05rem 0.4rem;
+  font-size: 0.78rem;
+  background: var(--eingelassen);
   border: 1px solid var(--rand);
+  padding: 0 0.4rem;
 }
 
 .satz {
@@ -1032,9 +1050,6 @@ tbody tr:nth-child(even) {
   font-size: 0.8rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: var(--flaeche-hell);
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
 }
 
 .code li {
@@ -1046,21 +1061,16 @@ tbody tr:nth-child(even) {
 }
 
 .code li.aktiv {
-  background: var(--akzent);
-  color: #1a1408;
+  background: #fff3a0;
   font-weight: 600;
-  box-shadow: inset 4px 0 0 #1a1408;
+  box-shadow: inset 4px 0 0 var(--gold);
 }
 
-/* Datenstruktur: Einträge als Inventar-Slots. */
-.struktur-box {
-  border-top: 5px solid var(--farbe, var(--akzent));
-}
-
+/* Datenstruktur: Einträge als dunkle Inventar-Slots. */
 .struktur-regel,
 .entnommen {
   margin: 0 0 0.45rem;
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   color: var(--gedaempft);
 }
 
@@ -1073,9 +1083,9 @@ tbody tr:nth-child(even) {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: 4px;
+  gap: 3px;
   font-family: var(--mono);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
 }
 
 .slots.dfs {
@@ -1092,9 +1102,12 @@ tbody tr:nth-child(even) {
   min-width: 3.6rem;
   padding: 0.2rem 0.3rem;
   background: var(--slot);
+  color: #fff;
+  text-shadow: 1px 1px 0 #2e2e2e;
   border: 2px solid var(--rand);
-  box-shadow: var(--tief);
-  color: #111;
+  box-shadow:
+    inset 2px 2px 0 var(--slot-dunkel),
+    inset -2px -2px 0 #b5b5b5;
 }
 
 .slots.dfs .slot {
@@ -1105,22 +1118,25 @@ tbody tr:nth-child(even) {
 }
 
 .slot small {
-  color: #2b2b2b;
+  color: #f1f1f1;
 }
 
-.slot.naechster,
-.pq tr.naechster td {
-  background: color-mix(in srgb, var(--farbe, var(--akzent)) 45%, #ffffff);
-}
-
+/* Nächster Eintrag: hell hervorgehoben wie ein gewählter Slot. */
 .slot.naechster {
-  border-color: var(--rand);
-  outline: 2px solid var(--farbe, var(--akzent));
+  background: #c5c5c5;
+  color: #111;
+  text-shadow: none;
+  outline: 3px solid var(--farbe, var(--gold));
+  outline-offset: -1px;
+}
+
+.slot.naechster small {
+  color: #333;
 }
 
 .slot.neu,
 .pq tr.neu td {
-  outline: 2px solid var(--fokus);
+  outline: 2px solid #fff;
   outline-offset: -2px;
 }
 
@@ -1131,6 +1147,10 @@ tbody tr:nth-child(even) {
 .pq td,
 .pq th {
   padding: 0.2rem 0.4rem;
+}
+
+.pq tr.naechster td {
+  background: color-mix(in srgb, var(--farbe, var(--gold)) 35%, #ffffff);
 }
 
 .pq tr.veraltet td {
@@ -1144,9 +1164,6 @@ tbody tr:nth-child(even) {
   color: var(--gedaempft);
   font-size: 0.78rem;
   padding: 0 0.2rem;
-}
-
-.rand {
   font-family: var(--ui);
 }
 
@@ -1155,18 +1172,14 @@ tbody tr:nth-child(even) {
   overflow-y: auto;
 }
 
-/* Ereignisprotokoll: Farbleiste je Art des Ereignisses, Klick springt zum Schritt. */
 .protokoll {
   margin: 0.3rem 0 0;
   padding: 0;
   list-style: none;
-  max-height: 14rem;
+  max-height: 13rem;
   overflow-y: auto;
   font-family: var(--mono);
-  font-size: 0.76rem;
-  background: var(--flaeche-hell);
-  border: 2px solid var(--rand);
-  box-shadow: var(--tief);
+  font-size: 0.75rem;
 }
 
 .protokoll button {
@@ -1175,8 +1188,8 @@ tbody tr:nth-child(even) {
   text-align: left;
   background: none;
   border: 0;
-  border-left: 5px solid transparent;
-  padding: 0.12rem 0.4rem;
+  border-left: 4px solid transparent;
+  padding: 0.1rem 0.4rem;
   cursor: pointer;
 }
 
@@ -1194,15 +1207,15 @@ tbody tr:nth-child(even) {
 
 .protokoll .aus button,
 .protokoll .fertig button {
-  border-left-color: var(--farbe, var(--akzent));
+  border-left-color: var(--farbe, var(--gold));
 }
 
 .protokoll .besser button {
-  border-left-color: #2e8b3a;
+  border-left-color: var(--gruen);
 }
 
 .protokoll .veraltet button {
-  border-left-color: #8b8b8b;
+  border-left-color: #9a9a9a;
   color: var(--gedaempft);
 }
 
@@ -1212,12 +1225,12 @@ tbody tr:nth-child(even) {
 
 .protokoll .ziel button,
 .protokoll .keinWeg button {
-  border-left-color: var(--akzent-dunkel);
+  border-left-color: var(--gold);
   font-weight: 600;
 }
 
 .protokoll li.aktuell button {
-  background: var(--auswahl);
+  background: #fff3a0;
 }
 
 .protokoll-box small {
@@ -1237,14 +1250,14 @@ tbody tr:nth-child(even) {
   max-height: 9rem;
   overflow-y: auto;
   font-family: var(--mono);
-  font-size: 0.78rem;
+  font-size: 0.76rem;
 }
 
 .besuchsliste li {
   counter-increment: besuch;
-  background: var(--flaeche-hell);
-  border: 1px solid var(--linie);
-  padding: 0.05rem 0.3rem;
+  background: var(--eingelassen);
+  border: 1px solid #9a9a9a;
+  padding: 0 0.3rem;
 }
 
 .besuchsliste li::before {
@@ -1257,7 +1270,7 @@ tbody tr:nth-child(even) {
   color: var(--gedaempft);
 }
 
-/* ---------- Tooltip: dunkle Pixel-Infotafel mit violettem Innenrahmen, gut lesbar über der hellen Seite ---------- */
+/* ---------- Tooltip: dunkle Infotafel mit violettem Innenrahmen ---------- */
 .tooltip {
   position: fixed;
   z-index: 10;
@@ -1266,81 +1279,14 @@ tbody tr:nth-child(even) {
   max-width: 21rem;
   font-size: 0.85rem;
   color: #f4f4f4;
-  background: rgba(16, 4, 22, 0.96);
+  background: rgba(16, 4, 22, 0.95);
   border: 2px solid #05000a;
-  box-shadow:
-    inset 0 0 0 2px #3b1a7a,
-    3px 3px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 2px #3b1a7a;
+  text-shadow: 1px 1px 0 #000;
 }
 
 .tt-kopf {
   font-family: var(--mono);
   font-weight: 600;
-  color: #ffe25a;
-}
-
-.karte-box > canvas:focus-visible,
-.karte-einzel > canvas:focus-visible {
-  outline: 3px solid var(--fokus);
-  outline-offset: 2px;
-}
-
-/* ---------- Ergänzungen aus PR #14 im hellen Schema: Tasten, Symbole im Umschalter, Block je Welt ---------- */
-kbd {
-  display: inline-block;
-  min-width: 1.6em;
-  padding: 0 0.35em;
-  margin-right: 0.15em;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-align: center;
-  background: linear-gradient(#fffdf8, #e8e0cf);
-  border: 2px solid var(--rand);
-  box-shadow: var(--hoch);
-}
-
-.tasten {
-  width: 100%;
-  margin: -0.2rem 0 0;
-  font-size: 0.82rem;
-  color: var(--gedaempft);
-}
-
-.umschalter button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.umschalter svg {
-  width: 16px;
-  height: 16px;
-  fill: currentColor;
-  shape-rendering: crispEdges;
-}
-
-.welt {
-  justify-content: flex-start;
-}
-
-.welt .kuerzel {
-  margin-left: auto;
-}
-
-.welt .symbol {
-  width: 22px;
-  height: 22px;
-}
-
-@media (max-width: 720px) {
-  .umschalter {
-    width: 100%;
-  }
-  .umschalter button {
-    flex: 1;
-    justify-content: center;
-    padding: 0.5rem;
-  }
+  color: var(--gelb);
 }

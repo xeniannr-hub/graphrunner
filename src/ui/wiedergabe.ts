@@ -117,8 +117,8 @@ export class Wiedergabe {
     const tasten = document.createElement("p");
     tasten.className = "tasten";
     tasten.innerHTML = opt.zumEnde
-      ? `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd><kbd>Ende</kbd> Anfang/Ende`
-      : `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Abspielen/Pause · <kbd>Pos1</kbd> Anfang`;
+      ? `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Start/Pause · <kbd>Pos1</kbd><kbd>Ende</kbd> Anfang/Ende · Feld anzeigen: darüberfahren, antippen oder <kbd>Tab</kbd>`
+      : `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Start/Pause · <kbd>Pos1</kbd> Anfang · Feld anzeigen: darüberfahren, antippen oder <kbd>Tab</kbd>`;
     leiste.append(opt.legende, tasten);
     this.element = leiste;
   }
