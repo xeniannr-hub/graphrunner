@@ -50,7 +50,7 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 3. **Gegenprobe:** Auf Karten, auf denen jedes Feld gleich viel kostet (Ruinenhof, Stollen), expandiert Dijkstra in derselben Reihenfolge wie BFS. Der Unterschied ist also genau dort sichtbar, wo er fachlich entsteht: im Flussmoor rund 120, in der Handelsstraße rund 370 Überholungen.
 
 Weil eine Kante so viel kostet wie das Feld, das man betritt, haben alle Kanten in ein Feld dasselbe Gewicht. Dijkstra findet ein Feld deshalb gleich beim ersten Mal zum günstigsten Preis und muss d nie nachträglich verbessern. A* kann das, weil es nach f expandiert; das Protokoll zeigt solche Verbesserungen mit altem und neuem g und Vorgänger.
-- **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu. „Karte leeren“ macht alles wieder zu Wiese.
+- **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu. „Karte leeren“ macht alles wieder zu Wiese. Die Fortschrittsregler starten auf 0 und bleiben beim Bauen dort, wo du sie hingestellt hast.
 - **Tooltip:** Über jedem Feld stehen Koordinate, Gelände, Ausdauer, die ausgehenden Kanten mit Gewicht (z. B. `Kanten: ↑ 2 · → 4 · ↓ – · ← 2`) und die Besuchsnummer. So sieht man die Karte als Graph.
 
 ## Modell

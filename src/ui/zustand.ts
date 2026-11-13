@@ -118,7 +118,14 @@ export function geheVergleich(k: number): void {
 }
 
 /** Rechnet alle vier Verfahren neu; ansEnde zeigt sofort die Ergebnisse (nach dem Bauen). */
-function neuRechnen(ansEnde: boolean): void {
+/**
+ * Rechnet alle vier Verfahren neu. positionBehalten = true (Bauen, Karte leeren): Die Regler bleiben, wo sie
+ * vorher standen, damit ein weiteres Feld die eigene Einstellung nicht zurücksetzt; ist der neue Lauf kürzer,
+ * stehen sie an seinem Ende. positionBehalten = false (neue Welt laden): Beide Regler starten bei 0.
+ */
+function neuRechnen(positionBehalten: boolean): void {
+  const altK = Z.k;
+  const altZeile = Object.fromEntries(ALGOS.map((a) => [a, Z.einzel[a].position])) as Record<Algo, number>;
   Z.version++;
   Z.ergebnisse = rechne(Z.karte, Z.start, Z.ziel);
   Object.assign(Z, kennzahlen(Z.karte, Z.ziel));
@@ -126,8 +133,9 @@ function neuRechnen(ansEnde: boolean): void {
   Z.einzel = replays(Z.ergebnisse);
   Z.laufzeit = null;
   Z.spielt = false;
-  geheVergleich(ansEnde ? vergleichMax() : 0);
-  if (ansEnde) for (const a of ALGOS) Z.einzel[a].gehe(Z.einzel[a].laenge);
+  // geheVergleich und Replay.gehe begrenzen die Position selbst auf die neue Länge.
+  geheVergleich(positionBehalten ? altK : 0);
+  if (positionBehalten) for (const a of ALGOS) Z.einzel[a].gehe(altZeile[a]);
 }
 
 export function ladeWelt(i: number): void {
