@@ -124,7 +124,7 @@ describe("Ruinenhof: BFS ist am besten, wenn jeder Schritt gleich viel kostet", 
   });
 });
 
-describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert", () => {
+describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat", () => {
   const w = welt("stollen");
   const r = laeufe(w);
   it("perfektes Labyrinth: zusammenhängend und ohne Kreis", () => {
@@ -173,7 +173,7 @@ describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt, das Ziel tief 
   });
 });
 
-describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten und eine Schätzung kaum hilft", () => {
+describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten und keine Schätzung wirklich hilft", () => {
   const w = welt("flussmoor");
   const r = laeufe(w);
   it("A*-Kosten = Dijkstra-Kosten", () => {
@@ -188,6 +188,12 @@ describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten
   });
   it("Dijkstra braucht weniger Rechenschritte als A* (A* rechnet für jedes eingefügte Feld h aus)", () => {
     expect(r.dijkstra.schritte.length).toBeLessThan(r.astar.schritte.length);
+  });
+  it("Text: A* praktisch gleichauf (226 statt 230 besuchte Felder), BFS zahlt fast das Dreifache", () => {
+    expect([r.astar.besucht, r.dijkstra.besucht]).toEqual([226, 230]); // TODO: von Hand nachrechnen
+    // BFS 172 Ausdauer, Dijkstra 64: 172 / 64 ≈ 2,7, also „fast das Dreifache“ (zwischen 2,5- und 3-fach).
+    expect(r.bfs.kosten / r.dijkstra.kosten).toBeGreaterThan(2.5);
+    expect(r.bfs.kosten / r.dijkstra.kosten).toBeLessThan(3);
   });
   it("BFS nimmt die Furt, Dijkstra die Brücke", () => {
     const furt = 9 * BREITE + 16;
@@ -258,4 +264,12 @@ describe("Beobachtungshinweis achteAuf", () => {
       expect(w.achteAuf.endsWith(".")).toBe(true);
     });
   }
+});
+
+describe("Stollen: „DFS hat hier Glück mit der Reihenfolge“ steht im Haupttext", () => {
+  it("wann und warum nennen das Glück, nicht nur der Lernpunkt", () => {
+    const w = welt("stollen");
+    expect(w.warum).toContain("DFS hat hier Glück mit der Reihenfolge");
+    expect(w.wann).toContain("Glück");
+  });
 });

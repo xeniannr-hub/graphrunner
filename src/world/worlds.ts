@@ -56,7 +56,7 @@ export const WELTEN: readonly Welt[] = [
     algo: "bfs",
     wann: "jeder Schritt gleich viel kostet",
     warum:
-      "Im Ruinenhof gibt es nur Wiese und Mauerreste, jeder Schritt kostet 2 Ausdauer; dann ist der kürzeste Weg nach Anzahl der Kanten zugleich der günstigste. Start und Ziel liegen in gegenüberliegenden Ecken des offenen Hofes, deshalb liegen fast alle Felder auf einem gleich kurzen Weg, und die Schätzung von A* kann kaum eines ausschließen: A* besucht fast so viele Felder wie BFS. BFS findet denselben Weg wie Dijkstra und A* mit den wenigsten Rechenschritten, weil eine Warteschlange keine Prioritäten verwalten muss.",
+      "Wenn jeder Schritt gleich viel kostet, ist der kürzeste Weg nach Kanten zugleich der günstigste, und BFS garantiert genau diesen Weg mit einer einfachen Warteschlange. Im Ruinenhof kostet jedes Feld 2 Ausdauer; Dijkstra und A* finden denselben Weg, rechnen aber mehr, weil sie Prioritäten verwalten und A* zusätzlich schätzt. Die Schätzung hilft hier kaum, weil von Ecke zu Ecke fast alle Felder auf einem gleich kurzen Weg liegen.",
     kriterium: { mass: "felder", wahl: "schritte" },
     achteAuf:
       "Achte darauf, wie BFS und A* am Ende fast gleich viele Felder des Hofes absuchen, während DFS in langen Bahnen hin und her läuft.",
@@ -91,13 +91,13 @@ export const WELTEN: readonly Welt[] = [
     id: "stollen",
     titel: "Stollen",
     algo: "dfs",
-    wann: "ein Labyrinth nur einen Weg hat und die feste Nachbarreihenfolge zufällig zu den richtigen Gängen passt",
+    wann: "es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat",
     warum:
-      "Im Stollen führt genau ein Weg zum Ziel, deshalb finden alle vier Verfahren denselben. DFS folgt einem Gang bis zum Ende, bevor es umkehrt, und hat hier Glück: Mit der festen Reihenfolge oben, rechts, unten, links probiert es die passenden Gänge zuerst (mit einer Reihenfolge, die mit „rechts“ beginnt, würde es über 240 statt 61 Felder besuchen). BFS, Dijkstra und A* suchen dagegen alle Abzweigungen gleichzeitig ab und besuchen deutlich mehr Felder.",
+      "Im Stollen führt genau ein Weg zum Ziel; jeder gefundene Weg ist also der günstigste, und die Garantien der anderen Verfahren bringen hier nichts. DFS hat hier Glück mit der Reihenfolge oben, rechts, unten, links: Es probiert die passenden Gänge zuerst und besucht nur 61 Felder, mit „rechts“ zuerst wären es über 240. BFS, Dijkstra und A* suchen dagegen alle Abzweigungen gleichzeitig ab und besuchen deutlich mehr Felder.",
     kriterium: { mass: "kosten", wahl: "besucht" },
     achteAuf: "Achte darauf, wie DFS einen Gang bis zum Ende verfolgt, während die anderen alle Abzweigungen gleichzeitig absuchen.",
     lernpunkt:
-      "Der Vorteil von DFS ist hier Glück, keine Eigenschaft von DFS: Nur 12 der 24 möglichen Nachbarreihenfolgen erfüllen „DFS besucht weniger als 70 % jedes anderen Verfahrens“. Beginnt die Reihenfolge mit „rechts“, besucht DFS über 240 statt 61 Felder. In einem Labyrinth mit einem einzigen Weg ist DFS also nur dann am besten, wenn seine Reihenfolge zum Ziel passt.",
+      "Nur 12 der 24 möglichen Nachbarreihenfolgen erfüllen „DFS besucht weniger als 70 % jedes anderen Verfahrens“. Der Vorteil ist also Glück, keine Eigenschaft von DFS: DFS garantiert weder den kürzesten noch den günstigsten Weg.",
     karte: [
       "=^===^=^===^===============^===^",
       "=^^^=^=^=^^^=^^^^^=^^^^^=^=^=^=^",
@@ -127,9 +127,9 @@ export const WELTEN: readonly Welt[] = [
     id: "flussmoor",
     titel: "Flussmoor",
     algo: "dijkstra",
-    wann: "Felder verschieden viel kosten und eine Schätzung kaum hilft",
+    wann: "Felder verschieden viel kosten und keine Schätzung wirklich hilft",
     warum:
-      "Der günstige Weg führt über die Brücke im Osten, weit weg vom Ziel; die Furt durch den Sumpf hat weniger Felder, kostet aber viel mehr. Dijkstra findet den günstigsten Weg mit den wenigsten Rechenschritten. A* findet denselben Weg und besucht kaum weniger Felder, weil die Schätzung den Umweg nicht kennt, muss aber für jedes eingefügte Feld h(v) ausrechnen; BFS nimmt die Furt, DFS zahlt mehr als das Doppelte.",
+      "Weil die Felder verschieden viel kosten, braucht man ein Verfahren mit Garantie für den günstigsten Weg; Dijkstra liefert ihn bei Kosten ≥ 0 immer, ganz ohne Schätzung. A* liegt hier praktisch gleichauf (226 statt 230 besuchte Felder), weil der günstige Weg über die Brücke weit vom Ziel wegführt und die Schätzung das nicht kennt; ihr Mehraufwand lohnt sich deshalb nicht. BFS nimmt die Furt durch den Sumpf mit weniger Kanten und zahlt fast das Dreifache.",
     kriterium: { mass: "kosten", wahl: "schritte" },
     achteAuf:
       "Achte darauf, wie die Front von Dijkstra auf dem Weg schnell vorankommt und im Sumpf kaum, während die Front von BFS überall gleich schnell wächst.",
@@ -165,7 +165,7 @@ export const WELTEN: readonly Welt[] = [
     algo: "astar",
     wann: "das Ziel weit weg liegt und seine Richtung bekannt ist",
     warum:
-      "Die Straße führt vom Start bis zur Schatztruhe am anderen Ende der Karte. A* schätzt den Restweg und bleibt deshalb auf der Straße, während Dijkstra sich in alle Richtungen ausbreitet. Beide finden denselben günstigsten Weg, A* besucht dabei weniger als ein Viertel der Felder; BFS geht quer über Wiese und Wald und zahlt mehr.",
+      "Mit einer zulässigen Schätzung findet A* garantiert denselben günstigsten Weg wie Dijkstra, sucht aber gezielt in Richtung Ziel. Hier führt die Straße vom Start bis zur Schatztruhe, also lenkt die Schätzung richtig: A* besucht weniger als ein Viertel der Felder von Dijkstra. BFS geht quer über Wiese und Wald und zahlt mehr.",
     kriterium: { mass: "kosten", wahl: "besucht" },
     achteAuf: "Achte darauf, wie A* auf der Straße bleibt, während Dijkstra sich in alle Richtungen ausbreitet.",
     lernpunkt: "",

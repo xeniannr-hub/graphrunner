@@ -453,7 +453,11 @@ export class Einzel {
       <div><dt>Prinzip</dt><dd>${info.prinzip}</dd></div>
       <div><dt>Wählt als Nächstes</dt><dd>${info.waehlt}</dd></div>
       <div><dt>Findet</dt><dd>${info.findet}</dd></div>
-      <div><dt>Ergebnis</dt><dd>${ergebnis}</dd></div>`;
+      <div><dt>Ergebnis</dt><dd>${ergebnis}</dd></div>${
+        e.algo === "dijkstra"
+          ? `<div><dt>Verbessert d?</dt><dd>Nie: Wegen der Kostenregel (eine Kante kostet so viel wie ihr Zielfeld) ist schon der erste Fund eines Feldes der günstigste, also wird d nie nachträglich verbessert. A* kann es (siehe Ereignisprotokoll).</dd></div>`
+          : ""
+      }`;
     this.heuristik.hidden = e.algo !== "astar";
     if (e.algo !== "astar") return;
     const s = e.start.y * e.breite + e.start.x;
