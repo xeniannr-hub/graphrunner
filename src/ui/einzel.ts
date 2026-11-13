@@ -9,7 +9,8 @@ import { ALGO_INFO } from "../info/algo-info";
 import { erklaerSatz, kartenBeschreibung, koord, merkmal, protokoll, type ProtokollEintrag } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
-import { Wiedergabe } from "./wiedergabe";
+import { Wiedergabe, schritteProSekunde } from "./wiedergabe";
+import { graphAusschnitt, miniGraphLabel, zeichneMiniGraph, zentrumVon, type GraphAusschnitt } from "../render/minigraph";
 import { Z } from "./zustand";
 
 /** So viele Einträge der Datenstruktur werden höchstens gezeigt; der Rest wird gezählt. */
@@ -78,6 +79,11 @@ export class Einzel {
   private readonly tabs = new Map<Algo, HTMLButtonElement>();
   private readonly canvas: HTMLCanvasElement;
   private readonly select: HTMLSelectElement;
+  private readonly miniGraph: HTMLCanvasElement;
+  private miniSchluessel = "";
+  private miniStart = -Infinity;
+  private miniAktuell: GraphAusschnitt | null = null;
+  private miniVorher: GraphAusschnitt | null = null;
   private readonly panel: HTMLElement;
   private readonly hinweis: HTMLElement;
   private readonly steckbrief: HTMLElement;
@@ -211,11 +217,12 @@ export class Einzel {
     this.merkmalBelege = merkmalBox.querySelector(".merkmal-belege") as HTMLUListElement;
     links.append(kartenRahmen, struktur, merkmalBox);
 
-    // Rechts: Steckbrief, Erklärung, Pseudocode, Protokoll, Besuchsreihenfolge.
+    // Rechts: Mini-Graph (FA-29) mit dem Erklärsatz als Bildunterschrift, Pseudocode, Steckbrief, Protokoll, Besuchsreihenfolge.
     const seite = element(
       "div",
       "einzel-seite",
-      `<div class="box erklaerung"><span class="zeile-nr"></span><p class="satz" aria-live="off"></p></div>
+      `<figure class="box minigraph-box"><canvas class="minigraph" role="img"></canvas>
+        <figcaption class="erklaerung" tabindex="0"><span class="zeile-nr"></span> <span class="satz" aria-live="off"></span></figcaption></figure>
       <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>
       <details class="box" open><summary><h3>Steckbrief</h3></summary><dl class="steckbrief"></dl><div class="heuristik"></div></details>
       <details class="box protokoll-box" open><summary><h3>Ereignisprotokoll <small class="protokoll-zahl"></small></h3></summary>
@@ -225,6 +232,7 @@ export class Einzel {
     this.steckbrief = seite.querySelector(".steckbrief") as HTMLElement;
     this.heuristik = seite.querySelector(".heuristik") as HTMLElement;
     this.satz = seite.querySelector(".satz") as HTMLElement;
+    this.miniGraph = seite.querySelector(".minigraph") as HTMLCanvasElement;
     this.zeileNr = seite.querySelector(".zeile-nr") as HTMLElement;
     this.code = seite.querySelector(".code") as HTMLOListElement;
     this.protokollListe = seite.querySelector(".protokoll") as HTMLOListElement;
@@ -249,7 +257,8 @@ export class Einzel {
     this.element = el;
   }
 
-  zeichne(zeit: number): void {
+  /** Zeichnet Karte und Mini-Graph. Gibt true zurück, solange der kurze Übergang im Mini-Graphen läuft. */
+  zeichne(zeit: number): boolean {
     const hover = hoverAuf(this.canvas);
     zeichneLeinwand(this.canvas, {
       karte: Z.karte,
@@ -265,6 +274,29 @@ export class Einzel {
       zeit,
       h: Z.h,
     });
+    return this.zeichneMiniGraph(zeit);
+  }
+
+  /**
+   * Mini-Graph synchron zur aktuellen Zeile. Nach einem Schritt gibt es einen Übergang von 200 ms, aber nur,
+   * wenn höchstens 8 Zeilen pro Sekunde laufen; schneller wäre er nur Flackern.
+   */
+  private zeichneMiniGraph(zeit: number): boolean {
+    const r = Z.einzel[Z.einzelAlgo];
+    const schluessel = `${Z.einzelAlgo}:${Z.version}:${r.position}`;
+    const ausschnitt = graphAusschnitt(r, zentrumVon(r));
+    if (schluessel !== this.miniSchluessel) {
+      const langsam = !Z.spielt || schritteProSekunde(Z.tempo) <= 8;
+      const gleicherLauf = this.miniSchluessel.startsWith(`${Z.einzelAlgo}:${Z.version}:`);
+      this.miniVorher = gleicherLauf ? this.miniAktuell : null;
+      this.miniStart = langsam && gleicherLauf ? zeit : -Infinity;
+      this.miniSchluessel = schluessel;
+      this.miniAktuell = ausschnitt;
+      this.miniGraph.setAttribute("aria-label", miniGraphLabel(ausschnitt));
+    }
+    const uebergang = Math.min(1, Math.max(0, (zeit - this.miniStart) / 200));
+    zeichneMiniGraph(this.miniGraph, ausschnitt, ausschnitt.fokus, r.ergebnis.algo, { uebergang, vorher: this.miniVorher });
+    return uebergang < 1;
   }
 
   aktualisiere(): void {
@@ -310,6 +342,8 @@ export class Einzel {
     const zeile = r.aktuell?.zeile ?? 0;
     this.zeileNr.textContent = zeile > 0 ? `Pseudocode-Zeile ${zeile}` : "Start";
     this.satz.textContent = erklaerSatz(r);
+    // Volle Fassung als Tooltip, falls die einzeilige Bildunterschrift abgeschnitten ist.
+    this.satz.parentElement?.setAttribute("title", `${this.zeileNr.textContent}: ${this.satz.textContent}`);
     [...this.code.children].forEach((li, i) => {
       const aktiv = i + 1 === zeile;
       li.classList.toggle("aktiv", aktiv);

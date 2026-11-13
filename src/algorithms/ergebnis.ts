@@ -47,5 +47,6 @@ export function aufzeichnen(algo: Algo, lauf: SuchLauf): SearchResult {
     besucht: besuchsIndizes.length,
     besuchsIndizes,
     schritte,
+    grid,
   };
 }

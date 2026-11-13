@@ -24,6 +24,10 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 
 - **Alle vergleichen:** vier Karten nebeneinander. Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Darunter stehen die beste Wahl der Welt mit Begründung, ein Fazit und eine Tabelle mit besuchten Feldern, Rechenschritten, Weglänge und Ausdauer. Einen ★ für wenig Suchaufwand bekommt nur, wer den optimalen Weg gefunden hat. Am Ende zeigt „Loslaufen“, wer den günstigsten Weg gefunden hat.
 - **Einzelansicht – ein Debugger für Algorithmen:** ein Verfahren Zeile für Zeile. Abspielen/Pause, Schritt vor und zurück, zum Anfang und zum Ende, Tempo einstellbar. Dazu:
+  - **Mini-Graph:** ein 5 × 5-Ausschnitt um das gerade bearbeitete Feld als Knoten und Kanten, synchron zur aktuellen Zeile. Im Knoten steht d (bei A* f, darunter g und h), am Knoten die Feldkosten = Gewicht jeder Kante hinein. Wasser und Fels sind Lücken, weil dort kein Knoten ist. Vorgängerkanten sind Pfeile in der Farbe des Verfahrens, die gerade geprüfte Kante u → v trägt „+Kosten(v)“. Darunter steht der Erklärsatz als Bildunterschrift. So sieht man die Karte als Graphen.
+
+  ![Einzelansicht mit Mini-Graph: A* auf der Handelsstraße prüft eine Kante](docs/einzelansicht.png)
+
   - **Erklärsatz** zur aktuellen Codezeile und **Pseudocode** mit hervorgehobener Zeile,
   - **Datenstruktur** live: Warteschlange (FIFO), Stapel (LIFO) oder Prioritätswarteschlange (bei A* mit g, h und f einzeln, veraltete Einträge durchgestrichen),
   - **Ereignisprotokoll** aller relevanten Aktionen (einfügen, entnehmen, verbessern, abschließen, zurückspringen); ein Klick springt zu diesem Schritt,
@@ -110,7 +114,7 @@ src/
   replay/             Aufzeichnung vor- und zurückspielen
   world/              Gelände und die fünf Welten als Textkarten
   info/               Steckbrief je Verfahren (Name, Farbe, Datenstruktur) und fokus(): neutral für render/ und ui/
-  render/             Pixelgrafik und Kartenzeichnung (Canvas 2D)
+  render/             Pixelgrafik, Kartenzeichnung und Mini-Graph (Canvas 2D)
   ui/                 Zustand, Wiedergabeleiste, Vergleich, Einzelansicht, Seitenleiste, Tooltip, Erklärungen
 prototype/            erster Prototyp, nur zum Nachschlagen
 docs/screenshot.png
