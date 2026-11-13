@@ -540,23 +540,12 @@ details.box:not([open]) > summary h3 {
   border: 1px solid var(--rand);
 }
 
-.kosten {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem 0.8rem;
-}
-
-.kosten li,
 .werkzeug {
   display: flex;
   align-items: center;
   gap: 0.45rem;
 }
 
-.kosten b,
 .werkzeug b {
   margin-left: auto;
   font-family: var(--mono);
@@ -682,36 +671,15 @@ input[type="range"]::-moz-range-thumb {
   margin-left: -0.25rem;
 }
 
-.legende i {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
-
-.legende .rahmen {
-  border: 3px solid;
-  outline: 1px solid var(--rand);
-  background: #3f9e2f;
-}
-
-.legende .weiss {
-  border-color: #fff;
-}
-
-.legende .gelb {
-  border-color: #ffe14d;
-}
-
-.legende .rot {
-  border-color: #ff4b4b;
-}
-
 .tasten {
   width: 100%;
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   color: var(--gedaempft);
+}
+
+.tasten kbd {
+  font-size: 0.7rem;
 }
 
 /* ---------- Karten ---------- */
@@ -1096,11 +1064,23 @@ tbody th {
 }
 
 /* Datenstruktur: Einträge als dunkle Inventar-Slots. */
+.struktur-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.6rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+}
+
 .struktur-regel,
 .entnommen {
-  margin: 0 0 0.45rem;
-  font-size: 0.86rem;
   color: var(--gedaempft);
+  font-size: 0.82rem;
+}
+
+.entnommen {
+  margin-left: auto;
 }
 
 .entnommen b {
@@ -1108,23 +1088,20 @@ tbody th {
   font-family: var(--mono);
 }
 
+/* Eine Zeile Slots; bei vielen Einträgen scrollt nur diese Zeile seitlich. */
 .slots {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 4px;
   align-items: stretch;
   gap: 3px;
   font-family: var(--mono);
   font-size: 0.74rem;
 }
 
-.slots.dfs {
-  flex-direction: column;
-  align-items: flex-start;
-  max-height: 20rem;
-  overflow-y: auto;
-}
-
 .slot {
+  flex: none;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -1137,13 +1114,6 @@ tbody th {
   box-shadow:
     inset 2px 2px 0 var(--slot-dunkel),
     inset -2px -2px 0 #b5b5b5;
-}
-
-.slots.dfs .slot {
-  flex-direction: row;
-  gap: 0.6rem;
-  min-width: 9rem;
-  justify-content: space-between;
 }
 
 .slot small {
@@ -1163,28 +1133,14 @@ tbody th {
   color: #333;
 }
 
-.slot.neu,
-.pq tr.neu td {
+.slot.veraltet {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.slot.neu {
   outline: 2px solid #fff;
   outline-offset: -2px;
-}
-
-.pq {
-  font-size: 0.8rem;
-}
-
-.pq td,
-.pq th {
-  padding: 0.2rem 0.4rem;
-}
-
-.pq tr.naechster td {
-  background: color-mix(in srgb, var(--farbe, var(--gold)) 35%, #ffffff);
-}
-
-.pq tr.veraltet td {
-  color: var(--gedaempft);
-  text-decoration: line-through;
 }
 
 .rand,
@@ -1194,11 +1150,6 @@ tbody th {
   font-size: 0.78rem;
   padding: 0 0.2rem;
   font-family: var(--ui);
-}
-
-.struktur-box .tabelle-rahmen {
-  max-height: 18rem;
-  overflow-y: auto;
 }
 
 .protokoll {
@@ -1318,4 +1269,102 @@ tbody th {
   font-family: var(--mono);
   font-weight: 600;
   color: var(--gelb);
+}
+
+/* ---------- „Mehr zum Verfahren“: zugeklappte Box mit Tabs ---------- */
+.mehr-box > summary h3 {
+  margin-bottom: 0;
+}
+
+.mehr-tabs {
+  margin: 0.55rem 0 0.5rem;
+}
+
+.mehr-tabs .tab {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.mehr-panel {
+  font-size: 0.92rem;
+}
+
+/* ---------- Mini-Legende am Mini-Graphen ---------- */
+.mini-legende {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.2rem 0.8rem;
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--gedaempft);
+}
+
+.mini-legende span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.mini-legende .ring {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 3px solid;
+  box-shadow: 0 0 0 1px var(--rand);
+  background: #b9b9b9;
+}
+
+.mini-legende .ring.weiss {
+  border-color: #fff;
+}
+
+.mini-legende .ring.gelb {
+  border-color: #ffd400;
+}
+
+.mini-legende .ring.rot {
+  border-color: #d62828;
+}
+
+.mini-legende .kasten {
+  font-style: normal;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.7rem;
+  padding: 0 0.2rem;
+  background: #fff;
+  border: 1px solid var(--rand);
+}
+
+.mini-formel {
+  font-family: var(--mono);
+  color: var(--text);
+}
+
+/* ---------- Ausdauer pro Feld als Chips ---------- */
+.kosten-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.kosten-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.1rem 0.35rem 0.1rem 0.15rem;
+  background: var(--eingelassen);
+  border: 1px solid var(--rand);
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.kosten-chips .symbol {
+  width: 18px;
+  height: 18px;
 }
