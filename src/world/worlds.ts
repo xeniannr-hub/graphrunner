@@ -25,6 +25,8 @@ export interface Welt {
   readonly warum: string;
   /** Bewertungskriterium; null bei der Eigenen Welt (dort gibt es keine „Beste Wahl“). */
   readonly kriterium: Kriterium | null;
+  /** Beobachtungshinweis vor dem Abspielen im Vergleich (ein Satz). Keine Aufgabe: AB-05 und FA-20 bleiben Won't. */
+  readonly achteAuf: string;
   /** Lernpunkt, der über die Welt hinaus gilt (z. B. Grenzen der Aussage); leer, wenn es keinen gibt. */
   readonly lernpunkt: string;
   readonly karte: readonly string[];
@@ -56,6 +58,8 @@ export const WELTEN: readonly Welt[] = [
     warum:
       "Im Ruinenhof gibt es nur Wiese und Mauerreste, jeder Schritt kostet 2 Ausdauer; dann ist der kürzeste Weg nach Anzahl der Kanten zugleich der günstigste. Start und Ziel liegen in gegenüberliegenden Ecken des offenen Hofes, deshalb liegen fast alle Felder auf einem gleich kurzen Weg, und die Schätzung von A* kann kaum eines ausschließen: A* besucht fast so viele Felder wie BFS. BFS findet denselben Weg wie Dijkstra und A* mit den wenigsten Rechenschritten, weil eine Warteschlange keine Prioritäten verwalten muss.",
     kriterium: { mass: "felder", wahl: "schritte" },
+    achteAuf:
+      "Achte darauf, wie BFS und A* am Ende fast gleich viele Felder des Hofes absuchen, während DFS in langen Bahnen hin und her läuft.",
     lernpunkt:
       "DFS findet hier mit der festen Reihenfolge oben, rechts, unten, links einen Weg von 456 statt 50 Kanten. Mit 8 der 24 möglichen Reihenfolgen (etwa unten, links, oben, rechts) liefe es dagegen direkt zum Ziel: DFS kann Glück oder Pech haben, BFS nicht.",
     karte: [
@@ -91,6 +95,7 @@ export const WELTEN: readonly Welt[] = [
     warum:
       "Im Stollen führt genau ein Weg zum Ziel, deshalb finden alle vier Verfahren denselben. DFS folgt einem Gang bis zum Ende, bevor es umkehrt, und hat hier Glück: Mit der festen Reihenfolge oben, rechts, unten, links probiert es die passenden Gänge zuerst (mit einer Reihenfolge, die mit „rechts“ beginnt, würde es über 240 statt 61 Felder besuchen). BFS, Dijkstra und A* suchen dagegen alle Abzweigungen gleichzeitig ab und besuchen deutlich mehr Felder.",
     kriterium: { mass: "kosten", wahl: "besucht" },
+    achteAuf: "Achte darauf, wie DFS einen Gang bis zum Ende verfolgt, während die anderen alle Abzweigungen gleichzeitig absuchen.",
     lernpunkt:
       "Der Vorteil von DFS ist hier Glück, keine Eigenschaft von DFS: Nur 12 der 24 möglichen Nachbarreihenfolgen erfüllen „DFS besucht weniger als 70 % jedes anderen Verfahrens“. Beginnt die Reihenfolge mit „rechts“, besucht DFS über 240 statt 61 Felder. In einem Labyrinth mit einem einzigen Weg ist DFS also nur dann am besten, wenn seine Reihenfolge zum Ziel passt.",
     karte: [
@@ -126,6 +131,8 @@ export const WELTEN: readonly Welt[] = [
     warum:
       "Der günstige Weg führt über die Brücke im Osten, weit weg vom Ziel; die Furt durch den Sumpf hat weniger Felder, kostet aber viel mehr. Dijkstra findet den günstigsten Weg mit den wenigsten Rechenschritten. A* findet denselben Weg und besucht kaum weniger Felder, weil die Schätzung den Umweg nicht kennt, muss aber für jedes eingefügte Feld h(v) ausrechnen; BFS nimmt die Furt, DFS zahlt mehr als das Doppelte.",
     kriterium: { mass: "kosten", wahl: "schritte" },
+    achteAuf:
+      "Achte darauf, wie die Front von Dijkstra auf dem Weg schnell vorankommt und im Sumpf kaum, während die Front von BFS überall gleich schnell wächst.",
     lernpunkt: "",
     karte: [
       "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
@@ -160,6 +167,7 @@ export const WELTEN: readonly Welt[] = [
     warum:
       "Die Straße führt vom Start bis zur Schatztruhe am anderen Ende der Karte. A* schätzt den Restweg und bleibt deshalb auf der Straße, während Dijkstra sich in alle Richtungen ausbreitet. Beide finden denselben günstigsten Weg, A* besucht dabei weniger als ein Viertel der Felder; BFS geht quer über Wiese und Wald und zahlt mehr.",
     kriterium: { mass: "kosten", wahl: "besucht" },
+    achteAuf: "Achte darauf, wie A* auf der Straße bleibt, während Dijkstra sich in alle Richtungen ausbreitet.",
     lernpunkt: "",
     karte: [
       "^^^.....TTTTT...~~........^^^^^^",
@@ -194,6 +202,7 @@ export const WELTEN: readonly Welt[] = [
     warum:
       "Male Gelände auf eine der Karten und setze Start und Ziel. Alle vier Verfahren rechnen nach jeder Änderung sofort neu. Probiere aus, wann welches Verfahren am besten ist.",
     kriterium: null,
+    achteAuf: "Achte darauf, wie sich die Form der Fronten ändert, wenn du teures Gelände oder Hindernisse malst.",
     lernpunkt:
       "Die Schätzung von A* ist h(v) = Manhattan-Abstand × billigstes Feld der ganzen Karte. Auf reiner Wiese ist der Faktor 2. Schon ein einziges Weg- oder Brückenfeld irgendwo senkt ihn auf 1 und halbiert damit h auf allen Feldern; A* lenkt dann schwächer und besucht mehr Felder, obwohl sich am Weg nichts geändert hat.",
     karte: Array.from({ length: 20 }, () => ".".repeat(32)),

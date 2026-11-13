@@ -23,6 +23,7 @@ export class Vergleich {
     { canvas: HTMLCanvasElement; zaehler: HTMLElement; status: HTMLElement; struktur: HTMLElement; gewicht: HTMLElement }
   >();
   private readonly wahl: HTMLParagraphElement;
+  private readonly achteAuf: HTMLParagraphElement;
   private readonly fazit: HTMLParagraphElement;
   private readonly tabelle: HTMLTableSectionElement;
 
@@ -45,6 +46,7 @@ export class Vergleich {
       ),
       eintrag([symbol("wartet", "#fff")], "wartet"),
       eintrag([symbol("besuchtWartet", ALGO_INFO.dfs.farbe)], "auf dem Stapel (DFS)"),
+      eintrag([symbol("front", "#1b1b1b")], "Suchfront (Umriss der wartenden Felder)"),
       eintrag([symbol("weg", "#fff")], "Weg"),
       eintrag([symbol("kante", "#1e1e1e")], "Vorgänger"),
     );
@@ -82,6 +84,7 @@ export class Vergleich {
           <div class="name"><span class="farbfeld"></span><h2>${info.name}</h2><span class="kurz">${info.kurz}</span>
             <span class="gewicht-marke" title="Bei dieser Karte kosten Felder verschieden viel; ${info.name} beachtet das nicht.">ignoriert Gewichte</span></div>
           <div class="zaehler" aria-live="off"></div>
+          <div class="front-zeile"><b>Front:</b> ${info.front}</div>
           <div class="status"></div>
           <div class="struktur-zeile"></div>
         </header>`;
@@ -119,7 +122,10 @@ export class Vergleich {
     this.fazit = ergebnis.querySelector(".fazit") as HTMLParagraphElement;
     this.tabelle = ergebnis.querySelector("tbody") as HTMLTableSectionElement;
 
-    el.append(this.wiedergabe.element, raster, ergebnis);
+    // Beobachtungshinweis vor dem Abspielen (achteAuf in worlds.ts).
+    this.achteAuf = document.createElement("p");
+    this.achteAuf.className = "achte-auf";
+    el.append(this.wiedergabe.element, this.achteAuf, raster, ergebnis);
     this.element = el;
   }
 
@@ -147,6 +153,7 @@ export class Vergleich {
         replay: Z.vergleich[a],
         zahlen: "keine",
         details: false,
+        front: true,
         laufzeit: Z.laufzeit,
         hover,
         hoverOk: hoverOk(hover),
@@ -158,6 +165,8 @@ export class Vergleich {
 
   aktualisiere(): void {
     this.wiedergabe.aktualisiere();
+    this.achteAuf.textContent = WELTEN[Z.weltIndex].achteAuf;
+    this.achteAuf.hidden = Z.k > 0;
     for (const a of ALGOS) {
       const k = this.karten.get(a);
       if (!k) continue;

@@ -5,6 +5,7 @@ import type { FeldId, Pos, TerrainKey } from "../types";
 import { ALGO_INFO } from "../info/algo-info";
 import { fokus } from "../info/fokus";
 import { TERRAIN_NACH_KEY } from "../world/terrain";
+import { frontUmriss } from "./front";
 import { sprites, textur } from "./textures";
 
 /** Zahlen auf der Karte: Besuchsnummer, d bzw. g, und nur bei A* h und f. */
@@ -20,6 +21,8 @@ export interface KartenBild {
   readonly zahlen: Zahlen;
   /** Einzelansicht: Fokusrahmen und der Weg zum gerade bearbeiteten Feld. */
   readonly details: boolean;
+  /** Vergleich: Suchfront als Umrisslinie in der Verfahrensfarbe (FA-31). */
+  readonly front: boolean;
   /** Ausdauer seit „Loslaufen“; null, solange niemand läuft. */
   readonly laufzeit: number | null;
   readonly hover: Pos | null;
@@ -68,7 +71,8 @@ export type FeldArt = "besucht" | "wartet" | "besuchtWartet" | "entdeckt";
  * das Muster des Geländes scheint aber noch durch.
  */
 const AUFHELLEN = 0.4;
-const DECKKRAFT = 0.72;
+// Etwas zurückgenommen, damit die Umrisslinie der Suchfront (FA-31) hervortritt.
+const DECKKRAFT = 0.6;
 
 function zeichneFeld(ctx: CanvasRenderingContext2D, x: number, y: number, ts: number, art: FeldArt, farbe: string): void {
   if (art === "besucht" || art === "besuchtWartet") {
@@ -98,7 +102,7 @@ function zeichneFeld(ctx: CanvasRenderingContext2D, x: number, y: number, ts: nu
   }
 }
 
-export type SymbolArt = FeldArt | "weg" | "kante";
+export type SymbolArt = FeldArt | "weg" | "kante" | "front";
 
 /**
  * Legendensymbol, gezeichnet wie auf der Karte: ein Wiesenfeld mit derselben Überlagerung (QA-05).
@@ -130,8 +134,48 @@ export function symbol(art: SymbolArt, farbe: string): HTMLCanvasElement {
     g.moveTo(2, 8);
     g.lineTo(14, 8);
     g.stroke();
+  } else if (art === "front") {
+    zeichneFeld(g, 0, 0, ts, "wartet", farbe);
+    umrissLinie(
+      g,
+      [
+        { x1: 0.15, y1: 0.15, x2: 0.85, y2: 0.15 },
+        { x1: 0.85, y1: 0.15, x2: 0.85, y2: 0.85 },
+        { x1: 0.85, y1: 0.85, x2: 0.15, y2: 0.85 },
+        { x1: 0.15, y1: 0.85, x2: 0.15, y2: 0.15 },
+      ],
+      ts,
+      farbe,
+    );
   } else zeichneFeld(g, 0, 0, ts, art, farbe);
   return c;
+}
+
+/** Umrisslinie: dunkler Rand, darüber 2 px in der Verfahrensfarbe. Kanten in Feldkoordinaten, ts = Feldgröße. */
+function umrissLinie(
+  ctx: CanvasRenderingContext2D,
+  kanten: readonly { x1: number; y1: number; x2: number; y2: number }[],
+  ts: number,
+  farbe: string,
+): void {
+  if (kanten.length === 0) return;
+  const pfad = () => {
+    ctx.beginPath();
+    for (const k of kanten) {
+      ctx.moveTo(k.x1 * ts, k.y1 * ts);
+      ctx.lineTo(k.x2 * ts, k.y2 * ts);
+    }
+  };
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
+  pfad();
+  ctx.strokeStyle = "#111";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+  pfad();
+  ctx.strokeStyle = farbe;
+  ctx.lineWidth = 2;
+  ctx.stroke();
 }
 
 function rgba(hex: string, a: number): string {
@@ -192,6 +236,9 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
     ctx.lineTo(x2, y2);
   }
   ctx.stroke();
+
+  // Suchfront (FA-31): Umriss der wartenden Felder in der Verfahrensfarbe.
+  if (bild.front) umrissLinie(ctx, frontUmriss(r), ts, farbe);
 
   const kette = (von: FeldId): FeldId[] => {
     const k: FeldId[] = [];

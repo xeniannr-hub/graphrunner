@@ -20,6 +20,8 @@ export interface AlgoInfo {
   readonly prinzip: string;
   /** Beachtet das Verfahren die Kantengewichte? */
   readonly gewichte: boolean;
+  /** Form der Suchfront im Vergleich (FA-31): woran man das Verfahren auf einen Blick erkennt. */
+  readonly front: string;
 }
 
 export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
@@ -35,6 +37,7 @@ export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
     strukturRegel: "Hinten wird angefügt, vorne entnommen: Wer zuerst kommt, wird zuerst expandiert.",
     prinzip: "Felder werden schichtweise expandiert: erst alle mit 1 Kante Abstand, dann alle mit 2 usw.",
     gewichte: false,
+    front: "gleich viele Kanten vom Start",
   },
   dfs: {
     name: "DFS",
@@ -48,6 +51,7 @@ export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
     strukturRegel: "Oben wird aufgelegt und oben entnommen: Das zuletzt entdeckte Feld kommt zuerst dran.",
     prinzip: "Ein Suchpfad wird so tief wie möglich verfolgt; in einer Sackgasse geht es zurück (Backtracking).",
     gewichte: false,
+    front: "ein Ast so tief wie möglich",
   },
   dijkstra: {
     name: "Dijkstra",
@@ -61,6 +65,7 @@ export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
     strukturRegel: "Entnommen wird immer der Eintrag mit dem kleinsten d, egal wann er eingefügt wurde.",
     prinzip: "Der jeweils günstigste bekannte Knoten wird expandiert; danach kann sein d nicht mehr sinken.",
     gewichte: true,
+    front: "gleiche Kosten vom Start",
   },
   astar: {
     name: "A*",
@@ -74,5 +79,6 @@ export const ALGO_INFO: Readonly<Record<Algo, AlgoInfo>> = {
     strukturRegel: "Entnommen wird immer der Eintrag mit dem kleinsten f = g + h.",
     prinzip: "Tatsächliche bisherige Kosten g und geschätzte Restkosten h bestimmen gemeinsam die Priorität f.",
     gewichte: true,
+    front: "gleiches f, zum Ziel gestreckt",
   },
 };

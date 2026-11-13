@@ -104,3 +104,26 @@ describe("Fazit", () => {
     expect(fazitText(w, ergebnisseVon(w))).toMatch(/DFS hat zwar nur \d+ Felder angesehen, zahlt aber \d+ statt \d+ Ausdauer\./);
   });
 });
+
+describe("Ergebnistabelle während des Laufs", () => {
+  it("zeigt aktuelle Werte mit „läuft …“, Weglänge erst am Ende, kein ★ vor dem Ende", () => {
+    const w = welt("handelsstrasse");
+    const E = ergebnisseVon(w);
+    // Nach 30 Besuchen: A* (43 Besuche) und alle anderen suchen noch.
+    const position = Object.fromEntries(ALGOS.map((a) => [a, E[a].besuchsIndizes[29] + 1])) as Record<Algo, number>;
+    const html = tabellenZeilen(w, E, { k: 30, position, laufzeit: null });
+    expect(html).not.toContain("★");
+    for (const zeile of html.split("<tr>").slice(1)) {
+      expect(zeile).toContain("läuft …");
+      const zellen = zeile.split("<td>").slice(1);
+      expect(zellen[0]).toMatch(/^30</); // besuchte Felder: aktueller Stand
+      expect(zellen[2]).toMatch(/^–</); // Weglänge noch nicht bekannt
+    }
+  });
+
+  it("am Ende kein „läuft …“ mehr", () => {
+    const w = welt("handelsstrasse");
+    const E = ergebnisseVon(w);
+    expect(tabellenZeilen(w, E, amEnde(E))).not.toContain("läuft …");
+  });
+});

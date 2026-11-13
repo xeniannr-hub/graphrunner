@@ -249,3 +249,13 @@ describe("Seitenleiste: Kurzfassung der Begründung", () => {
     });
   }
 });
+
+describe("Beobachtungshinweis achteAuf", () => {
+  for (const w of WELTEN) {
+    it(`${w.titel}: genau ein Satz, beginnt mit „Achte darauf“`, () => {
+      expect(w.achteAuf.startsWith("Achte darauf")).toBe(true);
+      expect(w.achteAuf.split(/(?<=[.!?])\s+/).length).toBe(1);
+      expect(w.achteAuf.endsWith(".")).toBe(true);
+    });
+  }
+});
