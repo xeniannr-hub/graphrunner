@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { ALGOS, SUCHE, nachbarn, schaetzung } from "../algorithms";
 import type { Algo, SearchResult } from "../types";
 import { BREITE, HOEHE, leseKarte, zuGrid } from "./terrain";
-import { WELTEN, type Welt } from "./worlds";
+import { WELTEN, kurzfassung, type Welt } from "./worlds";
 
 function welt(id: string): Welt {
   const w = WELTEN.find((x) => x.id === id);
@@ -236,4 +236,16 @@ describe("Eigene Welt", () => {
     expect(nachher.kosten).toBe(vorher.kosten);
     expect(nachher.besucht).toBeGreaterThan(vorher.besucht);
   });
+});
+
+describe("Seitenleiste: Kurzfassung der Begründung", () => {
+  for (const w of WELTEN) {
+    it(`${w.titel}: höchstens 2 Sätze und 35 Wörter, Rest im Aufklapper, nichts geht verloren`, () => {
+      const { kurz, rest } = kurzfassung(w.warum);
+      expect(kurz.length).toBeGreaterThan(0);
+      expect(kurz.split(/\s+/).length).toBeLessThanOrEqual(35);
+      expect(kurz.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„])/).length).toBeLessThanOrEqual(2);
+      expect([kurz, rest].filter(Boolean).join(" ")).toBe(w.warum);
+    });
+  }
 });

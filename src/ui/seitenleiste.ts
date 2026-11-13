@@ -3,7 +3,7 @@
 import { sprites, textur } from "../render/textures";
 import type { TerrainKey } from "../types";
 import { TERRAIN } from "../world/terrain";
-import { WELTEN } from "../world/worlds";
+import { WELTEN, kurzfassung } from "../world/worlds";
 import { ALGO_INFO } from "../info/algo-info";
 import { Z, istEigeneWelt, ladeWelt, leereKarte, type Werkzeug } from "./zustand";
 
@@ -124,6 +124,7 @@ export class Seitenleiste {
     this.wannEl = document.createElement("p");
     this.wannEl.className = "wann";
     this.warumEl = document.createElement("p");
+    // Aufklapper „Mehr“: Rest der Begründung und Lernpunkt.
     this.lernEl = document.createElement("details");
     this.lernEl.className = "lernpunkt";
     begruendung.append(this.wannEl, this.warumEl, this.lernEl);
@@ -178,22 +179,24 @@ export class Seitenleiste {
     this.ausdauer = document.createElement("section");
     this.ausdauer.className = "panel";
     this.ausdauer.innerHTML = `<h2>Ausdauer pro Feld</h2>`;
+    // Kompakte Zeile mit Chips: Symbol und Kosten, der Name steht im Tooltip und für Screenreader im Label.
     const tabelle = document.createElement("ul");
-    tabelle.className = "kosten";
+    tabelle.className = "kosten-chips";
     for (const t of TERRAIN) {
       const li = document.createElement("li");
+      const text = `${t.name}: ${t.kosten === Infinity ? "∞, nicht begehbar" : t.kosten}`;
+      li.title = text;
+      li.setAttribute("aria-label", text);
       li.append(symbol(textur(t.key, 1)));
-      const n = document.createElement("span");
-      n.textContent = t.name;
       const p = document.createElement("b");
       p.textContent = kosten(t.kosten);
-      li.append(n, p);
+      p.setAttribute("aria-hidden", "true");
+      li.append(p);
       tabelle.append(li);
     }
     const fuss = document.createElement("p");
     fuss.className = "hinweis";
-    fuss.textContent =
-      "Ein Schritt kostet so viel wie das Feld, das man betritt. „∞“: unendlich teuer, also nicht begehbar; die Algorithmen legen keine Kante dorthin.";
+    fuss.textContent = "Kosten = Feld, das man betritt · ∞ = nicht begehbar";
     this.ausdauer.append(tabelle, fuss);
 
     el.append(titel, liste, this.bauen);
@@ -213,16 +216,25 @@ export class Seitenleiste {
     } else {
       this.wannEl.textContent = "Baue deine eigene Welt.";
     }
-    this.warumEl.textContent = w.warum;
-    this.lernEl.hidden = w.lernpunkt === "";
-    // Aufklappbar, damit die Seitenleiste ruhig bleibt. Nur beim Weltwechsel neu schreiben,
-    // sonst klappt er bei jeder Aktualisierung wieder zu.
+    // Höchstens 2 Sätze (≤ 35 Wörter) sichtbar; der Rest und der Lernpunkt stehen unter „Mehr“.
+    const { kurz, rest } = kurzfassung(w.warum);
+    this.warumEl.textContent = kurz;
+    this.lernEl.hidden = rest === "" && w.lernpunkt === "";
+    // Nur beim Weltwechsel neu schreiben, sonst klappt „Mehr“ bei jeder Aktualisierung wieder zu.
     if (this.gezeigteWelt !== Z.weltIndex) {
       this.gezeigteWelt = Z.weltIndex;
-      this.lernEl.innerHTML = "<summary>Lernpunkt</summary>";
-      const text = document.createElement("p");
-      text.textContent = w.lernpunkt;
-      this.lernEl.append(text);
+      this.lernEl.innerHTML = "<summary>Mehr</summary>";
+      if (rest) {
+        const p = document.createElement("p");
+        p.textContent = rest;
+        this.lernEl.append(p);
+      }
+      if (w.lernpunkt) {
+        const p = document.createElement("p");
+        p.innerHTML = "<b>Lernpunkt:</b> ";
+        p.append(w.lernpunkt);
+        this.lernEl.append(p);
+      }
     }
     const eigen = istEigeneWelt();
     this.bauen.hidden = !eigen;

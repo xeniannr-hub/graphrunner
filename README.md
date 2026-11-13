@@ -23,16 +23,12 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 ## Bedienung
 
 - **Alle vergleichen:** vier Karten nebeneinander. Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Darunter stehen die beste Wahl der Welt mit Begründung, ein Fazit und eine Tabelle mit besuchten Feldern, Rechenschritten, Weglänge und Ausdauer. Einen ★ für wenig Suchaufwand bekommt nur, wer den optimalen Weg gefunden hat. Am Ende zeigt „Loslaufen“, wer den günstigsten Weg gefunden hat.
-- **Einzelansicht – ein Debugger für Algorithmen:** ein Verfahren Zeile für Zeile. Abspielen/Pause, Schritt vor und zurück, zum Anfang und zum Ende, Tempo einstellbar. Dazu:
-  - **Mini-Graph:** ein 5 × 5-Ausschnitt um das gerade bearbeitete Feld als Knoten und Kanten, synchron zur aktuellen Zeile. Im Knoten steht d (bei A* f, darunter g und h), am Knoten die Feldkosten = Gewicht jeder Kante hinein. Wasser und Fels sind Lücken, weil dort kein Knoten ist. Vorgängerkanten sind Pfeile in der Farbe des Verfahrens, die gerade geprüfte Kante u → v trägt „+Kosten(v)“. Darunter steht der Erklärsatz als Bildunterschrift. So sieht man die Karte als Graphen.
+- **Einzelansicht – ein Debugger für Algorithmen:** ein Verfahren Zeile für Zeile. Abspielen/Pause, Schritt vor und zurück, zum Anfang und zum Ende, Tempo einstellbar. Aufgeräumt in zwei Spalten:
+  - **Links:** die Karte und direkt darunter die **Datenstruktur** als eine Zeile Slots (Warteschlange, Stapel oder Prioritätswarteschlange; bei A* mit f, g und h). Darunter die zugeklappte Box **„Mehr zum Verfahren“** mit den Tabs Steckbrief (bei A* mit offengelegter Heuristik), „Woran erkenne ich …?“, Ereignisprotokoll (Klick springt zum Schritt) und Besuchsreihenfolge.
+  - **Rechts:** der **Mini-Graph**, ein 5 × 5-Ausschnitt um das gerade bearbeitete Feld als Knoten und Kanten, synchron zur aktuellen Zeile. Im Knoten steht d (bei A* f, darunter g und h), am Knoten die Feldkosten = Gewicht jeder Kante hinein. Wasser und Fels sind Lücken, weil dort kein Knoten ist. Eine Mini-Legende erklärt die Ringe (bearbeitet, geprüft, negativ), darunter steht der Erklärsatz. Darunter der Pseudocode mit der aktuellen Zeile.
+  - Ein Warnbalken erscheint nur, wenn BFS oder DFS auf einer gewichteten Karte laufen: Sie ignorieren die Kantengewichte.
 
-  ![Einzelansicht mit Mini-Graph: A* auf der Handelsstraße prüft eine Kante](docs/einzelansicht.png)
-
-  - **Erklärsatz** zur aktuellen Codezeile und **Pseudocode** mit hervorgehobener Zeile,
-  - **Datenstruktur** live: Warteschlange (FIFO), Stapel (LIFO) oder Prioritätswarteschlange (bei A* mit g, h und f einzeln, veraltete Einträge durchgestrichen),
-  - **Ereignisprotokoll** aller relevanten Aktionen (einfügen, entnehmen, verbessern, abschließen, zurückspringen); ein Klick springt zu diesem Schritt,
-  - **„Woran erkenne ich …?“** mit Belegen aus dem laufenden Algorithmus,
-  - bei A* die **offengelegte Heuristik**, bei BFS und DFS auf gewichteten Karten eine **Warnung**, dass Kantengewichte ignoriert werden.
+  ![Einzelansicht: Dijkstra im Flussmoor mit Mini-Graph, Prioritätswarteschlange und Pseudocode](docs/einzelansicht.png)
 - **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten, `Pos1` / `Ende` zum Anfang bzw. Ende. Mit `Tab` auf eine Karte: Pfeiltasten bewegen einen Feld-Cursor mit Feldinfo, `Enter` baut (Eigene Welt), `Esc` verlässt die Karte.
 - **Touch:** Antippen eines Feldes zeigt die Feldinfo. Wischen scrollt die Seite; nur in der Eigenen Welt malt man durch Ziehen.
 - **Fortschritt:** In der Einzelansicht zählt „Zeile k von n“ die ausgeführten Codezeilen, im Vergleich zählt „Feld k von n“ die besuchten Felder je Verfahren.

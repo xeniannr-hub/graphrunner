@@ -32,6 +32,21 @@ export interface Welt {
   readonly ziel: Pos;
 }
 
+/** Wörter eines Textes (für die Längengrenze der Kurzfassung). */
+const woerter = (t: string): number => t.split(/\s+/).filter(Boolean).length;
+
+/**
+ * Kurzfassung der Begründung für die Seitenleiste: die ersten Sätze, höchstens maxSaetze und maxWoerter;
+ * der Rest kommt in den Aufklapper „Mehr“. kurz + " " + rest ergibt wieder den ganzen Text.
+ */
+export function kurzfassung(text: string, maxSaetze = 2, maxWoerter = 35): { kurz: string; rest: string } {
+  const saetze = text.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„])/);
+  let n = 0;
+  let w = 0;
+  while (n < saetze.length && n < maxSaetze && w + woerter(saetze[n]) <= maxWoerter) w += woerter(saetze[n++]);
+  return { kurz: saetze.slice(0, n).join(" "), rest: saetze.slice(n).join(" ") };
+}
+
 export const WELTEN: readonly Welt[] = [
   {
     id: "ruinenhof",

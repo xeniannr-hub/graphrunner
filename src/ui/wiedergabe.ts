@@ -116,9 +116,8 @@ export class Wiedergabe {
     // Tastenhinweis direkt an der Leiste, damit die Bedienung ohne Anleitung auffällt (QA-04, QA-05).
     const tasten = document.createElement("p");
     tasten.className = "tasten";
-    tasten.innerHTML = opt.zumEnde
-      ? `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Start/Pause · <kbd>Pos1</kbd><kbd>Ende</kbd> Anfang/Ende · Feld anzeigen: darüberfahren, antippen oder <kbd>Tab</kbd>`
-      : `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leertaste</kbd> Start/Pause · <kbd>Pos1</kbd> Anfang · Feld anzeigen: darüberfahren, antippen oder <kbd>Tab</kbd>`;
+    // Eine kurze Zeile in kleiner Schrift.
+    tasten.innerHTML = `<kbd>←</kbd><kbd>→</kbd> Schritt · <kbd>Leer</kbd> Start/Pause · <kbd>Pos1</kbd>${opt.zumEnde ? "<kbd>Ende</kbd>" : ""} springen · <kbd>Tab</kbd> Feldinfo`;
     leiste.append(opt.legende, tasten);
     this.element = leiste;
   }

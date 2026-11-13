@@ -1,6 +1,7 @@
-// Einzelansicht als Debugger für Algorithmen (FA-01, FA-02, FA-06, FA-09, FA-11, FA-12):
-// ein Verfahren Zeile für Zeile. Links die Karte, darunter Datenstruktur und „Woran erkenne ich …?“;
-// rechts Steckbrief (mit Heuristik bei A*), Erklärsatz mit „Zeile n“, Pseudocode, Ereignisprotokoll, Besuchsreihenfolge.
+// Einzelansicht als Debugger für Algorithmen (FA-01, FA-02, FA-06, FA-09, FA-11, FA-12, FA-25, FA-26, FA-28, FA-29):
+// ein Verfahren Zeile für Zeile. Links die Karte, direkt darunter die Datenstruktur in einer Zeile und die zugeklappte
+// Box „Mehr zum Verfahren“ (Steckbrief, Woran erkenne ich …?, Ereignisprotokoll, Besuchsreihenfolge als Tabs).
+// Rechts nur der Mini-Graph mit dem Erklärsatz als Bildunterschrift und darunter der Pseudocode.
 import { ALGOS, PSEUDOCODE } from "../algorithms";
 import { symbol, zeichneLeinwand, type SymbolArt, type Zahlen } from "../render/karte";
 import type { Eintrag, Replay } from "../replay/replay";
@@ -65,13 +66,22 @@ function legendeFuer(a: Algo): HTMLElement[] {
           ["wartet", a === "bfs" ? "in der Warteschlange" : "in der Prioritätswarteschlange"],
           ["entdeckt", "entdeckt"],
         ];
-  eintraege.push(["weg", "Weg"], ["kante", "Vorgänger"]);
+  eintraege.push(["weg", "Weg"]);
   return eintraege.map(([art, text]) => {
     const span = document.createElement("span");
     span.append(symbol(art, f), text);
     return span;
   });
 }
+
+type MehrTab = "steckbrief" | "merkmal" | "protokoll" | "besuche";
+
+const MEHR_TABS: readonly [MehrTab, string][] = [
+  ["steckbrief", "Steckbrief"],
+  ["merkmal", "Woran erkenne ich …?"],
+  ["protokoll", "Ereignisprotokoll"],
+  ["besuche", "Besuchsreihenfolge"],
+];
 
 export class Einzel {
   readonly element: HTMLElement;
@@ -94,6 +104,8 @@ export class Einzel {
   private readonly strukturTitel: HTMLElement;
   private readonly strukturRegel: HTMLElement;
   private readonly strukturInhalt: HTMLElement;
+  private readonly strukturEntnommen: HTMLElement;
+  private readonly miniFormel: HTMLElement;
   private readonly merkmalFrage: HTMLElement;
   private readonly merkmalBelege: HTMLUListElement;
   private readonly protokollListe: HTMLOListElement;
@@ -162,14 +174,8 @@ export class Einzel {
     leiste.append(tabliste, zahlen);
 
     // Die Zustandssymbole hängen vom Verfahren ab und werden in aktualisiere() gezeichnet.
-    const legende = element(
-      "div",
-      "",
-      `<span class="legende-zustaende"></span>
-      <span><i class="rahmen weiss"></i>bearbeitet</span>
-      <span><i class="rahmen gelb"></i>geprüft</span>
-      <span><i class="rahmen rot"></i>Prüfung negativ</span>`,
-    );
+    // Die Rahmen bearbeitet/geprüft/negativ erklärt die Mini-Legende am Mini-Graphen.
+    const legende = element("div", "", `<span class="legende-zustaende"></span>`);
     this.legendeZustaende = legende.querySelector(".legende-zustaende") as HTMLElement;
     this.wiedergabe = new Wiedergabe(
       {
@@ -190,7 +196,7 @@ export class Einzel {
     this.hinweis = element("p", "hinweis-box");
     this.hinweis.setAttribute("role", "note");
 
-    // Links: Karte, Datenstruktur, Merkmal.
+    // Links: Karte, Datenstruktur, „Mehr zum Verfahren“.
     const links = element("div", "einzel-links");
     this.canvas = document.createElement("canvas");
     this.canvas.setAttribute("role", "application");
@@ -198,47 +204,44 @@ export class Einzel {
     const kartenRahmen = element("div", "karte-einzel");
     kartenRahmen.append(this.canvas);
     verbindeKarte(this.canvas, () => Z.einzel[Z.einzelAlgo], geaendert);
+    // Datenstruktur kompakt: Kopfzeile und eine Zeile Slots (FA-12).
     const struktur = element(
       "section",
       "box struktur-box",
-      `<h3><span class="struktur-titel"></span></h3><p class="struktur-regel"></p><div class="struktur-inhalt" aria-live="off"></div>`,
+      `<p class="struktur-kopf"><b class="struktur-titel"></b> <span class="struktur-regel"></span> <span class="entnommen"></span></p>
+      <div class="struktur-inhalt" aria-live="off"></div>`,
     );
     struktur.setAttribute("aria-label", "Datenstruktur");
     this.strukturTitel = struktur.querySelector(".struktur-titel") as HTMLElement;
     this.strukturRegel = struktur.querySelector(".struktur-regel") as HTMLElement;
+    this.strukturEntnommen = struktur.querySelector(".entnommen") as HTMLElement;
     this.strukturInhalt = struktur.querySelector(".struktur-inhalt") as HTMLElement;
-    const merkmalBox = element(
-      "details",
-      "box merkmal-box",
-      `<summary><h3 class="merkmal-frage"></h3></summary><ul class="merkmal-belege"></ul>`,
-    );
-    merkmalBox.setAttribute("open", "");
-    this.merkmalFrage = merkmalBox.querySelector(".merkmal-frage") as HTMLElement;
-    this.merkmalBelege = merkmalBox.querySelector(".merkmal-belege") as HTMLUListElement;
-    links.append(kartenRahmen, struktur, merkmalBox);
 
-    // Rechts: Mini-Graph (FA-29) mit dem Erklärsatz als Bildunterschrift, Pseudocode, Steckbrief, Protokoll, Besuchsreihenfolge.
-    const seite = element(
-      "div",
-      "einzel-seite",
-      `<figure class="box minigraph-box"><canvas class="minigraph" role="img"></canvas>
-        <figcaption class="erklaerung" tabindex="0"><span class="zeile-nr"></span> <span class="satz" aria-live="off"></span></figcaption></figure>
-      <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>
-      <details class="box" open><summary><h3>Steckbrief</h3></summary><dl class="steckbrief"></dl><div class="heuristik"></div></details>
-      <details class="box protokoll-box" open><summary><h3>Ereignisprotokoll <small class="protokoll-zahl"></small></h3></summary>
-        <p class="hinweis">Klick auf einen Eintrag springt zu diesem Schritt.</p><ol class="protokoll"></ol></details>
-      <details class="box liste-box"><summary><h3>Besuchsreihenfolge</h3></summary><p class="liste-leer">Noch kein Feld besucht.</p><ol class="besuchsliste"></ol></details>`,
+    // „Mehr zum Verfahren“: standardmäßig zugeklappt, darin Tabs nach dem WAI-ARIA-Tab-Muster (FA-25, FA-26, FA-28).
+    const mehr = element(
+      "details",
+      "box mehr-box",
+      `<summary><h3>Mehr zum Verfahren</h3></summary>
+      <div class="tabs mehr-tabs" role="tablist" aria-label="Mehr zum Verfahren"></div>
+      <div class="mehr-panel" role="tabpanel" id="mehr-steckbrief" aria-labelledby="mehr-tab-steckbrief">
+        <dl class="steckbrief"></dl><div class="heuristik"></div></div>
+      <div class="mehr-panel merkmal-box" role="tabpanel" id="mehr-merkmal" aria-labelledby="mehr-tab-merkmal" hidden>
+        <h3 class="merkmal-frage"></h3><ul class="merkmal-belege"></ul></div>
+      <div class="mehr-panel protokoll-box" role="tabpanel" id="mehr-protokoll" aria-labelledby="mehr-tab-protokoll" hidden>
+        <p class="hinweis">Alle relevanten Aktionen bis zur aktuellen Zeile <small class="protokoll-zahl"></small>. Klick springt zu diesem Schritt.</p>
+        <ol class="protokoll"></ol></div>
+      <div class="mehr-panel liste-box" role="tabpanel" id="mehr-besuche" aria-labelledby="mehr-tab-besuche" hidden>
+        <p class="liste-leer">Noch kein Feld besucht.</p><ol class="besuchsliste"></ol></div>`,
     );
-    this.steckbrief = seite.querySelector(".steckbrief") as HTMLElement;
-    this.heuristik = seite.querySelector(".heuristik") as HTMLElement;
-    this.satz = seite.querySelector(".satz") as HTMLElement;
-    this.miniGraph = seite.querySelector(".minigraph") as HTMLCanvasElement;
-    this.zeileNr = seite.querySelector(".zeile-nr") as HTMLElement;
-    this.code = seite.querySelector(".code") as HTMLOListElement;
-    this.protokollListe = seite.querySelector(".protokoll") as HTMLOListElement;
-    this.protokollZahl = seite.querySelector(".protokoll-zahl") as HTMLElement;
-    this.liste = seite.querySelector(".besuchsliste") as HTMLOListElement;
-    this.listeLeer = seite.querySelector(".liste-leer") as HTMLElement;
+    this.baueMehrTabs(mehr);
+    this.steckbrief = mehr.querySelector(".steckbrief") as HTMLElement;
+    this.heuristik = mehr.querySelector(".heuristik") as HTMLElement;
+    this.merkmalFrage = mehr.querySelector(".merkmal-frage") as HTMLElement;
+    this.merkmalBelege = mehr.querySelector(".merkmal-belege") as HTMLUListElement;
+    this.protokollListe = mehr.querySelector(".protokoll") as HTMLOListElement;
+    this.protokollZahl = mehr.querySelector(".protokoll-zahl") as HTMLElement;
+    this.liste = mehr.querySelector(".besuchsliste") as HTMLOListElement;
+    this.listeLeer = mehr.querySelector(".liste-leer") as HTMLElement;
     this.protokollListe.addEventListener("click", (ev) => {
       const b = (ev.target as HTMLElement).closest("button");
       if (!b) return;
@@ -246,6 +249,22 @@ export class Einzel {
       Z.einzel[Z.einzelAlgo].gehe(Number(b.dataset.schritt) + 1);
       this.geaendert();
     });
+    links.append(kartenRahmen, struktur, mehr);
+
+    // Rechts: Mini-Graph (FA-29) mit Mini-Legende und dem Erklärsatz als Bildunterschrift, darunter der Pseudocode.
+    const seite = element(
+      "div",
+      "einzel-seite",
+      `<figure class="box minigraph-box"><canvas class="minigraph" role="img"></canvas>
+        <p class="mini-legende"><span><i class="ring weiss"></i>bearbeitet</span><span><i class="ring gelb"></i>geprüft</span><span><i class="ring rot"></i>Prüfung negativ</span><span><i class="kasten">2</i>Kantengewicht</span><span class="mini-formel"></span></p>
+        <figcaption class="erklaerung" tabindex="0"><span class="zeile-nr"></span> <span class="satz" aria-live="off"></span></figcaption></figure>
+      <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>`,
+    );
+    this.satz = seite.querySelector(".satz") as HTMLElement;
+    this.miniGraph = seite.querySelector(".minigraph") as HTMLCanvasElement;
+    this.miniFormel = seite.querySelector(".mini-formel") as HTMLElement;
+    this.zeileNr = seite.querySelector(".zeile-nr") as HTMLElement;
+    this.code = seite.querySelector(".code") as HTMLOListElement;
 
     const inhalt = element("div", "einzel-inhalt");
     inhalt.setAttribute("role", "tabpanel");
@@ -255,6 +274,51 @@ export class Einzel {
 
     el.append(leiste, this.wiedergabe.element, this.hinweis, inhalt);
     this.element = el;
+  }
+
+  /** Tabs in „Mehr zum Verfahren“: WAI-ARIA-Tab-Muster mit Roving tabindex wie bei den Verfahren. */
+  private baueMehrTabs(mehr: HTMLElement): void {
+    const liste = mehr.querySelector(".mehr-tabs") as HTMLElement;
+    const tabs = new Map<MehrTab, HTMLButtonElement>();
+    const zeige = (t: MehrTab, fokus: boolean) => {
+      for (const [k, b] of tabs) {
+        b.setAttribute("aria-selected", String(k === t));
+        b.tabIndex = k === t ? 0 : -1;
+        (mehr.querySelector(`#mehr-${k}`) as HTMLElement).hidden = k !== t;
+      }
+      if (fokus) tabs.get(t)?.focus();
+      // Das Protokoll scrollt ans Ende, sobald es sichtbar wird.
+      if (t === "protokoll") this.protokollListe.scrollTop = this.protokollListe.scrollHeight;
+      if (t === "besuche") this.liste.scrollTop = this.liste.scrollHeight;
+    };
+    MEHR_TABS.forEach(([t, text], i) => {
+      const b = element("button", "tab", text);
+      b.type = "button";
+      b.id = `mehr-tab-${t}`;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-controls", `mehr-${t}`);
+      b.onclick = () => zeige(t, false);
+      b.onkeydown = (ev) => {
+        const n = MEHR_TABS.length;
+        const ziel =
+          ev.key === "ArrowRight"
+            ? (i + 1) % n
+            : ev.key === "ArrowLeft"
+              ? (i + n - 1) % n
+              : ev.key === "Home"
+                ? 0
+                : ev.key === "End"
+                  ? n - 1
+                  : -1;
+        if (ziel < 0) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        zeige(MEHR_TABS[ziel][0], true);
+      };
+      tabs.set(t, b);
+      liste.append(b);
+    });
+    zeige("steckbrief", false);
   }
 
   /** Zeichnet Karte und Mini-Graph. Gibt true zurück, solange der kurze Übergang im Mini-Graphen läuft. */
@@ -336,6 +400,9 @@ export class Einzel {
       );
     }
     this.select.value = Z.zahlen;
+    // Heuristik direkt am Mini-Graphen, damit sie auch bei zugeklapptem Steckbrief offen liegt (FA-28).
+    this.miniFormel.textContent = a === "astar" ? `h(v) = ${zahl(Z.billigstes)} · Manhattan(v, Ziel)` : "";
+    this.miniFormel.hidden = a !== "astar";
     this.aktualisiereSteckbrief(r);
     this.aktualisiereHinweis(r);
 
@@ -419,28 +486,21 @@ export class Einzel {
   private aktualisiereHinweis(r: Replay): void {
     const e = r.ergebnis;
     const info = ALGO_INFO[e.algo];
-    const ignoriert = !info.gewichte;
-    this.hinweis.hidden = !ignoriert;
-    if (!ignoriert) return;
+    // Nur bei einer Warnung: BFS/DFS auf gewichteter Karte (FA-27). Sonst kein Balken.
+    const warnen = !info.gewichte && Z.gewichtet;
+    this.hinweis.hidden = !warnen;
+    if (!warnen) return;
     const opt = Z.ergebnisse.dijkstra;
-    if (Z.gewichtet) {
-      this.hinweis.className = "hinweis-box warnung";
-      const vergleich =
-        e.gefunden && opt.gefunden && r.fertig
-          ? ` Hier: ${info.name} zahlt ${zahl(e.kosten)} Ausdauer, der günstigste Weg (Dijkstra) kostet ${zahl(opt.kosten)}.`
-          : "";
-      this.hinweis.innerHTML = `<b>Gewichtete Karte:</b> ${info.name} ignoriert die Kantengewichte (Ausdauer ${this.spanne()}). ${
-        e.algo === "bfs"
-          ? "Es findet den kürzesten Weg nach <b>Anzahl der Kanten</b>, nicht den günstigsten."
-          : "Es findet irgendeinen Weg, meist weder den kürzesten noch den günstigsten."
-      }${vergleich} Für den günstigsten Weg: Dijkstra oder A*.`;
-    } else {
-      this.hinweis.className = "hinweis-box info";
-      this.hinweis.innerHTML =
-        e.algo === "bfs"
-          ? "<b>Ungewichtete Karte:</b> Alle Felder kosten gleich viel. Der kürzeste Weg nach Anzahl der Kanten ist hier zugleich der günstigste."
-          : "<b>Ungewichtete Karte:</b> Alle Felder kosten gleich viel; DFS beachtet Gewichte ohnehin nicht.";
-    }
+    this.hinweis.className = "hinweis-box warnung";
+    const vergleich =
+      e.gefunden && opt.gefunden && r.fertig
+        ? ` Hier: ${info.name} zahlt ${zahl(e.kosten)} Ausdauer, der günstigste Weg (Dijkstra) kostet ${zahl(opt.kosten)}.`
+        : "";
+    this.hinweis.innerHTML = `<b>Gewichtete Karte:</b> ${info.name} ignoriert die Kantengewichte (Ausdauer ${this.spanne()}). ${
+      e.algo === "bfs"
+        ? "Es findet den kürzesten Weg nach <b>Anzahl der Kanten</b>, nicht den günstigsten."
+        : "Es findet irgendeinen Weg, meist weder den kürzesten noch den günstigsten."
+    }${vergleich} Für den günstigsten Weg: Dijkstra oder A*.`;
   }
 
   /** „1–7“: kleinste und größte Ausdauer der begehbaren Felder. */
@@ -461,46 +521,33 @@ export class Einzel {
     const b = e.breite;
     const k = (id: FeldId) => koord({ x: id % b, y: Math.floor(id / b) });
     const veraltet = inhalt.filter((x) => r.veraltet(x)).length;
-    this.strukturTitel.textContent = `${info.struktur}: ${inhalt.length} ${inhalt.length === 1 ? "Eintrag" : "Einträge"}${veraltet ? `, davon ${veraltet} veraltet` : ""}`;
+    this.strukturTitel.textContent = `${info.struktur}: ${inhalt.length}${veraltet ? ` (${veraltet} veraltet)` : ""}`;
     this.strukturRegel.textContent = info.strukturRegel;
     const s = r.aktuell;
     const neuSeq = s?.art === "einfuegen" ? Math.max(...inhalt.map((x) => x.seq)) : -1;
     const entnommen = s?.art === "entnehmen" ? r.letzteEntnahme() : undefined;
+    this.strukturEntnommen.innerHTML = entnommen ? `Entnommen: <b>${k(entnommen.v)}</b> ${this.werte(e.algo, entnommen)}` : "";
     const rest = inhalt.length - MAX_EINTRAEGE;
     const zeige = inhalt.slice(0, MAX_EINTRAEGE);
-    const mehr = rest > 0 ? `<span class="mehr">… und ${rest} weitere</span>` : "";
-    const leer = inhalt.length === 0 ? `<p class="hinweis">leer</p>` : "";
-    const raus = entnommen ? `<p class="entnommen">Gerade entnommen: <b>${k(entnommen.v)}</b> ${this.werte(e.algo, entnommen)}</p>` : "";
     const klasse = (x: Eintrag, i: number) =>
       [i === 0 ? "naechster" : "", x.seq === neuSeq ? "neu" : "", r.veraltet(x) ? "veraltet" : ""].filter(Boolean).join(" ");
-
-    if (e.algo === "bfs" || e.algo === "dfs") {
-      const randA = e.algo === "bfs" ? "vorne ← entnehmen" : "oben ← auflegen und entnehmen";
-      const randB = e.algo === "bfs" ? "hinten ← anfügen" : "unten";
-      this.strukturInhalt.innerHTML = `${raus}<div class="slots ${e.algo}">
+    // Wert im Slot: BFS/DFS d, Dijkstra d (Priorität), A* f groß und g, h klein (FA-28).
+    const wert = (x: Eintrag): string => {
+      if (e.algo === "astar") return `<small>f <b>${zahl(x.prio)}</b> · g ${zahl(x.g)} · h ${zahl(x.prio - x.g)}</small>`;
+      if (e.algo === "dijkstra") return `<small>d ${zahl(x.prio)}</small>`;
+      return `<small>d ${zahl(x.g)}</small>`;
+    };
+    const titel = (x: Eintrag, i: number): string =>
+      (r.veraltet(x) ? "veraltet, wird übersprungen" : i === 0 ? "wird als Nächstes entnommen" : "") || k(x.v);
+    const randA = e.algo === "bfs" ? "vorne" : e.algo === "dfs" ? "oben" : "kleinste Priorität";
+    const randB = e.algo === "bfs" ? "hinten" : e.algo === "dfs" ? "unten" : "";
+    this.strukturInhalt.innerHTML =
+      inhalt.length === 0
+        ? `<p class="hinweis">leer</p>`
+        : `<div class="slots">
         <span class="rand">${randA}</span>
-        ${zeige.map((x, i) => `<span class="slot ${klasse(x, i)}" title="d = ${zahl(x.g)} Kanten ab Start"><b>${k(x.v)}</b><small>d ${zahl(x.g)}</small></span>`).join("")}
-        ${mehr}${inhalt.length > 0 ? `<span class="rand">${randB}</span>` : ""}</div>${leer}`;
-      return;
-    }
-    const astar = e.algo === "astar";
-    const kopf = astar
-      ? `<tr><th scope="col">#</th><th scope="col">Feld</th><th scope="col">g</th><th scope="col">h</th><th scope="col">f = g + h</th><th scope="col">Status</th></tr>`
-      : `<tr><th scope="col">#</th><th scope="col">Feld</th><th scope="col">d (Priorität)</th><th scope="col">eingefügt als</th><th scope="col">Status</th></tr>`;
-    const zeilen = zeige
-      .map((x, i) => {
-        const status = r.veraltet(x) ? "veraltet, wird übersprungen" : i === 0 ? "wird als Nächstes entnommen" : "";
-        const werte = astar
-          ? `<td>${zahl(x.g)}</td><td>${zahl(x.prio - x.g)}</td><td><b>${zahl(x.prio)}</b></td>`
-          : `<td><b>${zahl(x.prio)}</b></td><td>Nr. ${x.seq + 1}</td>`;
-        return `<tr class="${klasse(x, i)}"><td>${i + 1}</td><td>${k(x.v)}</td>${werte}<td>${status}</td></tr>`;
-      })
-      .join("");
-    this.strukturInhalt.innerHTML = `${raus}${
-      inhalt.length
-        ? `<div class="tabelle-rahmen"><table class="pq"><thead>${kopf}</thead><tbody>${zeilen}</tbody></table></div>${mehr}`
-        : leer
-    }`;
+        ${zeige.map((x, i) => `<span class="slot ${klasse(x, i)}" title="${titel(x, i)}"><b>${k(x.v)}</b>${wert(x)}</span>`).join("")}
+        ${rest > 0 ? `<span class="mehr">+${rest}</span>` : ""}${randB ? `<span class="rand">${randB}</span>` : ""}</div>`;
   }
 
   private werte(algo: Algo, x: Eintrag): string {
