@@ -75,7 +75,8 @@ src/
   replay/             Replay: Steps vor- und zurückspielen
   world/              terrain (Gelände), worlds (die Welten als Textkarten)
   info/               algo-info (ALGO_INFO: Name, Farbe, Datenstruktur je Verfahren), fokus (markierte Felder eines Steps)
-  render/             textures (Pixelgrafik), karte (Karte zeichnen), kopf (Banner, Logo)
+  render/             textures (Pixelgrafik), karte (Karte zeichnen), kopf (Banner, Logo),
+                      minigraph (Kartenausschnitt als Knoten-Kanten-Bild, FA-29)
   ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, bewertung, einzel,
                       seitenleiste, karten-interaktion (Tooltip, Bauen), erklaerung
 prototype/            erster Prototyp, nur Referenz
@@ -125,7 +126,7 @@ Nur diese sieben. Jedes Gelände ist auf der Karte durch eigene Farbe **und** ei
 - `TerrainKey`, `Terrain { key, name, kosten }`
 - `Algo = "bfs" | "dfs" | "dijkstra" | "astar"`
 - `Step`: genau eine ausgeführte Pseudocode-Zeile, als **discriminated union** über `art`: Jede Art hat genau ihre Felder (z. B. `setze` immer `v`, `d`, `vorg`, `altD`, `altVorg`; `entnehmen` immer `u`), sodass der Compiler fehlende Felder meldet und keine `as`-Casts nötig sind. Arten: `init`, `setze`, `einfuegen`, `schaetze` (nur A*: h(v) berechnen), `schleife`, `entnehmen`, `oben`, `zielpruefung`, `nachbar`, `keinNachbar`, `markiertPruefung`, `veraltetPruefung`, `abschliessen`, `rechne`, `vergleiche`, `keinWeg`. `setze` speichert die alten Werte (`altD`, `altVorg`), damit das Zurückspulen exakt ist.
-- `SearchResult { algo, breite, hoehe, start, ziel, gefunden, weg, wegIds, kosten, felder, besucht, besuchsIndizes, schritte }`. Ohne Weg gilt: `weg = []`, `kosten = felder = Infinity`.
+- `SearchResult { algo, breite, hoehe, start, ziel, gefunden, weg, wegIds, kosten, felder, besucht, besuchsIndizes, schritte, grid }`. `grid` ist die Karte, auf der gesucht wurde; der Mini-Graph liest daraus Begehbarkeit und Kantengewichte. Ohne Weg gilt: `weg = []`, `kosten = felder = Infinity`.
 
 ---
 
@@ -212,13 +213,16 @@ Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra 
   - **„Woran erkenne ich …?“**: beobachtbare Merkmale mit Zahlen aus dem laufenden Replay, bei Dijkstra die Antwort auf „Woran erkenne ich, dass hier Dijkstra und nicht eine Breitensuche läuft?“ (Überholungen mit konkretem Beispiel, monoton steigende d).
 
   Rechts daneben:
+  - **Mini-Graph** (FA-29, `render/minigraph.ts`): 5 × 5-Ausschnitt um das gerade bearbeitete Feld (sonst den Start) als Knoten und Kanten, synchron zur aktuellen Zeile. Knoten nur für begehbare Felder (Wasser und Fels sind Lücken), Füllung wie auf der Karte, im Kreis d bzw. bei A* f groß und g, h klein darunter (h erst nach dem Step `schaetze`), Etikett mit den Feldkosten = Gewicht jeder Kante in diesen Knoten, Vorgängerkanten dick mit Pfeil, Ringe aus `fokus()`, geprüfte Kante u → v mit „+Kosten(v)“, bei der Zielprüfung ein Ziel-Symbol. Übergang 200 ms nur bis 8 Zeilen/s. `role="img"` mit kurzem `aria-label`. Darunter der Erklärsatz als einzeilige Bildunterschrift mit „Pseudocode-Zeile n“ (ganz beim Überfahren oder Fokussieren; `aria-live` nur angehalten).
   - Steckbrief, bei allen vier gleich: Verfahren · Prinzip · Wählt als Nächstes · Findet · Ergebnis; bei A* zusätzlich die offengelegte Heuristik mit Formel, Begründung (Manhattan, Faktor billigstes Feld, zulässig, konsistent) und Prüfung am Start
-  - aktueller Erklärsatz mit „Zeile n“ (bei A* mit f = g + h ausgerechnet, bei Verbesserungen alter und neuer Wert)
   - Pseudocode mit hervorgehobener Zeile
   - **Ereignisprotokoll**: alle relevanten Aktionen (einfügen, entnehmen, verbessern mit altem/neuem d und Vorgänger, abschließen, veraltete Einträge, Rücksprünge, Ziel); Klick springt zu diesem Schritt
   - Besuchsreihenfolge
 
-  Karte und Erklärsatz lesen die markierten Felder aus derselben Funktion `fokus()`. Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
+  Karte, Erklärsatz und Mini-Graph lesen die markierten Felder aus derselben Funktion `fokus()`.
+
+  **Ziel-Layout der Einzelansicht** (wird Schritt für Schritt umgesetzt; umgesetzt: Mini-Graph): links Karte und direkt darunter die Datenstruktur. Rechts oben der Mini-Graph mit dem Erklärsatz als einzeiliger Bildunterschrift, darunter der Pseudocode. Steckbrief, „Woran erkenne ich …?“, Ereignisprotokoll und Besuchsreihenfolge kommen in eine gemeinsame, standardmäßig zugeklappte Box „Mehr zum Verfahren“ mit Tabs.
+ Weißer Rahmen: wird bearbeitet. Gelber Rahmen: wird geprüft, rot bei negativer Prüfung.
 - **Tooltip** über jeder Karte in beiden Ansichten: Koordinate (ggf. Start/Ziel), Kategorie, Gewichtung bzw. „Ausdauer ∞ (nicht begehbar)“, bei begehbaren Feldern die ausgehenden Kanten mit Gewicht („Kanten: ↑ 2 · → 4 · ↓ – · ← 2“, „–“ = keine Kante), Zustand mit Besuch-Nr., dazu d (BFS/DFS: Kanten ab Start) bzw. bei A* g, h und f einzeln, und der Vorgänger. So wird die Karte als Graph aus Knoten und Kanten sichtbar. Feldinfo gibt es per Maus, per Antippen (bleibt stehen, bis woanders hingetippt wird) und per Tastatur: Tab auf die Karte, Pfeiltasten bewegen einen Feld-Cursor, Enter/Leertaste baut, Esc verlässt die Karte; eine `aria-live`-Region liest die Feldinfo vor, `aria-label` beschreibt den Stand jeder Karte (`kartenBeschreibung`).
 - **Bauen:** Start, Ziel und die sieben Geländearten; klicken, ziehen, antippen oder per Tastatur, auf jeder Karte. Nur in der Eigenen Welt haben die Karten `touch-action: none` (zum Malen); sonst scrollt eine Wischgeste die Seite. Start und Ziel nur auf begehbare Felder, nie aufeinander. Knopf „Karte leeren“ setzt alle Felder auf Wiese, Start und Ziel bleiben. Nach jeder Änderung rechnen alle Verfahren sofort neu.
 - **Darstellung:** nur **helles**, schlichtes Schema im Stil eines Spiele-Inventars (an Minecraft angelehnt, eigener Entwurf): Untergrund hellblau, **eine** Flächenart (hellgrau `#c6c6c6`, Licht oben links, Schatten unten rechts, schwarzer Rand), graue Steinknöpfe mit weißer Pixelschrift, gewählt = eingedrückt mit gelber Schrift, „Abspielen“ grün, dunkle Slots für Einträge der Datenstruktur, helle eingelassene Felder für Code, Protokoll und Tabelle. Farbe nur, wo sie etwas bedeutet (Verfahren, Hauptaktion, Auswahl). Kurze Legenden; Steckbrief, Merkmal, Protokoll, Besuchsreihenfolge und Lernpunkt sind aufklappbar. Kopf mit Bodenleiste aus Gras- und Erdblöcken, Umschalter mit Pixel-Symbolen, jede Welt mit einem eigenen Symbol aus ihrem Gelände (Ruinenhof Wiese mit Mauerrest, Stollen Fels mit Gang, Flussmoor Sumpf mit Wasserlauf, Handelsstraße Wiese mit Straße, Eigene Welt Wiese); Wasser und Fels kosten in Ausdauer-Tabelle, Bauen und Tooltip „∞“ wie im Modell (`Infinity`); unter der Wiedergabeleiste der Tastenhinweis. Besuchte Felder überdecken das Gelände nicht: Muster und Farbe des Geländes bleiben erkennbar. **Die Farbe des Verfahrens markiert genau die Felder, die als „besucht“ gezählt sind** (Zähler, Tabelle, Besuchsreihenfolge); bei DFS also schon beim Auflegen, Felder auf dem Stapel tragen zusätzlich den weißen Punkt. Damit der Farbton zur Verfahrensfarbe passt und sich nicht mit dem Gelände mischt, wird das Gelände unter besuchten Feldern erst aufgehellt (40 % Weiß), dann mit 72 % Deckkraft eingefärbt; das Farbfeld im Kopf jeder Karte ist dasselbe Symbol. Legendensymbole werden mit derselben Funktion gezeichnet wie die Karte (`symbol()` in `render/karte.ts`). Start und Ziel sind groß und beschriftet. Feste Farben: BFS `#ff4d73`, DFS `#a56bff`, Dijkstra `#ff8a2b`, A* `#ffd400`. Pixelschrift in Überschriften und auf Knöpfen (kurze Beschriftungen), Fließtext in Rubik. Ab 400 px Breite kein horizontales Scrollen. Auf schmalen Bildschirmen (≤ 960 px) steht die Reihenfolge Weltliste (und Bauen) → Steuerung und Karten → Begründung und Ausdauer, damit „Abspielen“ früh kommt. Fokusrahmen und `aria`-Attribute.
@@ -248,6 +252,10 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-26 | Erkennungsmerkmale je Verfahren mit Belegen aus dem Lauf („Woran erkenne ich Dijkstra statt BFS?“) | Should | `ui/erklaerung.ts` (`merkmal`) |
 | FA-27 | BFS/DFS: Hinweis, dass Kantengewichte ignoriert werden; BFS-Ergebnis als kürzester Weg nach Kantenzahl | Should | `ui/einzel.ts`, `ui/vergleich.ts`, `ui/bewertung.ts` |
 | FA-28 | A*: Heuristik offenlegen, g, h und f einzeln darstellen | Should | `ui/einzel.ts`, `ui/erklaerung.ts`, Zahlen auf der Karte |
+| FA-29 | Mini-Graph in der Einzelansicht: ein Kartenausschnitt als Knoten-Kanten-Bild, synchron zur aktuellen Pseudocode-Zeile | Should | `render/minigraph.ts`, `ui/einzel.ts` (umgesetzt) |
+| FA-30 | Kleines Beispiel in der Einzelansicht: dieselben Verfahren auf einer Mini-Karte (höchstens 6 × 4 Felder), die der Mini-Graph vollständig zeigt | Should | offen |
+| FA-31 | Vergleich: Suchfront jedes Verfahrens als Umrisslinie | Should | offen |
+| FA-32 | Entscheidungsbaum „Welches Verfahren?“ in der Seitenleiste | Could | offen |
 | FA-13 | Alle vier Verfahren gleichzeitig auf derselben Karte, je Schritt ein besuchtes Feld pro Verfahren | Should | `ui/vergleich.ts` |
 | FA-14 | Statistik je Verfahren gegenüberstellen: besuchte Felder (Suchaufwand), Rechenschritte, Weglänge, Wegkosten; Fazit in Sätzen, beste Wahl je Welt | Should | Ergebnis-Tabelle, `ui/bewertung.ts` |
 | FA-16 | Karte mit Geländekosten als gewichteter Graph; Start, Ziel und Gelände veränderbar | Must | `world/`, `algorithms/raster.ts` |
@@ -323,6 +331,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
   - Leistung (QA-03)
   - `besteWahl()` liefert in jeder der vier Welten genau deren Algorithmus; ohne Weg enthält die Tabelle kein „★“
   - `feldInfo()` nennt die ausgehenden Kanten mit Gewicht (mit Rechenweg), bei A* g, h und f
+  - Mini-Graph: keine unpassierbaren Felder im Ausschnitt, Kanten nur zu 4er-Nachbarn, Markierung wie `fokus()`, Kantengewicht = Kosten des Zielfeldes (`render/minigraph.test.ts`)
   - A*-Heuristik zulässig und konsistent; Kosten 0 korrekt; negative Kosten abgelehnt
   - Replay: Datenstruktur passt zu `inListe`, FIFO überholt nie, Dijkstra-Prioritäten steigen nie, Dijkstra verbessert nie ein d
   - Ereignisprotokoll und Erkennungsmerkmal (Dijkstra überholt im Flussmoor, BFS nie)

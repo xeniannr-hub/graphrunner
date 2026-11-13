@@ -26,7 +26,7 @@ export interface WiedergabeOptionen {
 }
 
 /** Schritte pro Sekunde für Tempo 1 … 10 (etwa 2 bis 140). */
-const schritteProSekunde = (tempo: number): number => 2 * 1.6 ** (tempo - 1);
+export const schritteProSekunde = (tempo: number): number => 2 * 1.6 ** (tempo - 1);
 
 function knopf(text: string, label: string, klasse = "knopf"): HTMLButtonElement {
   const b = document.createElement("button");

@@ -91,6 +91,8 @@ document.addEventListener("keydown", (ev) => {
 });
 
 let letzte = performance.now();
+/** Läuft gerade der kurze Übergang im Mini-Graphen? Dann weiter jedes Bild zeichnen. */
+let miniAnimiert = false;
 let groesse = "";
 function bild(jetzt: number): void {
   const dt = Math.min(0.1, (jetzt - letzte) / 1000);
@@ -104,7 +106,7 @@ function bild(jetzt: number): void {
     schmutzig = true;
     zeichneBanner(banner);
   }
-  if (schmutzig || laeuft) {
+  if (schmutzig || laeuft || miniAnimiert) {
     schmutzig = false;
     for (const [a, b] of ansichtKnoepfe) b.setAttribute("aria-pressed", String(a === Z.ansicht));
     vergleich.element.hidden = Z.ansicht !== "vergleich";
@@ -115,9 +117,10 @@ function bild(jetzt: number): void {
     if (Z.ansicht === "vergleich") {
       vergleich.aktualisiere();
       vergleich.zeichne(jetzt);
+      miniAnimiert = false;
     } else {
       einzel.aktualisiere();
-      einzel.zeichne(jetzt);
+      miniAnimiert = einzel.zeichne(jetzt);
     }
   }
   requestAnimationFrame(bild);

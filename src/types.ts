@@ -88,4 +88,6 @@ export interface SearchResult {
   /** Index in `schritte` für jeden Besuch, in Besuchsreihenfolge. */
   readonly besuchsIndizes: readonly number[];
   readonly schritte: readonly Step[];
+  /** Die Karte als Raster, auf dem gesucht wurde (für den Mini-Graphen: Begehbarkeit und Kantengewichte). */
+  readonly grid: Grid;
 }
