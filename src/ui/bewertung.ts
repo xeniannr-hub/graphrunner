@@ -103,8 +103,11 @@ export function tabellenZeilen(welt: Welt, E: Ergebnisse, stand: Stand): string 
     const wegZelle = (wert: number, bester: number | null) =>
       fa && e.gefunden ? `${zahl(wert)}${stern(a, wert, bester, mitWeg)}` : fa ? "kein Weg" : "–";
     const pl = angekommen(E, a, stand.laufzeit) ? platz(E, a) : 0;
+    // Während des Laufs: aktuelle Werte für besuchte Felder und Rechenschritte, markiert mit „läuft …“.
+    // Weglänge und Ausdauer erscheinen, sobald das Verfahren fertig ist (es endet, sobald es den Weg gefunden hat).
+    const laeuft = stand.k > 0 && !fa ? ' <small class="laeuft">läuft …</small>' : "";
     return `<tr>
-        <th scope="row"><span class="punkt" style="background:${ALGO_INFO[a].farbe}" aria-hidden="true"></span>${name(a)}</th>
+        <th scope="row"><span class="punkt" style="background:${ALGO_INFO[a].farbe}" aria-hidden="true"></span>${name(a)}${laeuft}</th>
         <td>${zahl(Math.min(stand.k, e.besucht))}${fa ? stern(a, e.besucht, bBesucht, opt) : ""}</td>
         <td>${zahl(stand.position[a])}${fa ? stern(a, rechenschritte(e), bSchritte, opt) : ""}</td>
         <td>${wegZelle(e.felder, bFelder)}</td>

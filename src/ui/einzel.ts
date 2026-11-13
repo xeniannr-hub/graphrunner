@@ -332,6 +332,7 @@ export class Einzel {
       replay: Z.einzel[Z.einzelAlgo],
       zahlen: Z.zahlen,
       details: true,
+      front: false,
       laufzeit: null,
       hover,
       hoverOk: hoverOk(hover),
