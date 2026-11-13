@@ -1395,3 +1395,72 @@ tbody th {
   font-weight: 400;
   color: var(--gedaempft);
 }
+
+/* ---------- Entscheidungsbaum „Welches Verfahren?“ (FA-32) ---------- */
+.entscheidung {
+  margin: 0 0 0.65rem;
+  padding: 0.45rem 0.55rem;
+  background: var(--eingelassen);
+  border: 2px solid var(--rand);
+  box-shadow: var(--tief);
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.entscheidung figcaption {
+  font-family: var(--pixel);
+  font-weight: 600;
+  color: #3f3f3f;
+  margin-bottom: 0.3rem;
+}
+
+.entscheidung .frage {
+  margin: 0;
+  font-weight: 600;
+}
+
+.entscheidung ul {
+  list-style: none;
+  margin: 0.15rem 0 0.1rem 0.3rem;
+  padding: 0 0 0 0.55rem;
+  border-left: 2px solid #b5b5b5;
+}
+
+.entscheidung li {
+  margin: 0.15rem 0;
+}
+
+.entscheidung .antwort {
+  color: var(--gedaempft);
+  margin-right: 0.25rem;
+}
+
+.entscheidung .blatt-text {
+  color: var(--gedaempft);
+}
+
+/* Pfad der aktuellen Welt in der Verfahrensfarbe. */
+.entscheidung li.aktiv > ul {
+  border-left-color: var(--farbe);
+}
+
+.entscheidung li.aktiv {
+  box-shadow: inset 3px 0 0 var(--farbe);
+  margin-left: -0.55rem;
+  padding-left: 0.55rem;
+}
+
+.entscheidung li.aktiv > .antwort {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.entscheidung .blatt.aktiv .kuerzel {
+  outline: 2px solid var(--rand);
+  outline-offset: 1px;
+}
+
+.entscheidung .blatt.aktiv .blatt-text {
+  color: var(--text);
+  font-weight: 600;
+}

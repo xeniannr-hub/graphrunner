@@ -74,7 +74,8 @@ src/
                       + *.test.ts direkt daneben
   replay/             Replay: Steps vor- und zurückspielen
   world/              terrain (Gelände), worlds (die Welten als Textkarten)
-  info/               algo-info (ALGO_INFO: Name, Farbe, Datenstruktur je Verfahren), fokus (markierte Felder eines Steps)
+  info/               algo-info (ALGO_INFO: Name, Farbe, Datenstruktur je Verfahren), fokus (markierte Felder eines Steps),
+                      entscheidung (Entscheidungsbaum „Welches Verfahren?“)
   render/             textures (Pixelgrafik), karte (Karte zeichnen), kopf (Banner, Logo), front (Suchfront als Umriss, FA-31),
                       minigraph (Kartenausschnitt als Knoten-Kanten-Bild, FA-29)
   ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, bewertung, einzel,
@@ -184,12 +185,12 @@ Genau fünf Welten in `world/worlds.ts`, jede als Textkarte (20 Zeilen × 32 Zei
 | Welt | Algo | „… am besten, wenn …“ | Messbare Bedingung (Test) |
 | --- | --- | --- | --- |
 | Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht die wenigsten Rechenschritte; DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
-| Stollen | DFS | es nur einen Weg gibt, das Ziel tief liegt und DFS die passenden Gänge zuerst probiert | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen; Modellannahme: nur 12 von 24 Nachbarreihenfolgen erfüllen das, mit „rechts“ vorne > 240 Felder |
-| Flussmoor | Dijkstra | Felder verschieden viel kosten und eine Schätzung kaum hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte als A*; BFS zahlt > 1,5 ×, DFS > 2 × |
+| Stollen | DFS | es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen; Modellannahme: nur 12 von 24 Nachbarreihenfolgen erfüllen das, mit „rechts“ vorne > 240 Felder |
+| Flussmoor | Dijkstra | Felder verschieden viel kosten und keine Schätzung wirklich hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte als A*; BFS zahlt > 1,5 ×, DFS > 2 × |
 | Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; A* braucht < 25 % der Rechenschritte von Dijkstra; BFS zahlt > 1,2 × |
 | Eigene Welt | – | selbst bauen | startet als leere Wiese |
 
-Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra nie weniger Felder besuchen als A*. „Am besten“ heißt in Ruinenhof und Flussmoor deshalb: optimaler Weg mit den **wenigsten Rechenschritten** (gemessen, nicht „ohne Schätzung“). Kein Text behauptet etwas, das die Messung nicht zeigt.
+`wann` und `warum` stützen sich auf **Voraussetzungen und Garantien** (BFS: gleiche Kosten → wenigste Kanten = günstigster Weg; Dijkstra: Kosten ≥ 0 → günstigster Weg garantiert; A*: zulässige Schätzung → derselbe günstigste Weg, gezielter gesucht; DFS: keine Garantie, im Stollen Glück mit der Reihenfolge), nicht auf knappe Zählunterschiede; jede genannte Zahl hält `worlds.test.ts` fest. Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra nie weniger Felder besuchen als A*. „Am besten“ heißt in Ruinenhof und Flussmoor deshalb: optimaler Weg mit den **wenigsten Rechenschritten** (gemessen, nicht „ohne Schätzung“). Kein Text behauptet etwas, das die Messung nicht zeigt.
 
 ### Modellannahmen (offen benennen, auch im Bericht)
 
@@ -201,7 +202,7 @@ Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra 
 ## 8. Oberfläche (Kurzfassung)
 
 - **Kopf:** Banner mit Pixel-Landschaft bei Tag, Logo (schwebende Block-Insel mit leuchtendem Graphen), „GraphRunner“, Untertitel „Explore the World of Pathfinding“ (ausdrücklich gewünscht, einzige englische Zeile, `lang="en"`), Umschalter **Alle vergleichen** / **Einzelansicht**.
-- **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter fett „*X* ist am besten, wenn …“ plus die Begründung, davon sichtbar höchstens 2 Sätze und 35 Wörter (`kurzfassung()` in `worlds.ts`, Test in `worlds.test.ts`); der Rest der Begründung und, falls die Welt einen hat, der **Lernpunkt** stehen im Aufklapper „Mehr“ (`lernpunkt` in `worlds.ts`: Ruinenhof und Stollen zur Nachbarreihenfolge der DFS, Eigene Welt zur Abhängigkeit der A*-Schätzung von der ganzen Karte); das Bewertungskriterium steht als `kriterium` direkt in der Welt; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“ als kompakte Zeile mit Chips (Symbol und Kosten, Name im Tooltip und im `aria-label`).
+- **Seitenleiste:** Weltliste mit Algorithmus-Kürzel; darunter der **Entscheidungsbaum** „Welches Verfahren?“ (FA-32, `info/entscheidung.ts`, DOM ohne Bibliothek): „Brauchst du den günstigsten Weg?“ nein → DFS (irgendein Weg, ohne Garantie); ja → „Kosten alle Schritte gleich viel?“ ja → BFS; nein → „Gibt es eine gute Schätzung zum Ziel?“ ja → A*, nein → Dijkstra. Der Pfad der aktuellen Welt ist in der Verfahrensfarbe markiert, in der Eigenen Welt nichts. Darunter fett „*X* ist am besten, wenn …“ plus die Begründung, davon sichtbar höchstens 2 Sätze und 35 Wörter (`kurzfassung()` in `worlds.ts`, Test in `worlds.test.ts`); der Rest der Begründung und, falls die Welt einen hat, der **Lernpunkt** stehen im Aufklapper „Mehr“ (`lernpunkt` in `worlds.ts`: Ruinenhof und Stollen zur Nachbarreihenfolge der DFS, Eigene Welt zur Abhängigkeit der A*-Schätzung von der ganzen Karte); das Bewertungskriterium steht als `kriterium` direkt in der Welt; bei der Eigenen Welt das Panel „Bauen“; sonst „Ausdauer pro Feld“ als kompakte Zeile mit Chips (Symbol und Kosten, Name im Tooltip und im `aria-label`).
 - **Wiedergabeleiste** (`ui/wiedergabe.ts`): **eine Komponente für beide Ansichten.** Reihenfolge: `|◀` · `◀` · Abspielen/Pause/Nochmal · `▶` · Tempo mit Anzeige „n Zeilen/s“ bzw. „n Felder/s“ · Fortschrittsregler „Zeile k von n“ (Einzelansicht: ausgeführte Codezeilen) bzw. „Feld k von n“ (Vergleich: besuchte Felder je Verfahren). Der Erklärsatz nennt die „Pseudocode-Zeile n“. Nur in der Einzelansicht kommt `▶|` (Zum Ende) dazu, nur in Alle vergleichen „Loslaufen“. Die Legende steht in der Steuerleiste. Tastatur: `←`/`→` Schritt, Leertaste Abspielen, `Pos1` zum Anfang, `Ende` zum Ende (nur Einzelansicht). Die Tabs der Einzelansicht folgen dem WAI-ARIA-Tab-Muster mit Roving tabindex (Pfeiltasten, Pos1, Ende); ein Tabwechsel hält die Wiedergabe an, mit Maus wie mit Tastatur.
 - **Alle vergleichen:** vier Karten im 2 × 2-Raster. Ein Schritt bedeutet: jedes Verfahren besucht ein weiteres Feld. Vor dem Abspielen steht über den Karten der Beobachtungshinweis `achteAuf` der Welt. Kopf je Karte: Name, Kurzbeschreibung, Marke „ignoriert Gewichte“ (BFS und DFS auf gewichteter Karte), Zähler „besucht“, eine feste Zeile „Front: …“ (BFS gleich viele Kanten vom Start, DFS ein Ast so tief wie möglich, Dijkstra gleiche Kosten vom Start, A* gleiches f, zum Ziel gestreckt; `front` in `info/algo-info.ts`), Status, Datenstruktur (Größe und nächster Eintrag). **Suchfront** (FA-31): Die wartenden Felder sind zusätzlich als zusammenhängende Umrisslinie in der Verfahrensfarbe gezeichnet (2 px, dunkler Rand); die flächige Einfärbung besuchter Felder ist dafür etwas zurückgenommen (60 % statt 72 %). Kein „Zum Ende“ (AB-05). BFS-Ergebnis heißt „kürzester Weg nach Kantenzahl“. Darunter das Ergebnis (Regeln in `ui/bewertung.ts`):
   - Zeile „Beste Wahl in dieser Welt: *X*, weil …“ aus `besteWahl(welt, ergebnisse)` mit festem Kriterium je Welt: Ruinenhof optimaler Weg und wenigste Rechenschritte (BFS); Stollen optimaler Weg und wenigste besuchte Felder (DFS); Flussmoor optimale Kosten und wenigste Rechenschritte (Dijkstra), der Satz nennt zusätzlich, dass A* weniger Felder besucht, aber für jedes eingefügte Feld h(v) berechnet; Handelsstraße optimale Kosten und wenigste besuchte Felder (A*). Darunter steht das Kriterium der Welt in Worten. Ein Test prüft je Welt, dass beste Wahl, ★ und Fazit sich nicht widersprechen. In der Eigenen Welt gibt es keine solche Zeile.
@@ -214,7 +215,7 @@ Wichtig für alle Texte: Bei zulässiger, konsistenter Schätzung kann Dijkstra 
   - Karte
   - direkt darunter die **Datenstruktur** (FA-12), kompakt: eine Kopfzeile (Name, Anzahl, Regel, gerade entnommen) und **eine Zeile Slots** in Entnahmereihenfolge (Warteschlange vorne → hinten, Stapel oben → unten, Prioritätswarteschlange nach Priorität); Dijkstra mit d, A* mit f, g und h einzeln; nächster, gerade eingefügter und veraltete Einträge markiert; bei vielen Einträgen scrollt nur diese Zeile.
   - **„Mehr zum Verfahren“**: eine Box, standardmäßig zugeklappt, darin Tabs nach dem WAI-ARIA-Tab-Muster mit Roving tabindex (Pfeiltasten, Pos1, Ende):
-    - Steckbrief, bei allen vier gleich: Verfahren · Prinzip · Wählt als Nächstes · Findet · Ergebnis; bei A* zusätzlich die offengelegte Heuristik mit Formel, Begründung (Manhattan, Faktor billigstes Feld, zulässig, konsistent) und Prüfung am Start (FA-28)
+    - Steckbrief, bei allen vier gleich: Verfahren · Prinzip · Wählt als Nächstes · Findet · Ergebnis; bei Dijkstra zusätzlich „Verbessert d? Nie“ (Kostenregel: Kante kostet das Zielfeld; A* kann es, siehe Protokoll); bei A* zusätzlich die offengelegte Heuristik mit Formel, Begründung (Manhattan, Faktor billigstes Feld, zulässig, konsistent) und Prüfung am Start (FA-28)
     - „Woran erkenne ich …?“ (FA-26): beobachtbare Merkmale mit Zahlen aus dem laufenden Replay, bei Dijkstra die Antwort auf „Woran erkenne ich, dass hier Dijkstra und nicht eine Breitensuche läuft?“
     - Ereignisprotokoll (FA-25): alle relevanten Aktionen; Klick springt zu diesem Schritt
     - Besuchsreihenfolge (FA-06)
@@ -256,7 +257,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
 | FA-29 | Mini-Graph in der Einzelansicht: ein Kartenausschnitt als Knoten-Kanten-Bild, synchron zur aktuellen Pseudocode-Zeile | Should | `render/minigraph.ts`, `ui/einzel.ts` (umgesetzt) |
 | FA-30 | Kleines Beispiel in der Einzelansicht: dieselben Verfahren auf einer Mini-Karte (höchstens 6 × 4 Felder), die der Mini-Graph vollständig zeigt | Should | offen |
 | FA-31 | Vergleich: Suchfront jedes Verfahrens als Umrisslinie | Should | `render/front.ts` (`frontUmriss`), `render/karte.ts`, `ui/vergleich.ts` (umgesetzt) |
-| FA-32 | Entscheidungsbaum „Welches Verfahren?“ in der Seitenleiste | Could | offen |
+| FA-32 | Entscheidungsbaum „Welches Verfahren?“ in der Seitenleiste | Could | `info/entscheidung.ts`, `ui/seitenleiste.ts` (umgesetzt) |
 | FA-13 | Alle vier Verfahren gleichzeitig auf derselben Karte, je Schritt ein besuchtes Feld pro Verfahren | Should | `ui/vergleich.ts` |
 | FA-14 | Statistik je Verfahren gegenüberstellen: besuchte Felder (Suchaufwand), Rechenschritte, Weglänge, Wegkosten; Fazit in Sätzen, beste Wahl je Welt | Should | Ergebnis-Tabelle, `ui/bewertung.ts` |
 | FA-16 | Karte mit Geländekosten als gewichteter Graph; Start, Ziel und Gelände veränderbar | Must | `world/`, `algorithms/raster.ts` |
@@ -335,6 +336,7 @@ IDs wie im Bericht (Anhang C). **Must** = ohne sie ist das Ergebnis unbrauchbar,
   - Suchfront: Die Umrisslinie umschließt genau die wartenden Felder (`render/front.test.ts`)
   - Ergebnistabelle während des Laufs: „läuft …“, aktuelle Werte, kein ★ vor dem Ende
   - `achteAuf`: genau ein Satz je Welt
+  - Entscheidungsbaum: jedes Verfahren genau ein Blatt, Pfade wie vorgegeben (`info/entscheidung.test.ts`)
   - Mini-Graph: keine unpassierbaren Felder im Ausschnitt, Kanten nur zu 4er-Nachbarn, Markierung wie `fokus()`, Kantengewicht = Kosten des Zielfeldes (`render/minigraph.test.ts`)
   - A*-Heuristik zulässig und konsistent; Kosten 0 korrekt; negative Kosten abgelehnt
   - Replay: Datenstruktur passt zu `inListe`, FIFO überholt nie, Dijkstra-Prioritäten steigen nie, Dijkstra verbessert nie ein d

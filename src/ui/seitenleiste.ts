@@ -4,6 +4,8 @@ import { sprites, textur } from "../render/textures";
 import type { TerrainKey } from "../types";
 import { TERRAIN } from "../world/terrain";
 import { WELTEN, kurzfassung } from "../world/worlds";
+import { BAUM, entscheidungsPfad, istBlatt, type Knoten } from "../info/entscheidung";
+import type { Algo } from "../types";
 import { ALGO_INFO } from "../info/algo-info";
 import { Z, istEigeneWelt, ladeWelt, leereKarte, type Werkzeug } from "./zustand";
 
@@ -79,6 +81,61 @@ function weltSymbol(id: string): HTMLCanvasElement {
 /** Kosten fürs Betreten; ∞ wie im Modell: Wasser und Fels kosten unendlich viel und sind damit Hindernisse. */
 const kosten = (k: number): string => (k === Infinity ? "∞" : String(k));
 
+/**
+ * Entscheidungsbaum als verschachtelte Liste (DOM, ohne Bibliothek). Jeder Zweig trägt data-pfad mit den Antworten
+ * bis dorthin, z. B. "ja,nein"; so lässt sich der Pfad einer Welt markieren.
+ */
+function baueBaum(): HTMLElement {
+  const nav = document.createElement("figure");
+  nav.className = "entscheidung";
+  nav.innerHTML = `<figcaption>Welches Verfahren?</figcaption>`;
+  const knoten = (k: Knoten, pfad: string[]): HTMLElement => {
+    if (istBlatt(k)) {
+      const b = document.createElement("span");
+      b.className = "blatt";
+      b.dataset.algo = k.algo;
+      b.innerHTML = `<span class="kuerzel" style="--farbe:${ALGO_INFO[k.algo].farbe}">${ALGO_INFO[k.algo].name}</span>${k.text ? ` <span class="blatt-text">(${k.text})</span>` : ""}`;
+      return b;
+    }
+    const box = document.createElement("div");
+    const f = document.createElement("p");
+    f.className = "frage";
+    f.textContent = k.frage;
+    const ul = document.createElement("ul");
+    for (const z of k.zweige) {
+      const li = document.createElement("li");
+      const p = [...pfad, z.antwort];
+      li.dataset.pfad = p.join(",");
+      const a = document.createElement("span");
+      a.className = "antwort";
+      a.textContent = `${z.antwort} →`;
+      li.append(a, knoten(z.ziel, p));
+      ul.append(li);
+    }
+    box.append(f, ul);
+    return box;
+  };
+  nav.append(knoten(BAUM, []));
+  return nav;
+}
+
+/** Markiert den Pfad zum Verfahren der Welt in dessen Farbe; in der Eigenen Welt (algo = null) nichts. */
+function markiereBaum(baum: HTMLElement, algo: Algo | null): void {
+  const pfad = algo ? entscheidungsPfad(algo)?.join(",") : undefined;
+  baum.style.setProperty("--farbe", algo ? ALGO_INFO[algo].farbe : "transparent");
+  for (const li of baum.querySelectorAll<HTMLElement>("li[data-pfad]")) {
+    // Ein Zweig liegt auf dem Pfad, wenn seine Antworten der Anfang der Antworten zum Verfahren sind.
+    const teil = li.dataset.pfad ?? "";
+    li.classList.toggle("aktiv", pfad !== undefined && (pfad === teil || pfad.startsWith(`${teil},`)));
+  }
+  for (const b of baum.querySelectorAll<HTMLElement>(".blatt")) {
+    const aktiv = b.dataset.algo === algo;
+    b.classList.toggle("aktiv", aktiv);
+    if (aktiv) b.setAttribute("aria-current", "true");
+    else b.removeAttribute("aria-current");
+  }
+}
+
 export class Seitenleiste {
   /** Weltliste und (in der Eigenen Welt) Bauen: steht auf dem Handy über der Karte. */
   readonly element: HTMLElement;
@@ -86,6 +143,7 @@ export class Seitenleiste {
   readonly info: HTMLElement;
   private readonly welten: HTMLButtonElement[] = [];
   private readonly wannEl: HTMLElement;
+  private readonly baum: HTMLElement;
   private readonly warumEl: HTMLElement;
   private readonly lernEl: HTMLElement;
   private gezeigteWelt = -1;
@@ -127,7 +185,9 @@ export class Seitenleiste {
     // Aufklapper „Mehr“: Rest der Begründung und Lernpunkt.
     this.lernEl = document.createElement("details");
     this.lernEl.className = "lernpunkt";
-    begruendung.append(this.wannEl, this.warumEl, this.lernEl);
+    // Entscheidungsbaum „Welches Verfahren?“ über der Kurzbegründung (FA-32).
+    this.baum = baueBaum();
+    begruendung.append(this.baum, this.wannEl, this.warumEl, this.lernEl);
 
     // Bauen: Start, Ziel und die sieben Geländearten.
     this.bauen = document.createElement("section");
@@ -216,6 +276,7 @@ export class Seitenleiste {
     } else {
       this.wannEl.textContent = "Baue deine eigene Welt.";
     }
+    markiereBaum(this.baum, w.algo);
     // Höchstens 2 Sätze (≤ 35 Wörter) sichtbar; der Rest und der Lernpunkt stehen unter „Mehr“.
     const { kurz, rest } = kurzfassung(w.warum);
     this.warumEl.textContent = kurz;
