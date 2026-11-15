@@ -7,7 +7,7 @@ describe("Dijkstra", () => {
   it("einfacher Fall: gerade Reihe", () => {
     const r = SUCHE.dijkstra([[1, 1, 1, 1]], { x: 0, y: 0 }, { x: 3, y: 0 });
     // 1 + 1 + 1 = 3.
-    expect(r.kosten).toBe(3); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(3);
   });
 
   it("weicht dem Sumpf aus", () => {
@@ -17,8 +17,8 @@ describe("Dijkstra", () => {
     ];
     const r = SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Quer durch den Sumpf: 7 + 1 = 8. Unten herum: 2 + 2 + 2 + 1 = 7.
-    expect(r.kosten).toBe(7); // TODO: von Hand nachrechnen
-    expect(r.felder).toBe(4); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(7);
+    expect(r.felder).toBe(4);
   });
 
   it("Fall mit Hindernis", () => {
@@ -29,7 +29,7 @@ describe("Dijkstra", () => {
     ];
     const r = SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Nur unten herum: 6 Felder zu je 1 → 6.
-    expect(r.kosten).toBe(6); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(6);
   });
 
   it("Fall ohne Weg", () => {
@@ -62,7 +62,7 @@ describe("Nullgewichtige Kanten", () => {
     const r = SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Quer: 5 + 1 = 6. Unten herum: 0 + 0 + 0 + 1 = 1.
     expect(r.kosten).toBe(1); // TODO: von Hand nachrechnen
-    expect(r.felder).toBe(4); // TODO: von Hand nachrechnen
+    expect(r.felder).toBe(4);
   });
   it("A* bleibt genau, wenn das billigste Feld 0 kostet (h = 0)", () => {
     const grid = [
@@ -70,6 +70,6 @@ describe("Nullgewichtige Kanten", () => {
       [0, 0, 0],
     ];
     // Wie oben: unten herum 0 + 0 + 0 + 1 = 1.
-    expect(SUCHE.astar(grid, { x: 0, y: 0 }, { x: 2, y: 0 }).kosten).toBe(1); // TODO: von Hand nachrechnen
+    expect(SUCHE.astar(grid, { x: 0, y: 0 }, { x: 2, y: 0 }).kosten).toBe(1);
   });
 });
