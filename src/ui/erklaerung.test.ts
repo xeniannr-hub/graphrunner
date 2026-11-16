@@ -43,7 +43,7 @@ describe("Erklärsatz und fokus()", () => {
       `Feld (${w.start.x}|${w.start.y}) · Start`,
       "Weg",
       "Ausdauer 1",
-      "Kanten: ↑ 1 · → 7 · ↓ 7 · ← 7", // TODO: von Hand nachrechnen
+      "Kanten: ↑ 1 · → 7 · ↓ 7 · ← 7",
       // Der Start wird als Erstes entnommen und liegt am Ende auf dem gefundenen Weg.
       "Teil des gefundenen Weges · Besuch Nr. 1",
       // Start: 0 Kanten ab Start, kein Vorgänger.
@@ -61,11 +61,11 @@ describe("Erklärsatz und fokus()", () => {
     const s = { x: 2, y: 2 };
     const z = { x: 0, y: 1 };
     // Mitte (1|1): oben (1|0) Wald → 4, rechts (2|1) Wasser → keine Kante, unten (1|2) Sumpf → 7, links (0|1) Wiese → 2.
-    expect(feldInfo(k, { x: 1, y: 1 }, s, z)[3]).toBe("Kanten: ↑ 4 · → – · ↓ 7 · ← 2"); // TODO: von Hand nachrechnen
+    expect(feldInfo(k, { x: 1, y: 1 }, s, z)[3]).toBe("Kanten: ↑ 4 · → – · ↓ 7 · ← 2");
     // Ecke (0|0): oben außerhalb → keine Kante, rechts (1|0) Wald → 4, unten (0|1) Wiese → 2, links außerhalb → keine Kante.
-    expect(feldInfo(k, { x: 0, y: 0 }, s, z)[3]).toBe("Kanten: ↑ – · → 4 · ↓ 2 · ← –"); // TODO: von Hand nachrechnen
+    expect(feldInfo(k, { x: 0, y: 0 }, s, z)[3]).toBe("Kanten: ↑ – · → 4 · ↓ 2 · ← –");
     // Fels (0|2) ist kein Knoten: keine Kantenzeile.
-    expect(feldInfo(k, { x: 0, y: 2 }, s, z)).toEqual(["Feld (0|2)", "Fels", "Ausdauer ∞ (nicht begehbar)"]); // TODO: von Hand nachrechnen
+    expect(feldInfo(k, { x: 0, y: 2 }, s, z)).toEqual(["Feld (0|2)", "Fels", "Ausdauer ∞ (nicht begehbar)"]);
   });
 
   it("A*: Tooltip zeigt g, h und f einzeln", () => {
@@ -77,7 +77,7 @@ describe("Erklärsatz und fokus()", () => {
     const r = new Replay(SUCHE.astar(g, s, z));
     r.gehe(r.laenge);
     // (1|0): g = 2 (Wiese betreten). Billigstes Feld der Karte: Weg = 1. h = |1 − 2| · 1 = 1. f = 2 + 1 = 3.
-    expect(feldInfo(k, { x: 1, y: 0 }, s, z, r, h).at(-1)).toBe("g = 2 · h = 1 · f = 3 · Vorgänger (0|0)"); // TODO: von Hand nachrechnen
+    expect(feldInfo(k, { x: 1, y: 0 }, s, z, r, h).at(-1)).toBe("g = 2 · h = 1 · f = 3 · Vorgänger (0|0)");
   });
 });
 
@@ -142,6 +142,6 @@ describe("Kartenbeschreibung für Screenreader", () => {
     expect(kartenBeschreibung(r)).toContain("Suche noch nicht gestartet.");
     r.gehe(r.laenge);
     // Weg (0|0) → (1|0) → (2|0): 2 Kanten, Kosten 1 + 1 = 2.
-    expect(kartenBeschreibung(r)).toContain("Weg gefunden: 2 Kanten, 2 Ausdauer."); // TODO: von Hand nachrechnen
+    expect(kartenBeschreibung(r)).toContain("Weg gefunden: 2 Kanten, 2 Ausdauer.");
   });
 });
