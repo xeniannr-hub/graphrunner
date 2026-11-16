@@ -61,7 +61,7 @@ describe("Nullgewichtige Kanten", () => {
     ];
     const r = SUCHE.dijkstra(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Quer: 5 + 1 = 6. Unten herum: 0 + 0 + 0 + 1 = 1.
-    expect(r.kosten).toBe(1); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(1);
     expect(r.felder).toBe(4);
   });
   it("A* bleibt genau, wenn das billigste Feld 0 kostet (h = 0)", () => {
