@@ -59,7 +59,7 @@ describe("Mini-Graph: kleines Beispiel mit Rechenweg", () => {
 
   it("Hindernis ist eine Lücke: 5 Knoten, keine Kante nach (2|0)", () => {
     // Begehbar: (0|0), (1|0), (0|1), (1|1), (2|1) → 5 Knoten.
-    expect(a.knoten.length).toBe(5); // TODO: von Hand nachrechnen
+    expect(a.knoten.length).toBe(5);
     expect(a.knoten.some((n) => n.id === 2)).toBe(false);
     expect(a.kanten.some((k) => k.nach === 2 || k.von === 2)).toBe(false);
   });
@@ -68,16 +68,16 @@ describe("Mini-Graph: kleines Beispiel mit Rechenweg", () => {
     const b = 3;
     for (const k of a.kanten) expect(k.gewicht).toBe(grid[Math.floor(k.nach / b)][k.nach % b]);
     // Konkret: (0|0) → (1|0) betritt Sumpf-Feld mit Kosten 7; (1|0) → (0|0) betritt Feld mit Kosten 1.
-    expect(a.kanten.find((k) => k.von === 0 && k.nach === 1)?.gewicht).toBe(7); // TODO: von Hand nachrechnen
-    expect(a.kanten.find((k) => k.von === 1 && k.nach === 0)?.gewicht).toBe(1); // TODO: von Hand nachrechnen
+    expect(a.kanten.find((k) => k.von === 0 && k.nach === 1)?.gewicht).toBe(7);
+    expect(a.kanten.find((k) => k.von === 1 && k.nach === 0)?.gewicht).toBe(1);
   });
 
   it("Vorgängerkanten folgen vorg: günstigster Weg (0|0) → (0|1) → (1|1) → (2|1)", () => {
     // Unten herum: 2 + 1 + 1 = 4. Über (1|0): 7 + 1 + 1 = 9. Dijkstra nimmt unten herum.
     // ids bei Breite 3: (0|0) = 0, (0|1) = 3, (1|1) = 4, (2|1) = 5.
     const vorg = a.kanten.filter((k) => k.vorgaenger).map((k) => `${k.von}→${k.nach}`);
-    expect(vorg).toEqual(expect.arrayContaining(["0→3", "3→4", "4→5"])); // TODO: von Hand nachrechnen
-    expect(r.ergebnis.kosten).toBe(4); // TODO: von Hand nachrechnen
+    expect(vorg).toEqual(expect.arrayContaining(["0→3", "3→4", "4→5"]));
+    expect(r.ergebnis.kosten).toBe(4);
   });
 });
 
@@ -90,6 +90,6 @@ describe("Mini-Graph: A* zeigt h erst nach dem Schritt „schaetze“", () => {
     expect(graphAusschnitt(r, { x: 0, y: 0 }).knoten.find((n) => n.id === 0)?.h).toBeNull();
     r.gehe(3);
     // h(s) = Manhattan((0|0), (2|0)) × billigstes Feld 1 = 2.
-    expect(graphAusschnitt(r, { x: 0, y: 0 }).knoten.find((n) => n.id === 0)?.h).toBe(2); // TODO: von Hand nachrechnen
+    expect(graphAusschnitt(r, { x: 0, y: 0 }).knoten.find((n) => n.id === 0)?.h).toBe(2);
   });
 });
