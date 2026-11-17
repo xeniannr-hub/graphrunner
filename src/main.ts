@@ -98,7 +98,6 @@ function bild(jetzt: number): void {
   const dt = Math.min(0.1, (jetzt - letzte) / 1000);
   letzte = jetzt;
   if (aktiveWiedergabe().tick(dt)) schmutzig = true;
-  const laeuft = Z.ansicht === "vergleich" && vergleich.laufe(dt);
   // Bei Größenänderung neu zeichnen, damit die Karten scharf bleiben.
   const g = `${window.innerWidth}x${window.innerHeight}x${window.devicePixelRatio}`;
   if (g !== groesse) {
@@ -106,7 +105,7 @@ function bild(jetzt: number): void {
     schmutzig = true;
     zeichneBanner(banner);
   }
-  if (schmutzig || laeuft || miniAnimiert) {
+  if (schmutzig || miniAnimiert) {
     schmutzig = false;
     for (const [a, b] of ansichtKnoepfe) b.setAttribute("aria-pressed", String(a === Z.ansicht));
     vergleich.element.hidden = Z.ansicht !== "vergleich";
@@ -116,7 +115,7 @@ function bild(jetzt: number): void {
     document.body.classList.toggle("bauen-aktiv", istEigeneWelt());
     if (Z.ansicht === "vergleich") {
       vergleich.aktualisiere();
-      vergleich.zeichne(jetzt);
+      vergleich.zeichne();
       miniAnimiert = false;
     } else {
       einzel.aktualisiere();

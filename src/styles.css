@@ -1000,6 +1000,15 @@ tbody th {
   gap: 0.45rem;
 }
 
+.mini-zusatz {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.code-box .erklaerung {
+  margin-bottom: 0.45rem;
+}
+
 .minigraph {
   display: block;
   width: 100%;

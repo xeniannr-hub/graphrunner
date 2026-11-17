@@ -12,7 +12,6 @@ const ergebnisseVon = (w: Welt): Ergebnisse => rechne(zuGrid(leseKarte(w.karte))
 const amEnde = (E: Ergebnisse) => ({
   k: Math.max(...ALGOS.map((a) => E[a].besucht)),
   position: Object.fromEntries(ALGOS.map((a) => [a, E[a].schritte.length])) as Record<Algo, number>,
-  laufzeit: null,
 });
 const welt = (id: string): Welt => {
   const w = WELTEN.find((x) => x.id === id);
@@ -111,7 +110,7 @@ describe("Ergebnistabelle während des Laufs", () => {
     const E = ergebnisseVon(w);
     // Nach 30 Besuchen: A* (43 Besuche) und alle anderen suchen noch.
     const position = Object.fromEntries(ALGOS.map((a) => [a, E[a].besuchsIndizes[29] + 1])) as Record<Algo, number>;
-    const html = tabellenZeilen(w, E, { k: 30, position, laufzeit: null });
+    const html = tabellenZeilen(w, E, { k: 30, position });
     expect(html).not.toContain("★");
     for (const zeile of html.split("<tr>").slice(1)) {
       expect(zeile).toContain("läuft …");

@@ -46,7 +46,7 @@ describe("Suchfront: Umrisslinie", () => {
     // Karte [[1, 1, 1, 1]], Start (0|0). Nach init, setze(s), einfügen(s) wartet nur der Start → 4 Seiten.
     const r = new Replay(SUCHE.bfs([[1, 1, 1, 1]], { x: 0, y: 0 }, { x: 3, y: 0 }));
     r.gehe(3);
-    expect(frontUmriss(r).length).toBe(4); // TODO: von Hand nachrechnen
+    expect(frontUmriss(r).length).toBe(4);
     expect(frontUmriss(r).every((k) => k.feld === 0)).toBe(true);
   });
 
@@ -57,7 +57,7 @@ describe("Suchfront: Umrisslinie", () => {
     const r = new Replay(SUCHE.dfs([[1, 1, 1]], { x: 0, y: 0 }, { x: 2, y: 0 }));
     r.gehe(10);
     expect(r.inhalt().map((e) => e.v)).toEqual([1, 0]);
-    expect(frontUmriss(r).length).toBe(6); // TODO: von Hand nachrechnen
+    expect(frontUmriss(r).length).toBe(6);
     expect(frontUmriss(r).some((k) => k.x1 === 1 && k.x2 === 1)).toBe(false);
   });
 });

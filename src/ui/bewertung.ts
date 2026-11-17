@@ -65,21 +65,12 @@ export function besteWahl(welt: Welt, E: Ergebnisse): BesteWahl | null {
   return { algo, satz: `${name(algo)}, weil es ${weg} mit den wenigsten ${was} findet${vergleich}.${zusatz}`, kriterium };
 }
 
-/** Platz beim Loslaufen: 1 + Zahl der Verfahren mit strikt günstigerem Weg. */
-export function platz(E: Ergebnisse, a: Algo): number {
-  return 1 + ALGOS.filter((b) => E[b].gefunden && E[b].kosten < E[a].kosten).length;
-}
-
-export const angekommen = (E: Ergebnisse, a: Algo, laufzeit: number | null): boolean =>
-  laufzeit !== null && E[a].gefunden && laufzeit >= E[a].kosten;
-
 /** Stand der Wiedergabe im Vergleich. */
 export interface Stand {
   /** Besuchte Felder je Verfahren bisher. */
   readonly k: number;
   /** Bisher ausgeführte Rechenschritte je Verfahren. */
   readonly position: Readonly<Record<Algo, number>>;
-  readonly laufzeit: number | null;
 }
 
 /** Zeilen der Ergebnistabelle als HTML. ★ gibt es erst, wenn alle Verfahren fertig sind. */
@@ -102,7 +93,6 @@ export function tabellenZeilen(welt: Welt, E: Ergebnisse, stand: Stand): string 
     const fa = fertig(a);
     const wegZelle = (wert: number, bester: number | null) =>
       fa && e.gefunden ? `${zahl(wert)}${stern(a, wert, bester, mitWeg)}` : fa ? "kein Weg" : "–";
-    const pl = angekommen(E, a, stand.laufzeit) ? platz(E, a) : 0;
     // Während des Laufs: aktuelle Werte für besuchte Felder und Rechenschritte, markiert mit „läuft …“.
     // Weglänge und Ausdauer erscheinen, sobald das Verfahren fertig ist (es endet, sobald es den Weg gefunden hat).
     const laeuft = stand.k > 0 && !fa ? ' <small class="laeuft">läuft …</small>' : "";
@@ -111,8 +101,7 @@ export function tabellenZeilen(welt: Welt, E: Ergebnisse, stand: Stand): string 
         <td>${zahl(Math.min(stand.k, e.besucht))}${fa ? stern(a, e.besucht, bBesucht, opt) : ""}</td>
         <td>${zahl(stand.position[a])}${fa ? stern(a, rechenschritte(e), bSchritte, opt) : ""}</td>
         <td>${wegZelle(e.felder, bFelder)}</td>
-        <td>${wegZelle(e.kosten, bKosten)}</td>
-        <td>${pl > 0 ? `Platz ${pl}${pl === 1 ? STERN : ""}` : "–"}</td></tr>`;
+        <td>${wegZelle(e.kosten, bKosten)}</td></tr>`;
   }).join("");
 }
 

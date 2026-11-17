@@ -4,7 +4,7 @@ import { ALGOS } from "../algorithms";
 import { symbol, zeichneLeinwand } from "../render/karte";
 import type { Algo } from "../types";
 import { WELTEN } from "../world/worlds";
-import { angekommen, besteWahl, fazitText, platz, tabellenZeilen } from "./bewertung";
+import { besteWahl, fazitText, tabellenZeilen } from "./bewertung";
 import { ALGO_INFO } from "../info/algo-info";
 import { kartenBeschreibung } from "./erklaerung";
 import { hoverAuf, hoverOk, verbindeKarte } from "./karten-interaktion";
@@ -62,13 +62,6 @@ export class Vergleich {
         einheitErklaerung: "Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld.",
         legende,
         geaendert,
-        loslaufen: {
-          bereit: () => alleFertig() && ALGOS.some((a) => Z.ergebnisse[a].gefunden),
-          laeuft: () => Z.laufzeit !== null,
-          starte: () => {
-            Z.laufzeit = 0;
-          },
-        },
       },
     );
 
@@ -113,7 +106,7 @@ export class Vergleich {
       <p class="fazit" aria-live="polite"></p>
       <div class="tabelle-rahmen">
         <table>
-          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes (Modellannahme, siehe unten)">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th><th scope="col">Platz beim Loslaufen</th></tr></thead>
+          <thead><tr><th scope="col">Verfahren</th><th scope="col">Besuchte Felder</th><th scope="col" title="ausgeführte Zeilen des Pseudocodes (Modellannahme, siehe unten)">Rechenschritte</th><th scope="col" title="Anzahl der Kanten (Schritte) des Weges">Weglänge (Kanten)</th><th scope="col">Ausdauer des Weges</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -129,18 +122,7 @@ export class Vergleich {
     this.element = el;
   }
 
-  /** Lässt die Figuren laufen; dt in Sekunden. Gibt true zurück, solange jemand läuft. */
-  laufe(dt: number): boolean {
-    if (Z.laufzeit === null) return false;
-    const kosten = ALGOS.filter((a) => Z.ergebnisse[a].gefunden).map((a) => Z.ergebnisse[a].kosten);
-    const max = Math.max(...kosten);
-    if (Z.laufzeit >= max) return false;
-    // Der teuerste Weg dauert bei mittlerem Tempo etwa 8 Sekunden; die Reihenfolge der Ankunft folgt den Kosten.
-    Z.laufzeit = Math.min(max, Z.laufzeit + ((dt * Math.max(max, 8)) / 8) * (Z.tempo / 5));
-    return true;
-  }
-
-  zeichne(zeit: number): void {
+  zeichne(): void {
     for (const a of ALGOS) {
       const k = this.karten.get(a);
       if (!k) continue;
@@ -154,10 +136,8 @@ export class Vergleich {
         zahlen: "keine",
         details: false,
         front: true,
-        laufzeit: Z.laufzeit,
         hover,
         hoverOk: hoverOk(hover),
-        zeit,
         h: Z.h,
       });
     }
@@ -196,14 +176,11 @@ export class Vergleich {
       if (Z.k === 0) status = "bereit";
       else if (!fertig(a)) status = "sucht …";
       else if (!e.gefunden) status = "kein Weg gefunden";
-      else if (Z.laufzeit === null)
+      else
         status =
           a === "bfs"
             ? `Ziel gefunden: kürzester Weg nach Kantenzahl, ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`
             : `Ziel gefunden: ${zahl(e.felder)} Kanten, ${zahl(e.kosten)} Ausdauer`;
-      else if (angekommen(Z.ergebnisse, a, Z.laufzeit))
-        status = `angekommen: <b>Platz ${platz(Z.ergebnisse, a)}</b>, ${zahl(e.kosten)} Ausdauer`;
-      else status = `läuft … ${zahl(Math.floor(Z.laufzeit))} von ${zahl(e.kosten)} Ausdauer`;
       k.status.innerHTML = status;
     }
     this.aktualisiereErgebnis();
@@ -213,7 +190,7 @@ export class Vergleich {
     const welt = WELTEN[Z.weltIndex];
     const alle = alleFertig();
     const position = Object.fromEntries(ALGOS.map((a) => [a, Z.vergleich[a].position])) as Record<Algo, number>;
-    this.tabelle.innerHTML = tabellenZeilen(welt, Z.ergebnisse, { k: Z.k, position, laufzeit: Z.laufzeit });
+    this.tabelle.innerHTML = tabellenZeilen(welt, Z.ergebnisse, { k: Z.k, position });
     const wahl = alle ? besteWahl(welt, Z.ergebnisse) : null;
     this.wahl.hidden = wahl === null;
     this.wahl.innerHTML = wahl

@@ -18,9 +18,9 @@ describe("DFS", () => {
       { x: 0, y: 0 },
       { x: 1, y: 0 },
       { x: 2, y: 0 },
-    ]); // TODO: von Hand nachrechnen
+    ]);
     // Aufgelegt werden genau die 5 Felder des Weges → 5 Besuche.
-    expect(r.besucht).toBe(5); // TODO: von Hand nachrechnen
+    expect(r.besucht).toBe(5);
   });
 
   it("Fall mit Hindernis: läuft oben herum", () => {
@@ -31,8 +31,8 @@ describe("DFS", () => {
     ];
     const r = SUCHE.dfs(grid, { x: 0, y: 1 }, { x: 2, y: 1 });
     // (0|1) → oben (0|0) → rechts (1|0) → rechts (2|0) → unten (2|1) = Ziel: 4 Felder.
-    expect(r.felder).toBe(4); // TODO: von Hand nachrechnen
-    expect(r.kosten).toBe(4); // TODO: von Hand nachrechnen
+    expect(r.felder).toBe(4);
+    expect(r.kosten).toBe(4);
   });
 
   it("springt aus einer Sackgasse zurück", () => {
@@ -43,8 +43,8 @@ describe("DFS", () => {
     const r = SUCHE.dfs(grid, { x: 0, y: 1 }, { x: 2, y: 1 });
     // (0|1) → oben (0|0): Sackgasse, wird wieder entnommen → zurück zu (0|1) → rechts (1|1) → rechts (2|1).
     // Weg: (0|1), (1|1), (2|1) → 2 Felder. Aufgelegt: (0|1), (0|0), (1|1), (2|1) → 4 Besuche.
-    expect(r.felder).toBe(2); // TODO: von Hand nachrechnen
-    expect(r.besucht).toBe(4); // TODO: von Hand nachrechnen
+    expect(r.felder).toBe(2);
+    expect(r.besucht).toBe(4);
     expect(r.schritte.some((s) => s.art === "entnehmen" && s.u === 0)).toBe(true);
   });
 

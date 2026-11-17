@@ -7,7 +7,7 @@ describe("A*", () => {
   it("einfacher Fall: gerade Reihe", () => {
     const r = SUCHE.astar([[1, 1, 1, 1]], { x: 0, y: 0 }, { x: 3, y: 0 });
     // 1 + 1 + 1 = 3.
-    expect(r.kosten).toBe(3); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(3);
   });
 
   it("Fall mit Hindernis", () => {
@@ -18,7 +18,7 @@ describe("A*", () => {
     ];
     const r = SUCHE.astar(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Nur unten herum: 6 Felder zu je 1 → 6.
-    expect(r.kosten).toBe(6); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(6);
   });
 
   it("Fall ohne Weg", () => {
@@ -35,7 +35,7 @@ describe("A*", () => {
     ];
     const r = SUCHE.astar(grid, { x: 0, y: 0 }, { x: 2, y: 0 });
     // Quer: 4 + 2 = 6. Unten herum: 2 + 2 + 2 + 2 = 8. Günstigster Weg: 6.
-    expect(r.kosten).toBe(6); // TODO: von Hand nachrechnen
+    expect(r.kosten).toBe(6);
   });
 
   it("besucht auf freier Wiese weniger Felder als Dijkstra", () => {
