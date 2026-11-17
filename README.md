@@ -122,12 +122,10 @@ Die Algorithmen kennen weder DOM noch Canvas. Sie liefern Schritt für Schritt `
 
 ## Team
 
-| Modul | Verantwortlich |
-| --- | --- |
-| `algorithms/`, `replay/` | *Name eintragen* |
-| `world/` | *Name eintragen* |
-| `render/` | *Name eintragen* |
-| `ui/`, `main.ts`, `styles.css` | *Name eintragen* |
+- Xenia Penner
+- Finia Held
+- Kiana Martini
+- Lisa Franjic
 
 ## Deployment
 

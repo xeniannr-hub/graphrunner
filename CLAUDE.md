@@ -356,7 +356,7 @@ Pflichtinhalte:
 - Tabelle der Welten
 - Abschnitt „Modell“: Kostenregel, Nachbarreihenfolge, Heuristik, Geländetabelle
 - **Startanleitung** (`npm install`, `npm run dev`, `npm test`, `npm run build`)
-- Ordnerstruktur, Teamaufteilung nach Modulen, Deploy-Hinweis, Quellen
+- Ordnerstruktur, Namen des Teams, Deploy-Hinweis, Quellen
 
 ---
 
