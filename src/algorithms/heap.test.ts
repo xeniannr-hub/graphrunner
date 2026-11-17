@@ -12,7 +12,7 @@ describe("Heap", () => {
     const reihenfolge: string[] = [];
     for (let x = h.entnehmen(); x; x = h.entnehmen()) reihenfolge.push(x.wert);
     // Priorität 0: e. Priorität 1: b vor c (b älter). Priorität 2: a vor d (a älter).
-    expect(reihenfolge).toEqual(["e", "b", "c", "a", "d"]); // TODO: von Hand nachrechnen
+    expect(reihenfolge).toEqual(["e", "b", "c", "a", "d"]);
   });
 
   it("ist leer nach dem letzten Entnehmen", () => {

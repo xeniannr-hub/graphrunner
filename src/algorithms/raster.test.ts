@@ -16,7 +16,7 @@ describe("Raster", () => {
       [1, 1, 1],
     ];
     // Mitte (1|1) = id 4: oben id 1, rechts id 5, unten id 7, links id 3.
-    expect(nachbarn(grid, 4)).toEqual([1, 5, 7, 3]); // TODO: von Hand nachrechnen
+    expect(nachbarn(grid, 4)).toEqual([1, 5, 7, 3]);
   });
 
   it("lässt unpassierbare Nachbarn weg", () => {
@@ -25,7 +25,7 @@ describe("Raster", () => {
       [1, 1, 1],
     ];
     // (0|0) = id 0: oben gibt es nicht, rechts (1|0) ist Fels, unten (0|1) = id 3, links gibt es nicht.
-    expect(nachbarn(grid, 0)).toEqual([3]); // TODO: von Hand nachrechnen
+    expect(nachbarn(grid, 0)).toEqual([3]);
   });
 
   it("Schätzung: Manhattan-Abstand mal billigstes Feld", () => {
@@ -35,7 +35,7 @@ describe("Raster", () => {
     ];
     const h = schaetzung(grid, { x: 2, y: 0 });
     // (0|1) = id 3: Abstand |0 − 2| + |1 − 0| = 3, billigstes Feld 2 → 6.
-    expect(h(3)).toBe(6); // TODO: von Hand nachrechnen
+    expect(h(3)).toBe(6);
   });
 });
 
