@@ -14,7 +14,7 @@ Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten 
 
 | Welt | Verfahren | … ist am besten, wenn … | Messbare Bedingung |
 | --- | --- | --- | --- |
-| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht die wenigsten Rechenschritte; DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
+| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht unter den Verfahren mit optimalem Weg die wenigsten Rechenschritte (DFS rechnet weniger, findet aber einen 456 Kanten langen Weg); DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
 | Stollen | DFS | es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen (hängt an der Nachbarreihenfolge, siehe Modellannahmen) |
 | Flussmoor | Dijkstra | Felder verschieden viel kosten und keine Schätzung wirklich hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte (4.167 zu 4.356); BFS zahlt > 1,5 ×, DFS > 2 × |
 | Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten, auch < 25 % der Rechenschritte (1.098 zu 8.326); BFS zahlt > 1,2 × |
@@ -114,8 +114,8 @@ src/
   render/             Pixelgrafik, Kartenzeichnung und Mini-Graph (Canvas 2D)
   ui/                 Zustand, Wiedergabeleiste, Vergleich, Einzelansicht, Seitenleiste, Tooltip, Erklärungen
 prototype/            erster Prototyp, nur zum Nachschlagen
-docs/screenshot.png
-.github/workflows/deploy.yml
+docs/                 Bildschirmfotos für dieses README, Designentwürfe (entwurf-logo.jpg, entwurf-oberflaeche.jpg)
+.github/workflows/    pruefen.yml (Pull Requests), deploy.yml (GitHub Pages)
 ```
 
 Die Algorithmen kennen weder DOM noch Canvas. Sie liefern Schritt für Schritt `Step`-Objekte, die `Replay` vor- und zurückspielt. Deshalb laufen alle Tests ohne Browser (`src/architektur.test.ts` prüft die Importregeln).
