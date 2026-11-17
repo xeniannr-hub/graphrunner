@@ -198,6 +198,8 @@ export class Vergleich {
       : "";
     this.fazit.textContent = alle
       ? fazitText(welt, Z.ergebnisse)
-      : "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld.";
+      : Z.k === 0
+        ? "Drücke „Abspielen“. Alle vier Verfahren suchen gleichzeitig; pro Schritt besucht jedes genau ein weiteres Feld."
+        : "Die Suche läuft noch. Beste Wahl und Fazit erscheinen, sobald alle vier Verfahren fertig sind.";
   }
 }

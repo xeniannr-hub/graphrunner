@@ -10,7 +10,7 @@ Diese Datei liest Claude Code zu Beginn jeder Sitzung. Sie gilt für alle vier G
 - **Lernziel:** BFS, DFS, Dijkstra und A* verständlich machen, vor allem die Frage: **Wann ist welcher Algorithmus der beste?**
 - **Zielgruppe:** Studierende, die Graphensuche lernen, und Lehrende, die das Werkzeug in der Vorlesung zeigen. Die App muss **ohne Tutorial** verständlich sein.
 - **Idee:** ein Pixel-Spiel „GraphRunner“ (Gamification) in einer Klötzchenwelt: Gelände als Blöcke, eine blockige Spielfigur. Für jeden Algorithmus gibt es eine Welt, deren Gelände zeigt, wann er am besten passt. Alle Grafiken sind eigene Entwürfe, nichts stammt aus Minecraft oder anderen Spielen (keine Texturen, Figuren, Logos oder Schriften daraus).
-- **Name:** Das Spiel heißt nur „GraphRunner“ („Graph“ steingrau, „Runner“ orange). Designvorlage: die beiden Entwürfe in `docs/` (Logo und Oberfläche). Repo, Paket und Live-Adresse heißen ebenfalls `graphrunner` (https://xeniannr-hub.github.io/graphrunner/). Nur `prototype/` trägt noch den alten Arbeitstitel „Kieselmark“ und bleibt als Referenz unverändert.
+- **Name:** Das Spiel heißt nur „GraphRunner“ („Graph“ steingrau, „Runner“ orange). Designvorlage: die beiden Entwürfe `docs/entwurf-logo.jpg` und `docs/entwurf-oberflaeche.jpg`. Repo, Paket und Live-Adresse heißen ebenfalls `graphrunner` (https://xeniannr-hub.github.io/graphrunner/). Nur `prototype/` trägt noch den alten Arbeitstitel „Kieselmark“ und bleibt als Referenz unverändert.
 - **Abgabe:** als **GitHub-Repo** mit laufender Live-Version auf GitHub Pages, dazu Projektbericht (PDF) und Präsentation. Die Anforderungs-IDs in Abschnitt 9 sind dieselben wie im Bericht (Anhang C). Code, Tests und Bericht verweisen aufeinander.
 
 ---
@@ -81,8 +81,8 @@ src/
   ui/                 zustand, wiedergabe (Wiedergabeleiste), vergleich, bewertung, einzel,
                       seitenleiste, karten-interaktion (Tooltip, Bauen), erklaerung
 prototype/            erster Prototyp, nur Referenz
-docs/                 screenshot.png
-.github/workflows/    deploy.yml
+docs/                 screenshot.png, einzelansicht.png, Designentwürfe entwurf-logo.jpg, entwurf-oberflaeche.jpg
+.github/workflows/    pruefen.yml, deploy.yml
 ```
 
 | Modul | darf importieren |
@@ -184,7 +184,7 @@ Genau fünf Welten in `world/worlds.ts`, jede als Textkarte (20 Zeilen × 32 Zei
 
 | Welt | Algo | „… am besten, wenn …“ | Messbare Bedingung (Test) |
 | --- | --- | --- | --- |
-| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht die wenigsten Rechenschritte; DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
+| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht unter den Verfahren mit optimalem Weg die wenigsten Rechenschritte (DFS rechnet weniger, findet aber einen 456 Kanten langen Weg); DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
 | Stollen | DFS | es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen; Modellannahme: nur 12 von 24 Nachbarreihenfolgen erfüllen das, mit „rechts“ vorne > 240 Felder |
 | Flussmoor | Dijkstra | Felder verschieden viel kosten und keine Schätzung wirklich hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte als A*; BFS zahlt > 1,5 ×, DFS > 2 × |
 | Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten; A* braucht < 25 % der Rechenschritte von Dijkstra; BFS zahlt > 1,2 × |
