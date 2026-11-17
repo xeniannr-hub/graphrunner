@@ -23,13 +23,9 @@ export interface KartenBild {
   readonly details: boolean;
   /** Vergleich: Suchfront als Umrisslinie in der Verfahrensfarbe (FA-31). */
   readonly front: boolean;
-  /** Ausdauer seit „Loslaufen“; null, solange niemand läuft. */
-  readonly laufzeit: number | null;
   readonly hover: Pos | null;
   /** Darf auf das Feld unter der Maus gebaut werden? */
   readonly hoverOk: boolean;
-  /** Zeit in ms für kleine Bewegungen der Figur. */
-  readonly zeit: number;
   /** A*-Schätzung für die Zahlen h und f. */
   readonly h: (id: FeldId) => number;
 }
@@ -183,22 +179,6 @@ function rgba(hex: string, a: number): string {
   return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
 }
 
-/** Position der laufenden Figur: Jeder Schritt dauert so lange, wie das betretene Feld kostet. */
-function laeuferPos(bild: KartenBild, t: number): { x: number; y: number; laeuft: boolean } {
-  const weg = bild.replay.ergebnis.weg;
-  let rest = t;
-  for (let i = 1; i < weg.length; i++) {
-    const k = TERRAIN_NACH_KEY[bild.karte[weg[i].y][weg[i].x]].kosten;
-    if (rest < k) {
-      const f = rest / k;
-      return { x: weg[i - 1].x + (weg[i].x - weg[i - 1].x) * f, y: weg[i - 1].y + (weg[i].y - weg[i - 1].y) * f, laeuft: true };
-    }
-    rest -= k;
-  }
-  const letzt = weg[weg.length - 1];
-  return { x: letzt.x, y: letzt.y, laeuft: false };
-}
-
 function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBild): void {
   const r = bild.replay;
   const e = r.ergebnis;
@@ -328,20 +308,11 @@ function zeichneKarte(ctx: CanvasRenderingContext2D, ts: number, bild: KartenBil
   const th = (tb * sp.truhe.height) / sp.truhe.width;
   ctx.drawImage(sp.truhe, zx - tb / 2, zy - th / 2, tb, th);
   ctx.drawImage(sp.fahne, sx - ts * 0.1, sy - ts * 1.25, ts * 0.9, ts * 0.9);
-  let fx = sx;
-  let fy = sy;
-  let laeuft = false;
-  if (bild.laufzeit !== null && e.gefunden && r.fertig) {
-    const p = laeuferPos(bild, bild.laufzeit);
-    fx = (p.x + 0.5) * ts;
-    fy = (p.y + 0.5) * ts;
-    laeuft = p.laeuft;
-  }
+  // Die Figur steht am Start.
   const gr = Math.max(ts * 1.45, 14);
-  const hops = laeuft ? Math.abs(Math.sin(bild.zeit / 70)) * ts * 0.1 : 0;
   ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
-  ctx.fillRect(fx - gr * 0.3, fy + gr * 0.36, gr * 0.6, gr * 0.1);
-  ctx.drawImage(sp.figur, fx - gr / 2, fy - gr * 0.55 - hops, gr, gr);
+  ctx.fillRect(sx - gr * 0.3, sy + gr * 0.36, gr * 0.6, gr * 0.1);
+  ctx.drawImage(sp.figur, sx - gr / 2, sy - gr * 0.55, gr, gr);
   schild(ctx, ts, bild.start, "START", START_FARBE, bild.karte[0].length);
   schild(ctx, ts, bild.ziel, "ZIEL", ZIEL_FARBE, bild.karte[0].length);
 }

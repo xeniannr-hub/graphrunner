@@ -1,7 +1,7 @@
 // Einzelansicht als Debugger für Algorithmen (FA-01, FA-02, FA-06, FA-09, FA-11, FA-12, FA-25, FA-26, FA-28, FA-29):
 // ein Verfahren Zeile für Zeile. Links die Karte, direkt darunter die Datenstruktur in einer Zeile und die zugeklappte
 // Box „Mehr zum Verfahren“ (Steckbrief, Woran erkenne ich …?, Ereignisprotokoll, Besuchsreihenfolge als Tabs).
-// Rechts nur der Mini-Graph mit dem Erklärsatz als Bildunterschrift und darunter der Pseudocode.
+// Rechts der zugeklappte Mini-Graph und darunter der Pseudocode mit dem Erklärsatz zur aktuellen Zeile.
 import { ALGOS, PSEUDOCODE } from "../algorithms";
 import { symbol, zeichneLeinwand, type SymbolArt, type Zahlen } from "../render/karte";
 import type { Eintrag, Replay } from "../replay/replay";
@@ -90,6 +90,7 @@ export class Einzel {
   private readonly canvas: HTMLCanvasElement;
   private readonly select: HTMLSelectElement;
   private readonly miniGraph: HTMLCanvasElement;
+  private readonly miniKlappe: HTMLDetailsElement;
   private miniSchluessel = "";
   private miniStart = -Infinity;
   private miniAktuell: GraphAusschnitt | null = null;
@@ -251,15 +252,25 @@ export class Einzel {
     });
     links.append(kartenRahmen, struktur, mehr);
 
-    // Rechts: Mini-Graph (FA-29) mit Mini-Legende und dem Erklärsatz als Bildunterschrift, darunter der Pseudocode.
+    // Rechts: Mini-Graph (FA-29), anfangs zugeklappt, damit die Ansicht nicht überladen wirkt. Darunter der Pseudocode
+    // mit dem Erklärsatz zur aktuellen Zeile; der Satz bleibt immer sichtbar, auch wenn der Graph zu ist.
     const seite = element(
       "div",
       "einzel-seite",
-      `<figure class="box minigraph-box"><canvas class="minigraph" role="img"></canvas>
-        <p class="mini-legende"><span><i class="ring weiss"></i>bearbeitet</span><span><i class="ring gelb"></i>geprüft</span><span><i class="ring rot"></i>Prüfung negativ</span><span><i class="kasten">2</i>Kantengewicht</span><span class="mini-formel"></span></p>
-        <figcaption class="erklaerung" tabindex="0"><span class="zeile-nr"></span> <span class="satz" aria-live="off"></span></figcaption></figure>
-      <div class="box code-box"><h3>Pseudocode</h3><ol class="code"></ol></div>`,
+      `<details class="box minigraph-box"><summary><h3>Graph-Ausschnitt</h3> <small class="mini-zusatz">5 × 5 Felder als Knoten und Kanten</small></summary>
+        <canvas class="minigraph" role="img"></canvas>
+        <p class="mini-legende"><span><i class="ring weiss"></i>bearbeitet</span><span><i class="ring gelb"></i>geprüft</span><span><i class="ring rot"></i>Prüfung negativ</span><span><i class="kasten">2</i>Kantengewicht</span><span class="mini-formel"></span></p></details>
+      <div class="box code-box"><h3>Pseudocode</h3>
+        <p class="erklaerung" tabindex="0"><span class="zeile-nr"></span> <span class="satz" aria-live="off"></span></p>
+        <ol class="code"></ol></div>`,
     );
+    this.miniKlappe = seite.querySelector(".minigraph-box") as HTMLDetailsElement;
+    // Beim Aufklappen neu zeichnen (zugeklappt hat die Leinwand keine Breite) und ohne Übergang beginnen.
+    this.miniKlappe.addEventListener("toggle", () => {
+      this.miniSchluessel = "";
+      this.miniAktuell = null;
+      this.geaendert();
+    });
     this.satz = seite.querySelector(".satz") as HTMLElement;
     this.miniGraph = seite.querySelector(".minigraph") as HTMLCanvasElement;
     this.miniFormel = seite.querySelector(".mini-formel") as HTMLElement;
@@ -333,10 +344,8 @@ export class Einzel {
       zahlen: Z.zahlen,
       details: true,
       front: false,
-      laufzeit: null,
       hover,
       hoverOk: hoverOk(hover),
-      zeit,
       h: Z.h,
     });
     return this.zeichneMiniGraph(zeit);
@@ -347,6 +356,7 @@ export class Einzel {
    * wenn höchstens 8 Zeilen pro Sekunde laufen; schneller wäre er nur Flackern.
    */
   private zeichneMiniGraph(zeit: number): boolean {
+    if (!this.miniKlappe.open) return false;
     const r = Z.einzel[Z.einzelAlgo];
     const schluessel = `${Z.einzelAlgo}:${Z.version}:${r.position}`;
     const ausschnitt = graphAusschnitt(r, zentrumVon(r));

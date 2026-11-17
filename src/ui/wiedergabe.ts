@@ -1,6 +1,6 @@
 // Wiedergabeleiste für beide Ansichten (FA-09):
 // |◀ · ◀ · Abspielen/Pause/Nochmal · ▶ · [▶| nur Einzelansicht] · Tempo (mit Schritten pro Sekunde) ·
-// „Zeile k von n“ bzw. „Feld k von n“ · [Loslaufen nur Vergleich] · Legende. Tastatur: ← → Schritt, Leertaste, Pos1, Ende.
+// „Zeile k von n“ bzw. „Feld k von n“ · Legende. Tastatur: ← → Schritt, Leertaste, Pos1, Ende.
 import { Z } from "./zustand";
 
 export interface Steuerung {
@@ -18,8 +18,6 @@ export interface WiedergabeOptionen {
   readonly einheitEinzahl: string;
   /** Erklärung der Einheit (title der Fortschrittsanzeige). */
   readonly einheitErklaerung: string;
-  /** Nur Vergleich: Knopf „Loslaufen“. */
-  readonly loslaufen?: { bereit(): boolean; laeuft(): boolean; starte(): void };
   readonly legende: HTMLElement;
   /** Wird nach jeder Bedienung aufgerufen. */
   readonly geaendert: () => void;
@@ -45,7 +43,6 @@ export class Wiedergabe {
   private readonly tempoRegler: HTMLInputElement;
   private readonly anzeige: HTMLOutputElement;
   private readonly tempoAnzeige: HTMLOutputElement;
-  private readonly los: HTMLButtonElement | null = null;
   private rest = 0;
 
   constructor(
@@ -102,16 +99,6 @@ export class Wiedergabe {
     fortschritt.append(this.regler, this.anzeige);
 
     leiste.append(knoepfe, tempo, fortschritt);
-    if (opt.loslaufen) {
-      this.los = knopf("Loslaufen", "Alle Figuren laufen ihren gefundenen Weg ab", "knopf los");
-      const l = opt.loslaufen;
-      this.los.onclick = () => {
-        Z.spielt = false;
-        l.starte();
-        this.opt.geaendert();
-      };
-      leiste.append(this.los);
-    }
     opt.legende.classList.add("legende");
     // Tastenhinweis direkt an der Leiste, damit die Bedienung ohne Anleitung auffällt (QA-04, QA-05).
     const tasten = document.createElement("p");
@@ -181,9 +168,5 @@ export class Wiedergabe {
     this.tempoRegler.value = String(Z.tempo);
     const sps = schritteProSekunde(Z.tempo);
     this.tempoAnzeige.textContent = `${sps < 10 ? sps.toLocaleString("de-DE", { maximumFractionDigits: 1 }) : Math.round(sps)} ${this.opt.einheit}/s`;
-    if (this.los && this.opt.loslaufen) {
-      this.los.disabled = !this.opt.loslaufen.bereit();
-      this.los.setAttribute("aria-pressed", String(this.opt.loslaufen.laeuft()));
-    }
   }
 }

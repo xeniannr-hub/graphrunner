@@ -30,8 +30,6 @@ export interface Zustand {
   spielt: boolean;
   /** Tempo 1 … 10. */
   tempo: number;
-  /** Ausdauer seit „Loslaufen“, null = Rennen nicht gestartet. */
-  laufzeit: number | null;
   werkzeug: Werkzeug;
   /** A*-Schätzung der aktuellen Karte: h(v) = Manhattan(v, Ziel) × billigstes Feld. */
   h: (id: FeldId) => number;
@@ -99,7 +97,6 @@ export const Z: Zustand = {
   k: 0,
   spielt: false,
   tempo: 5,
-  laufzeit: null,
   werkzeug: "wald",
   ...kennzahlen(ersteKarte, erste.ziel),
 };
@@ -113,8 +110,6 @@ export function vergleichMax(): number {
 export function geheVergleich(k: number): void {
   Z.k = Math.max(0, Math.min(vergleichMax(), Math.round(k)));
   for (const a of ALGOS) Z.vergleich[a].gehe(Z.vergleich[a].positionNachBesuch(Z.k));
-  // Wer zurückspult, bricht das Rennen ab.
-  if (Z.k < vergleichMax()) Z.laufzeit = null;
 }
 
 /** Rechnet alle vier Verfahren neu; ansEnde zeigt sofort die Ergebnisse (nach dem Bauen). */
@@ -131,7 +126,6 @@ function neuRechnen(positionBehalten: boolean): void {
   Object.assign(Z, kennzahlen(Z.karte, Z.ziel));
   Z.vergleich = replays(Z.ergebnisse);
   Z.einzel = replays(Z.ergebnisse);
-  Z.laufzeit = null;
   Z.spielt = false;
   // geheVergleich und Replay.gehe begrenzen die Position selbst auf die neue Länge.
   geheVergleich(positionBehalten ? altK : 0);
