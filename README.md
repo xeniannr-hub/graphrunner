@@ -1,124 +1,84 @@
 # GraphRunner
 
-Ein Pixel-Spiel im Klötzchenstil im Browser, das zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
+Ein Pixel-Spiel im Browser, das zeigt, **wann welcher Suchalgorithmus der beste ist**: BFS, DFS, Dijkstra und A* suchen gleichzeitig auf derselben Karte, Schritt für Schritt und mit Pseudocode.
 
 **Live:** https://xeniannr-hub.github.io/graphrunner/
 
 ![GraphRunner: Alle vier Verfahren auf der Handelsstraße](docs/screenshot.png)
 
-Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg. Thema: „Visualisierung grundlegender Graphensuchalgorithmen mit GUI oder Web-App“.
+Hochschulprojekt im Modul *Theoretische Informatik* an der DHBW Ravensburg.
 
 ## Welten
 
-Für jedes Verfahren gibt es eine Welt, deren Gelände zeigt, wann es am besten passt. Die Bedingungen in der rechten Spalte prüft `src/world/worlds.test.ts`.
+Jede Welt ist so gebaut, dass ein Verfahren dort am besten abschneidet. Die Bedingungen prüft `src/world/worlds.test.ts`.
 
-| Welt | Verfahren | … ist am besten, wenn … | Messbare Bedingung |
+| Welt | Bestes Verfahren | Warum | Gemessen |
 | --- | --- | --- | --- |
-| Ruinenhof | BFS | jeder Schritt gleich viel kostet | offener Hof, nur Wiese und Mauerreste, Start und Ziel in gegenüberliegenden Ecken; BFS sucht > 60 % der Felder ab; alle optimalen Kosten gleich; A* und Dijkstra besuchen > 85 % von BFS; BFS braucht unter den Verfahren mit optimalem Weg die wenigsten Rechenschritte (DFS rechnet weniger, findet aber einen 456 Kanten langen Weg); DFS-Weg > 3 × so lang (456 statt 50), mit 8 von 24 Reihenfolgen wäre DFS direkt am Ziel |
-| Stollen | DFS | es nur einen Weg gibt und DFS mit seiner Nachbarreihenfolge Glück hat | perfektes Labyrinth; alle finden denselben Weg; DFS besucht < 70 % jedes anderen (hängt an der Nachbarreihenfolge, siehe Modellannahmen) |
-| Flussmoor | Dijkstra | Felder verschieden viel kosten und keine Schätzung wirklich hilft | A*-Kosten = Dijkstra; A* besucht > 95 % von Dijkstra; Dijkstra braucht weniger Rechenschritte (4.167 zu 4.356); BFS zahlt > 1,5 ×, DFS > 2 × |
-| Handelsstraße | A* | das Ziel weit weg liegt und seine Richtung bekannt ist | A*-Kosten = Dijkstra; A* besucht < 25 % von Dijkstra und am wenigsten, auch < 25 % der Rechenschritte (1.098 zu 8.326); BFS zahlt > 1,2 × |
-| Eigene Welt | – | selbst bauen | startet als leere Wiese |
+| Ruinenhof | BFS | jeder Schritt kostet gleich viel | weniger Rechenschritte als Dijkstra (6.982 zu 9.928) bei gleichem Weg |
+| Stollen | DFS | Labyrinth mit nur einem Weg | DFS besucht 61 Felder, < 70 % jedes anderen Verfahrens |
+| Flussmoor | Dijkstra | Kosten verschieden, Schätzung hilft kaum | weniger Rechenschritte als A* (4.167 zu 4.356) |
+| Handelsstraße | A* | Ziel weit weg, Richtung bekannt | A* besucht 43 statt 424 Felder wie Dijkstra |
+| Eigene Welt | – | selbst bauen | – |
 
 ## Bedienung
 
-- **Welches Verfahren?** Ein kleiner Entscheidungsbaum in der Seitenleiste fragt nach Voraussetzungen: Brauchst du den günstigsten Weg? Kosten alle Schritte gleich viel? Gibt es eine gute Schätzung zum Ziel? Der Pfad zur aktuellen Welt ist in der Farbe ihres Verfahrens markiert.
-- **Alle vergleichen:** vier Karten nebeneinander. Vor dem Abspielen sagt ein Satz, worauf man in dieser Welt achten soll. Die **Suchfront** jedes Verfahrens, also die Felder, die gerade in Warteschlange, Stapel oder Heap warten, ist als Umrisslinie in seiner Farbe gezeichnet; eine feste Zeile darüber sagt, welche Form sie hat: BFS gleich viele Kanten vom Start, DFS ein Ast so tief wie möglich, Dijkstra gleiche Kosten vom Start, A* gleiches f, zum Ziel gestreckt. Die Ergebnistabelle zeigt schon während des Laufs die aktuellen Werte („läuft …“). Ein Schritt heißt: Jedes Verfahren besucht ein weiteres Feld. Darunter stehen die beste Wahl der Welt mit Begründung, ein Fazit und eine Tabelle mit besuchten Feldern, Rechenschritten, Weglänge und Ausdauer. Einen ★ für wenig Suchaufwand bekommt nur, wer den optimalen Weg gefunden hat.
-- **Einzelansicht – ein Debugger für Algorithmen:** ein Verfahren Zeile für Zeile. Abspielen/Pause, Schritt vor und zurück, zum Anfang und zum Ende, Tempo einstellbar. Aufgeräumt in zwei Spalten:
-  - **Links:** die Karte und direkt darunter die **Datenstruktur** als eine Zeile Slots (Warteschlange, Stapel oder Prioritätswarteschlange; bei A* mit f, g und h). Darunter die zugeklappte Box **„Mehr zum Verfahren“** mit den Tabs Steckbrief (bei A* mit offengelegter Heuristik), „Woran erkenne ich …?“, Ereignisprotokoll (Klick springt zum Schritt) und Besuchsreihenfolge.
-  - **Rechts:** der **Mini-Graph** (zum Aufklappen), ein 5 × 5-Ausschnitt um das gerade bearbeitete Feld als Knoten und Kanten, synchron zur aktuellen Zeile. Im Knoten steht d (bei A* f, darunter g und h), am Knoten die Feldkosten = Gewicht jeder Kante hinein. Wasser und Fels sind Lücken, weil dort kein Knoten ist. Eine Mini-Legende erklärt die Ringe (bearbeitet, geprüft, negativ). Darunter der Pseudocode mit dem Erklärsatz und der aktuellen Zeile.
-  - Ein Warnbalken erscheint nur, wenn BFS oder DFS auf einer gewichteten Karte laufen: Sie ignorieren die Kantengewichte.
+- **Alle vergleichen:** vier Karten nebeneinander. Die Umrisslinie zeigt die **Suchfront**, also die Felder, die gerade in der Datenstruktur warten. Darunter: beste Wahl, Fazit und Ergebnistabelle.
+- **Einzelansicht:** ein Verfahren Zeile für Zeile, wie im Debugger, mit Datenstruktur, Pseudocode und aufklappbarem Mini-Graph (5 × 5 Felder als Knoten und Kanten).
+- **Welches Verfahren?** Ein Entscheidungsbaum in der Seitenleiste führt über die Voraussetzungen zum passenden Verfahren.
+- **Eigene Welt:** Gelände malen, alle Verfahren rechnen sofort neu.
+- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen/Pause, `Pos1` / `Ende` Anfang/Ende. Ein Tooltip zeigt zu jedem Feld Gelände, Kanten mit Gewicht und Besuchsnummer.
 
-  ![Einzelansicht: Dijkstra im Flussmoor mit Mini-Graph, Prioritätswarteschlange und Pseudocode](docs/einzelansicht.png)
-- **Tastatur:** `←` / `→` ein Schritt, Leertaste Abspielen oder Anhalten, `Pos1` / `Ende` zum Anfang bzw. Ende. Mit `Tab` auf eine Karte: Pfeiltasten bewegen einen Feld-Cursor mit Feldinfo, `Enter` baut (Eigene Welt), `Esc` verlässt die Karte.
-- **Touch:** Antippen eines Feldes zeigt die Feldinfo. Wischen scrollt die Seite; nur in der Eigenen Welt malt man durch Ziehen.
-- **Fortschritt:** In der Einzelansicht zählt „Zeile k von n“ die ausgeführten Codezeilen, im Vergleich zählt „Feld k von n“ die besuchten Felder je Verfahren.
-
-### Zustände auf der Karte
-
-| Zustand | Bedeutung | Darstellung |
-| --- | --- | --- |
-| entdeckt | d ist gesetzt, das Feld ist aber noch nicht eingereiht (eine Codezeile lang) | gestrichelter weißer Rahmen |
-| wartet | liegt in Warteschlange, Stapel oder Prioritätswarteschlange | heller Schleier mit weißem Punkt |
-| expandiert | entnommen und Nachbarn untersucht (Dijkstra/A*: abgeschlossen) | Farbe des Verfahrens, Gelände bleibt sichtbar |
-| finaler Weg | Teil des gefundenen Weges | weiße Linie |
-
-### Woran erkenne ich, dass Dijkstra läuft und nicht eine Breitensuche?
-
-1. **Entnahmereihenfolge:** BFS nimmt immer den ältesten Eintrag (FIFO). Dijkstra nimmt den mit dem kleinsten d. Die Tabelle der Prioritätswarteschlange zeigt d und die Einfügenummer, und das Panel zählt, wie oft ein jüngerer Eintrag einen älteren überholt hat, mit konkretem Beispiel. Bei BFS passiert das nie.
-2. **Monotone Kosten:** Die entnommenen d-Werte steigen nie. d zählt Kosten, nicht Kanten. Die Front breitet sich in teurem Gelände (Sumpf, Wald) langsamer aus als auf dem Weg, bei BFS dagegen in gleichmäßigen Schichten.
-3. **Gegenprobe:** Auf Karten, auf denen jedes Feld gleich viel kostet (Ruinenhof, Stollen), expandiert Dijkstra in derselben Reihenfolge wie BFS. Der Unterschied ist also genau dort sichtbar, wo er fachlich entsteht: im Flussmoor rund 120, in der Handelsstraße rund 370 Überholungen.
-
-Weil eine Kante so viel kostet wie das Feld, das man betritt, haben alle Kanten in ein Feld dasselbe Gewicht. Dijkstra findet ein Feld deshalb gleich beim ersten Mal zum günstigsten Preis und muss d nie nachträglich verbessern. A* kann das, weil es nach f expandiert; das Protokoll zeigt solche Verbesserungen mit altem und neuem g und Vorgänger.
-- **Eigene Welt:** Werkzeug wählen, dann auf eine Karte klicken oder darüber ziehen. Alle Verfahren rechnen sofort neu. „Karte leeren“ macht alles wieder zu Wiese. Die Fortschrittsregler starten auf 0 und bleiben beim Bauen dort, wo du sie hingestellt hast.
-- **Tooltip:** Über jedem Feld stehen Koordinate, Gelände, Ausdauer, die ausgehenden Kanten mit Gewicht (z. B. `Kanten: ↑ 2 · → 4 · ↓ – · ← 2`) und die Besuchsnummer. So sieht man die Karte als Graph.
+![Einzelansicht: Dijkstra im Flussmoor](docs/einzelansicht.png)
 
 ## Modell
 
-- Die Karte hat 32 × 20 Felder. `x` zählt nach rechts, `y` nach unten, ab 0. Feldnummer `id = y · 32 + x`.
-- Jedes begehbare Feld ist ein Knoten. Nachbarn sind nur die vier direkten Nachbarfelder, keine Diagonalen.
-- **Kostenregel:** Die Kante u → v kostet so viel wie das Feld v. Das Startfeld zählt nicht. Hin- und Rückweg können deshalb verschieden teuer sein: Bei `[[7, 1, 1]]` kostet links → rechts 2, rechts → links 8.
-- **Nachbarreihenfolge:** fest **oben, rechts, unten, links** (`RICHTUNGEN` in `src/algorithms/raster.ts`). Sie bestimmt den Verlauf der DFS und entscheidet bei den anderen Verfahren über Gleichstände. Im Heap gewinnt bei gleicher Priorität der ältere Eintrag, deshalb ist jeder Lauf reproduzierbar.
-- **Heuristik von A\*:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld der Karte`. Sie ist zulässig, weil jeder Weg mindestens so viele Schritte braucht und jeder Schritt mindestens das billigste Feld kostet. Sie ist konsistent, weil ein Schritt den Abstand um genau 1 ändert. Der Faktor „billigstes Feld“ hält sie zulässig, wenn es keinen Weg (Kosten 1) gibt. Beides prüfen Tests auf Zufallskarten mit Kosten 0 bis 7 (`astar.test.ts`).
-- **Kantengewichte ≥ 0:** Negative Kosten werden mit einer Fehlermeldung abgelehnt, weil Dijkstra und A* sie nicht erlauben. Kosten 0 sind erlaubt und werden korrekt behandelt (Vergleich mit Bellman-Ford auf 300 Zufallskarten).
+- Karte mit 32 × 20 Feldern. Jedes begehbare Feld ist ein Knoten, Nachbarn sind die vier direkten Felder (keine Diagonalen).
+- **Kostenregel:** Die Kante u → v kostet so viel wie das Feld v. Der Graph ist deshalb gerichtet: Hin- und Rückweg können verschieden teuer sein.
+- **Nachbarreihenfolge:** fest **oben, rechts, unten, links** (`src/algorithms/raster.ts`). Bei gleicher Priorität gewinnt der ältere Eintrag, jeder Lauf ist reproduzierbar.
+- **Heuristik von A\*:** `h(v) = Manhattan-Abstand(v, Ziel) × billigstes begehbares Feld`. Sie ist zulässig und konsistent; Tests auf Zufallskarten prüfen beides.
+- Negative Kosten werden abgelehnt, Kosten 0 sind erlaubt.
 
-| Gelände | Ausdauer | Zeichen in Karten |
+| Gelände | Weg | Brücke | Wiese | Wald | Sumpf | Wasser | Fels |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Ausdauer | 1 | 1 | 2 | 4 | 7 | ∞ | ∞ |
+
+| Verfahren | Datenstruktur | Findet |
 | --- | --- | --- |
-| Weg | 1 | `=` |
-| Brücke | 1 | `#` |
-| Wiese | 2 | `.` |
-| Wald | 4 | `T` |
-| Sumpf | 7 | `%` |
-| Wasser | ∞ (nicht begehbar) | `~` |
-| Fels | ∞ (nicht begehbar) | `^` |
+| BFS | Warteschlange (FIFO) | Weg mit den wenigsten Kanten |
+| DFS | Stapel | irgendeinen Weg |
+| Dijkstra | Prioritätswarteschlange (Min-Heap) nach g | günstigsten Weg |
+| A* | Prioritätswarteschlange nach f = g + h | günstigsten Weg |
 
-| Verfahren | Datenstruktur | Findet | Besuch zählt beim |
-| --- | --- | --- | --- |
-| BFS | Warteschlange (FIFO) | kürzesten Weg nach Anzahl der Kanten (Gewichte ignoriert) | Entnehmen |
-| DFS | Stapel (iterativ) | irgendeinen Weg | Auflegen |
-| Dijkstra | Min-Heap mit lazy deletion | günstigsten Weg | Abschließen |
-| A* | wie Dijkstra mit f = g + h | günstigsten Weg | Abschließen |
-
-## Modellannahmen
-
-Diese Annahmen bestimmen die Messwerte. Sie sind hier und im Bericht offen benannt.
-
-1. **Rechenschritte = ausgeführte Pseudocode-Zeilen.** Jede Zeile zählt 1, auch eine Heap-Operation (eigentlich O(log n)). Dijkstra hat pro Nachbar eine Zeile mehr als BFS (`rechne` und `vergleiche` statt einer Prüfung). Dass BFS im Ruinenhof am wenigsten rechnet (6.982 statt 9.928 bei Dijkstra), folgt deshalb teilweise aus der Schreibweise des Pseudocodes.
-2. **Die Schätzung h(v) ist bei A* ein eigener Rechenschritt.** Bei zulässiger, konsistenter Schätzung kann Dijkstra A* bei den besuchten Feldern nie schlagen. Was A* dafür bezahlt, zeigt sich nur, wenn das Berechnen von h(v) mitgezählt wird. Dann liegt Dijkstra im Flussmoor vorne (4.167 zu 4.356 Rechenschritte), in der Handelsstraße gewinnt A* deutlich (1.098 zu 8.326). Beste Wahl, ★ und Fazit folgen demselben festen Kriterium je Welt, das unter der Zeile „Beste Wahl“ steht.
-3. **Die Nachbarreihenfolge ist fest: oben, rechts, unten, links.** Der DFS-Vorteil im Stollen hängt daran. Nur 12 von 24 Reihenfolgen erfüllen „DFS besucht < 70 % jedes anderen“. Beginnt die Reihenfolge mit „rechts“, besucht DFS 241 bis 273 statt 61 Felder. Im Ruinenhof liefe DFS mit 8 der 24 Reihenfolgen (z. B. unten, links, oben, rechts) direkt zum Ziel, mit der festen Reihenfolge findet es einen Weg von 456 statt 50 Kanten. DFS hat im Stollen also Glück; `worlds.test.ts` hält das mit allen 24 Reihenfolgen fest.
+**Annahmen hinter den Messwerten:** Ein Rechenschritt ist eine ausgeführte Pseudocode-Zeile, auch eine Heap-Operation; bei A* zählt das Berechnen von h(v) als eigener Schritt. Der Vorteil der DFS im Stollen hängt an der festen Nachbarreihenfolge: Nur 12 von 24 Reihenfolgen erfüllen die Bedingung, DFS hat dort also Glück.
 
 ## Starten
 
 Voraussetzung: Node 22 oder neuer.
 
 ```bash
-npm install        # einmalig
-npm run dev        # Entwicklungsserver, danach die angezeigte Adresse öffnen
-npm test           # Unit Tests im Terminal (ohne Zeitmessung)
-npm run test:leistung  # Zeitmessung QA-03 (< 100 ms je Welt, Median aus 5 Läufen)
-npm run build      # Typprüfung und Build nach dist/
-npm run format     # Formatieren mit Prettier (die CI prüft mit format:check)
+npm install            # einmalig
+npm run dev            # Entwicklungsserver
+npm test               # Tests
+npm run test:leistung  # Zeitmessung (< 100 ms je Welt)
+npm run build          # Typprüfung und Build nach dist/
 ```
 
 ## Ordnerstruktur
 
 ```text
 src/
-  types.ts            gemeinsame Typen
-  main.ts             Einstieg: Oberfläche, Zeichenschleife, Tastatur
-  styles.css
-  algorithms/         BFS, DFS, Dijkstra, A* als Generatoren, Raster, Heap, Pseudocode
-  replay/             Aufzeichnung vor- und zurückspielen
-  world/              Gelände und die fünf Welten als Textkarten
-  info/               Steckbrief je Verfahren (Name, Farbe, Datenstruktur) und fokus(): neutral für render/ und ui/
-  render/             Pixelgrafik, Kartenzeichnung und Mini-Graph (Canvas 2D)
-  ui/                 Zustand, Wiedergabeleiste, Vergleich, Einzelansicht, Seitenleiste, Tooltip, Erklärungen
-prototype/            erster Prototyp, nur zum Nachschlagen
-docs/                 Bildschirmfotos für dieses README, Designentwürfe (entwurf-logo.jpg, entwurf-oberflaeche.jpg)
-.github/workflows/    pruefen.yml (Pull Requests), deploy.yml (GitHub Pages)
+  algorithms/   BFS, DFS, Dijkstra, A* als Generatoren, Heap, Pseudocode
+  replay/       Aufzeichnung vor- und zurückspielen
+  world/        Gelände und die fünf Welten
+  info/         Steckbriefe der Verfahren
+  render/       Karte und Mini-Graph (Canvas 2D)
+  ui/           Oberfläche: Vergleich, Einzelansicht, Seitenleiste, Tooltip
+prototype/      erster Prototyp, nur zum Nachschlagen
+docs/           Bildschirmfotos und Designentwürfe
+.github/        Workflows pruefen.yml und deploy.yml
 ```
 
-Die Algorithmen kennen weder DOM noch Canvas. Sie liefern Schritt für Schritt `Step`-Objekte, die `Replay` vor- und zurückspielt. Deshalb laufen alle Tests ohne Browser (`src/architektur.test.ts` prüft die Importregeln).
+Die Algorithmen kennen weder DOM noch Canvas, deshalb laufen alle Tests ohne Browser.
 
 ## Team
 
@@ -129,13 +89,12 @@ Die Algorithmen kennen weder DOM noch Canvas. Sie liefern Schritt für Schritt `
 
 ## Deployment
 
-Jeder Pull Request und jeder Push auf einen anderen Branch startet `.github/workflows/pruefen.yml` (Formatierung, Tests, Build, Zeitmessung nur zur Information, Commit-Nachrichten). Jeder Push auf `main` startet `.github/workflows/deploy.yml`: `npm ci` → `npm run format:check` → `npm test` → `npm run build` → Veröffentlichung von `dist/` auf GitHub Pages. Schlagen die Tests fehl, wird nichts veröffentlicht. Einmalig nötig: *Settings → Pages → Source: GitHub Actions*.
+Jeder Pull Request wird geprüft (`pruefen.yml`: Formatierung, Tests, Build). Jeder Push auf `main` testet, baut und veröffentlicht automatisch auf GitHub Pages (`deploy.yml`). Schlagen die Tests fehl, wird nichts veröffentlicht.
 
 ## Quellen
 
-- Brown, M. H.; Sedgewick, R. (1984): A System for Algorithm Animation. *Computer Graphics* 18(3), 177–186.
 - Dijkstra, E. W. (1959): A note on two problems in connexion with graphs. *Numerische Mathematik* 1, 269–271.
 - Hart, P. E.; Nilsson, N. J.; Raphael, B. (1968): A Formal Basis for the Heuristic Determination of Minimum Cost Paths. *IEEE Transactions on Systems Science and Cybernetics* 4(2), 100–107.
 - Tarjan, R. E. (1972): Depth-First Search and Linear Graph Algorithms. *SIAM Journal on Computing* 1(2), 146–160.
-- Alle Grafiken (Gelände, Figur, Truhe, Logo) sind eigene Entwürfe im Klötzchenstil; nichts stammt aus anderen Spielen.
-- Schriften: Pixelify Sans, Rubik, JetBrains Mono (SIL Open Font License), lokal eingebunden über `@fontsource`.
+- Brown, M. H.; Sedgewick, R. (1984): A System for Algorithm Animation. *Computer Graphics* 18(3), 177–186.
+- Alle Grafiken sind eigene Entwürfe. Schriften: Pixelify Sans, Rubik, JetBrains Mono (SIL Open Font License).
