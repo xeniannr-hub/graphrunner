@@ -114,11 +114,15 @@ describe("Ruinenhof: BFS ist am besten, wenn jeder Schritt gleich viel kostet", 
   });
   it("DFS findet mit der festen Reihenfolge einen Weg von 456 statt 50 Kanten (> 3 × so lang)", () => {
     expect(r.dfs.felder).toBeGreaterThan(3 * r.bfs.felder);
+    // Regressionstest: Sollwert nicht von Hand prüfbar (zu groß), sichert nur ab,
+    // dass sich das Verhalten nicht unbemerkt ändert
     expect([r.dfs.felder, r.bfs.felder]).toEqual([456, 50]);
   });
   it("Lernpunkt: Mit 8 der 24 Reihenfolgen liefe DFS direkt zum Ziel, z. B. unten, links, oben, rechts", () => {
     expect(dfsLauf(w, ["o", "r", "u", "l"])).toEqual({ besucht: r.dfs.besucht, weg: r.dfs.felder });
     const direkt = alleReihenfolgen(["o", "r", "u", "l"]).filter((o) => dfsLauf(w, o).weg === r.bfs.felder);
+    // Regressionstest: Sollwert nicht von Hand prüfbar (zu groß), sichert nur ab,
+    // dass sich das Verhalten nicht unbemerkt ändert
     expect(direkt.length).toBe(8);
     expect(dfsLauf(w, ["u", "l", "o", "r"]).weg).toBe(r.bfs.felder);
   });
@@ -166,9 +170,13 @@ describe("Stollen: DFS ist am besten, wenn es nur einen Weg gibt und DFS mit sei
     const alle = alleReihenfolgen(["o", "r", "u", "l"]);
     const erfuellt = alle.filter((o) => dfsBesuche(w, o) < 0.7 * min);
     // Nur die Hälfte der 24 Reihenfolgen erfüllt die Bedingung (Messung, im Bericht genannt).
+    // Regressionstest: Sollwert nicht von Hand prüfbar (zu groß), sichert nur ab,
+    // dass sich das Verhalten nicht unbemerkt ändert
     expect(erfuellt.length).toBe(12);
     // „mit rechts vorne über 240 statt 61“, wie im Text der Welt.
     for (const o of alle.filter((x) => x[0] === "r")) expect(dfsBesuche(w, o)).toBeGreaterThan(240);
+    // Regressionstest: Sollwert nicht von Hand prüfbar (zu groß), sichert nur ab,
+    // dass sich das Verhalten nicht unbemerkt ändert
     expect(r.dfs.besucht).toBe(61);
   });
 });
@@ -190,6 +198,8 @@ describe("Flussmoor: Dijkstra ist am besten, wenn Felder verschieden viel kosten
     expect(r.dijkstra.schritte.length).toBeLessThan(r.astar.schritte.length);
   });
   it("Text: A* praktisch gleichauf (226 statt 230 besuchte Felder), BFS zahlt fast das Dreifache", () => {
+    // Regressionstest: Sollwert nicht von Hand prüfbar (zu groß), sichert nur ab,
+    // dass sich das Verhalten nicht unbemerkt ändert
     expect([r.astar.besucht, r.dijkstra.besucht]).toEqual([226, 230]);
     // BFS 172 Ausdauer, Dijkstra 64: 172 / 64 ≈ 2,7, also „fast das Dreifache“ (zwischen 2,5- und 3-fach).
     expect(r.bfs.kosten / r.dijkstra.kosten).toBeGreaterThan(2.5);
